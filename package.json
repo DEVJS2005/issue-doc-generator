@@ -1,0 +1,22 @@
+{
+  "name": "issue-doc-generator",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Gera issues completas e testáveis a partir de uma descrição curta, seguindo o ISTQB CTFL v4.0.1.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspace server & npm run dev --workspace web",
+    "build": "npm run build --workspace web && npm run build --workspace server",
+    "start": "npm run start --workspace server",
+    "test": "npm run test --workspace server",
+    "typecheck": "npm run typecheck --workspaces"
+  }
+}
