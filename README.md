@@ -8,6 +8,8 @@ As técnicas de teste e de revisão seguem o **ISTQB® CTFL v4.0.1**, por meio d
 A IA entrega um **rascunho**: o que ela não souber afirmar fica marcado como `[a preencher]` e vira
 uma dúvida para o PO. Uma pessoa revisa antes de virar card.
 
+Próximos passos, pendências conhecidas e checklist para o DevOps: [docs/ROADMAP.md](docs/ROADMAP.md).
+
 ## Como usar
 
 1. Entre com seu e-mail e senha.
@@ -196,8 +198,9 @@ Entrada de teste: descrição de 3 linhas (limitar cupons a 3 por pedido). O pro
 | Gemini `gemini-3.8-flash` | Exemplo de Marcas (entrada longa) | ~264 s | — | 15 critérios, 31 casos, 5/5 problemas apontados |
 | Gemini `gemini-3.8-flash` | Refinar ("prioridade Alta") | ~130 s | — | mudou só Prioridade e Revisão |
 
-Esses tempos foram medidos com o Gemini sob alta demanda (houve respostas 503 antes). Para
-entradas longas, deixe `TEMPO_LIMITE_SEGUNDOS` em 300 ou mais.
+Esses tempos foram medidos com o Gemini sob alta demanda (houve respostas 503 antes). Por isso o
+padrão de `TEMPO_LIMITE_SEGUNDOS` é 300: com 180, um refinamento real (ajuste de ~1.900
+caracteres) foi interrompido por tempo esgotado.
 
 **Custo por issue:**
 
@@ -222,7 +225,7 @@ O tempo depende do modelo e do esforço. Modelos que raciocinam bastante podem p
 | `ESFORCO` | `medium` | Esforço do modelo (`low` a `max`): Claude e Gemini. |
 | `FALLBACK_RECUSA` | `true` | Fallback de recusa do lado do servidor, só Claude. |
 | `MAX_TOKENS_SAIDA` | `64000` | Limite de tokens de saída por geração. |
-| `TEMPO_LIMITE_SEGUNDOS` | `180` | Tempo máximo de uma geração. |
+| `TEMPO_LIMITE_SEGUNDOS` | `300` | Tempo máximo de uma geração ou refinamento. |
 | `LIMITE_POR_HORA` | `30` | Gerações e refinamentos por usuário por hora. |
 | `USUARIOS_PERMITIDOS` | (vazio) | `email:senha` separados por vírgula. |
 | `SEGREDO_SESSAO` | (vazio = temporário) | Assina o cookie de sessão. |
