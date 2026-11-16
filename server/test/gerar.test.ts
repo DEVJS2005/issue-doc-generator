@@ -5,6 +5,7 @@ import { codigoPorStatus, ErroGeracao, normalizarErro } from "../src/ia/erros.js
 import { extrairJson, schemaParaProvedor, secaoAtual } from "../src/ia/json.js";
 import type { Provedor, RespostaIA } from "../src/ia/tipos.js";
 import { issueExemplo } from "./fixtures/issue.js";
+import { entrar, USUARIO_TESTE } from "./fixtures/login.js";
 
 type EventoSse = { evento: string; dados: any };
 
@@ -45,8 +46,9 @@ function provedorFalso(comportamento: {
 }
 
 async function gerar(provedor: Provedor | null, corpo: unknown = ENTRADA, env: NodeJS.ProcessEnv = {}) {
-  const app = await montarApp(carregarConfig(env), { provedor });
-  return app.inject({ method: "POST", url: "/api/gerar", payload: corpo as object });
+  const app = await montarApp(carregarConfig({ USUARIOS_PERMITIDOS: USUARIO_TESTE, ...env }), { provedor });
+  const cookie = await entrar(app);
+  return app.inject({ method: "POST", url: "/api/gerar", payload: corpo as object, headers: { cookie } });
 }
 
 describe("POST /api/gerar", () => {

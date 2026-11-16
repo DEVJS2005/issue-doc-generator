@@ -22,6 +22,18 @@ function limpar(texto: string): string {
   return texto.replace(/\r\n/g, "\n").replace(TAGS, "").trim();
 }
 
+/**
+ * Pedido de refinamento: a entrada original (para a IA não perder o contexto nem inventar), a
+ * issue atual em JSON e o ajuste pedido. O prompt de sistema manda mudar só o que o ajuste pede.
+ */
+export function formatarRefinamento(entrada: Entrada, issueAtual: Issue, ajuste: string): string {
+  return [
+    formatarEntrada(entrada),
+    `<issue_atual>\n${limpar(JSON.stringify(issueAtual, null, 2))}\n</issue_atual>`,
+    `<ajuste>\n${limpar(ajuste)}\n</ajuste>`,
+  ].join("\n");
+}
+
 /** Texto da entrada exatamente como a IA recebe, tanto nos pedidos quanto nos exemplos do prompt. */
 export function formatarEntrada(e: Entrada): string {
   return [

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { lerPreco, type Preco } from "./custo.js";
 import type { NomeProvedor } from "./ia/tipos.js";
 
 const lista = (valor: string | undefined) =>
@@ -33,6 +34,10 @@ const esquema = z.object({
   PRODUTOS: z.string().default(""),
   PORTA: z.coerce.number().int().positive().default(3000),
   REGISTRAR_DESCRICAO: booleano("false"),
+  SEGREDO_SESSAO: z.string().default(""),
+  SESSAO_HORAS: z.coerce.number().positive().default(12),
+  CONFIAR_PROXY: booleano("false"),
+  PRECO_POR_MTOK: z.string().trim().default(""),
 });
 
 export type Config = {
@@ -51,6 +56,10 @@ export type Config = {
   produtos: string[];
   porta: number;
   registrarDescricao: boolean;
+  segredoSessao: string;
+  sessaoHoras: number;
+  confiarProxy: boolean;
+  precoPorMtok: Preco | null;
 };
 
 export function carregarConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -78,5 +87,9 @@ export function carregarConfig(env: NodeJS.ProcessEnv = process.env): Config {
     produtos: lista(e.PRODUTOS),
     porta: e.PORTA,
     registrarDescricao: e.REGISTRAR_DESCRICAO,
+    segredoSessao: e.SEGREDO_SESSAO,
+    sessaoHoras: e.SESSAO_HORAS,
+    confiarProxy: e.CONFIAR_PROXY,
+    precoPorMtok: lerPreco(e.PRECO_POR_MTOK),
   };
 }
