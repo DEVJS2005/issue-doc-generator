@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { montarApp } from "../src/app.js";
 import { carregarConfig } from "../src/config.js";
+import { entrar, USUARIO_TESTE } from "./fixtures/login.js";
 
 describe("configuração", () => {
   it("usa os padrões quando o ambiente está vazio", () => {
@@ -50,8 +51,8 @@ describe("rotas básicas", () => {
   });
 
   it("lista produtos do .env mais 'Outro'", async () => {
-    const app = await montarApp(carregarConfig({ PRODUTOS: "Loja,App" }));
-    const r = await app.inject({ method: "GET", url: "/api/opcoes" });
+    const app = await montarApp(carregarConfig({ PRODUTOS: "Loja,App", USUARIOS_PERMITIDOS: USUARIO_TESTE }));
+    const r = await app.inject({ method: "GET", url: "/api/opcoes", headers: { cookie: await entrar(app) } });
     expect(r.json().produtos).toEqual(["Loja", "App", "Outro"]);
   });
 

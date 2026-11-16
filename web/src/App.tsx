@@ -1,14 +1,365 @@
-// Esqueleto da etapa 1: a tela completa (entrada, saída, copiar, baixar) vem na etapa 4.
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { api, ErroApi, transmitir, type Entrada, type ErroTela, type Opcoes, type Progresso, type Resultado, type Usuario } from "./api";
+import { Markdown } from "./Markdown";
+
+const AVISO_DADOS = "Não cole dados pessoais reais (usuários, clientes, CPFs). O texto é enviado para processamento por IA.";
+const SEGUNDOS_AINDA_GERANDO = 60;
+
 export function App() {
+  const [usuario, setUsuario] = useState<Usuario | null | undefined>(undefined);
+
+  useEffect(() => {
+    api
+      .sessao()
+      .then((r) => setUsuario(r.usuario))
+      .catch(() => setUsuario(null));
+  }, []);
+
+  async function sair() {
+    await api.sair().catch(() => undefined);
+    setUsuario(null);
+  }
+
   return (
-    <main style={{ maxWidth: 880, margin: "0 auto", padding: "24px 16px", fontFamily: "system-ui, sans-serif" }}>
-      <h1>Issue Doc Generator</h1>
-      <p>Transforma uma descrição curta numa issue completa e testável, seguindo o ISTQB CTFL v4.0.1.</p>
-      <p role="note">
-        <strong>
-          Não cole dados pessoais reais (usuários, clientes, CPFs). O texto é enviado para processamento por IA.
-        </strong>
-      </p>
-    </main>
+    <div className="pagina">
+      <header className="topo">
+        <div>
+          <h1>Issue Doc Generator</h1>
+          <p className="subtitulo">Da descrição curta à issue testável, com técnicas do ISTQB CTFL v4.0.1.</p>
+        </div>
+        {usuario && (
+          <div className="conta">
+            <span>{usuario.email}</span>
+            <button type="button" className="botao-texto" onClick={sair}>
+              Sair
+            </button>
+          </div>
+        )}
+      </header>
+      <main>
+        {usuario === undefined && <p className="carregando">Carregando…</p>}
+        {usuario === null && <Login aoEntrar={setUsuario} />}
+        {usuario && <Gerador aoSessaoExpirar={() => setUsuario(null)} />}
+      </main>
+    </div>
+  );
+}
+
+function Login({ aoEntrar }: { aoEntrar: (u: Usuario) => void }) {
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
+  async function enviar(e: FormEvent) {
+    e.preventDefault();
+    setEnviando(true);
+    setErro(null);
+    try {
+      aoEntrar((await api.entrar(email, senha)).usuario);
+    } catch (err) {
+      setErro(err instanceof ErroApi ? err.message : "Não foi possível entrar. Tente de novo.");
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <form className="cartao login" onSubmit={enviar}>
+      <h2>Entrar</h2>
+      <label>
+        E-mail
+        <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+      </label>
+      <label>
+        Senha
+        <input type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
+      </label>
+      {erro && (
+        <p className="erro" role="alert">
+          {erro}
+        </p>
+      )}
+      <button type="submit" disabled={enviando}>
+        {enviando ? "Entrando…" : "Entrar"}
+      </button>
+    </form>
+  );
+}
+
+type Execucao = { tipo: "gerar" | "refinar"; inicio: number; progresso: Progresso | null };
+
+function Gerador({ aoSessaoExpirar }: { aoSessaoExpirar: () => void }) {
+  const [opcoes, setOpcoes] = useState<Opcoes | null>(null);
+  const [descricao, setDescricao] = useState("");
+  const [tipo, setTipo] = useState("");
+  const [produto, setProduto] = useState("");
+  const [produtoOutro, setProdutoOutro] = useState("");
+  const [contexto, setContexto] = useState("");
+
+  const [execucao, setExecucao] = useState<Execucao | null>(null);
+  const [agora, setAgora] = useState(Date.now());
+  const [resultado, setResultado] = useState<Resultado | null>(null);
+  const [entradaUsada, setEntradaUsada] = useState<Entrada | null>(null);
+  const [erro, setErro] = useState<{ erro: ErroTela; refazer: () => void } | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [ajuste, setAjuste] = useState("");
+  const [copiado, setCopiado] = useState(false);
+  const controle = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    api
+      .opcoes()
+      .then((o) => {
+        setOpcoes(o);
+        setTipo(o.tipos[0] ?? "");
+        setProduto(o.produtos[0] ?? "Outro");
+      })
+      .catch((e) => (e instanceof ErroApi && e.status === 401 ? aoSessaoExpirar() : setAviso("Não foi possível carregar as opções.")));
+  }, [aoSessaoExpirar]);
+
+  useEffect(() => {
+    if (!execucao) return;
+    const t = setInterval(() => setAgora(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [execucao]);
+
+  const nomeProduto = produto === "Outro" ? produtoOutro.trim() : produto;
+
+  async function executar(tipoExec: Execucao["tipo"], url: "/api/gerar" | "/api/refinar", corpo: unknown, aoConcluir: (r: Resultado) => void) {
+    const c = new AbortController();
+    controle.current = c;
+    setErro(null);
+    setAviso(null);
+    setAgora(Date.now());
+    setExecucao({ tipo: tipoExec, inicio: Date.now(), progresso: null });
+    try {
+      const r = await transmitir(url, corpo, c.signal, (p) => setExecucao((ex) => (ex ? { ...ex, progresso: p } : ex)));
+      aoConcluir(r);
+    } catch (e) {
+      if (c.signal.aborted) {
+        setAviso("Geração cancelada.");
+      } else if (e instanceof ErroApi && e.status === 401) {
+        aoSessaoExpirar();
+      } else {
+        const erroTela =
+          e instanceof ErroApi ? e.erro : { codigo: "conexao", mensagem: "Não foi possível falar com o servidor. Tente de novo.", podeTentarDeNovo: true };
+        setErro({ erro: erroTela, refazer: () => executar(tipoExec, url, corpo, aoConcluir) });
+      }
+    } finally {
+      controle.current = null;
+      setExecucao(null);
+    }
+  }
+
+  function gerar(e: FormEvent) {
+    e.preventDefault();
+    const entrada: Entrada = { descricao, tipo, produto: nomeProduto, contexto };
+    void executar("gerar", "/api/gerar", entrada, (r) => {
+      setResultado(r);
+      setEntradaUsada(entrada);
+      setAjuste("");
+    });
+  }
+
+  function refinar(e: FormEvent) {
+    e.preventDefault();
+    if (!resultado || !entradaUsada) return;
+    void executar("refinar", "/api/refinar", { entrada: entradaUsada, issue: resultado.issue, ajuste }, (r) => {
+      setResultado(r);
+      setAjuste("");
+    });
+  }
+
+  async function copiar() {
+    if (!resultado) return;
+    await navigator.clipboard.writeText(resultado.markdown);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  }
+
+  function baixar() {
+    if (!resultado) return;
+    const url = URL.createObjectURL(new Blob([resultado.markdown], { type: "text/markdown;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${nomeArquivo(resultado.markdown)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  if (!opcoes) return <p className="carregando">{aviso ?? "Carregando…"}</p>;
+
+  const ocupado = execucao !== null;
+  const segundos = execucao ? Math.floor((agora - execucao.inicio) / 1000) : 0;
+
+  return (
+    <>
+      <form className="cartao" onSubmit={gerar} aria-busy={ocupado}>
+        <h2>O que está errado ou o que queremos</h2>
+        <p className="aviso-dados" role="note">
+          {AVISO_DADOS}
+        </p>
+        <Campo rotulo="Descrição" atual={descricao.length} limite={opcoes.limites.descricao}>
+          <textarea
+            name="descricao"
+            rows={6}
+            value={descricao}
+            maxLength={opcoes.limites.descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+            placeholder="Ex.: No checkout, o cliente consegue aplicar quantos cupons quiser. Queremos limitar a 3 por pedido."
+            required
+          />
+        </Campo>
+        <div className="linha">
+          <label>
+            Tipo
+            <select name="tipo" value={tipo} onChange={(e) => setTipo(e.target.value)}>
+              {opcoes.tipos.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Produto
+            <select name="produto" value={produto} onChange={(e) => setProduto(e.target.value)}>
+              {opcoes.produtos.map((p) => (
+                <option key={p}>{p}</option>
+              ))}
+            </select>
+          </label>
+          {produto === "Outro" && (
+            <label>
+              Nome do produto
+              <input name="produtoOutro" value={produtoOutro} maxLength={120} onChange={(e) => setProdutoOutro(e.target.value)} required />
+            </label>
+          )}
+        </div>
+        <Campo rotulo="Contexto (opcional)" atual={contexto.length} limite={opcoes.limites.contexto}>
+          <textarea
+            name="contexto"
+            rows={4}
+            value={contexto}
+            maxLength={opcoes.limites.contexto}
+            onChange={(e) => setContexto(e.target.value)}
+            placeholder="Regras conhecidas, telas, links, protótipo descrito em texto."
+          />
+        </Campo>
+        <div className="acoes">
+          <button type="submit" disabled={ocupado || !descricao.trim() || !nomeProduto}>
+            Gerar issue
+          </button>
+        </div>
+      </form>
+
+      {execucao && (
+        <section className="cartao progresso" aria-live="polite">
+          <p>
+            <strong>{execucao.tipo === "gerar" ? "Gerando a issue" : "Refinando a issue"}</strong>
+            {" · "}
+            {textoProgresso(execucao.progresso)} · {segundos}s
+          </p>
+          {segundos >= SEGUNDOS_AINDA_GERANDO && <p className="ainda">Ainda gerando… modelos que raciocinam mais podem levar alguns minutos.</p>}
+          <button type="button" className="secundario" onClick={() => controle.current?.abort()}>
+            Cancelar
+          </button>
+        </section>
+      )}
+
+      {aviso && <p className="info">{aviso}</p>}
+      {erro && (
+        <section className="cartao erro" role="alert">
+          <p>{erro.erro.mensagem}</p>
+          {erro.erro.podeTentarDeNovo && (
+            <button type="button" onClick={erro.refazer} disabled={ocupado}>
+              Tentar de novo
+            </button>
+          )}
+        </section>
+      )}
+
+      {resultado && (
+        <section className="cartao resultado">
+          <div className="barra">
+            <h2>Rascunho da issue</h2>
+            <div className="acoes">
+              <button type="button" className="secundario" onClick={copiar}>
+                {copiado ? "Copiado" : "Copiar Markdown"}
+              </button>
+              <button type="button" className="secundario" onClick={baixar}>
+                Baixar .md
+              </button>
+            </div>
+          </div>
+          <p className="legenda">
+            Revise antes de virar card. <mark className="lacuna">[a preencher]</mark> marca o que a IA não pôde afirmar.
+          </p>
+          {resultado.alteracoes && (
+            <p className="alteracoes">
+              {resultado.alteracoes.length ? `Mudou neste refinamento: ${resultado.alteracoes.join(", ")}.` : "O refinamento não mudou nada na issue."}
+            </p>
+          )}
+          {resultado.avisos.length > 0 && (
+            <div className="avisos">
+              <strong>Pontos para conferir</strong>
+              <ul>
+                {resultado.avisos.map((a, i) => (
+                  <li key={i}>{a.mensagem}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <Markdown fonte={resultado.markdown} />
+
+          <form className="refinar" onSubmit={refinar}>
+            <Campo rotulo="Refinar" atual={ajuste.length} limite={opcoes.limites.ajuste}>
+              <textarea
+                name="ajuste"
+                rows={2}
+                value={ajuste}
+                maxLength={opcoes.limites.ajuste}
+                onChange={(e) => setAjuste(e.target.value)}
+                placeholder='Ex.: "troque o status Ativo por Disponível" ou "inclua o limite de 2.500 linhas".'
+              />
+            </Campo>
+            <button type="submit" disabled={ocupado || !ajuste.trim()}>
+              Refinar
+            </button>
+          </form>
+        </section>
+      )}
+    </>
+  );
+}
+
+function Campo({ rotulo, atual, limite, children }: { rotulo: string; atual: number; limite: number; children: ReactNode }) {
+  return (
+    <label className="campo">
+      <span className="rotulo">
+        {rotulo}
+        <span className={atual > limite * 0.9 ? "contador perto" : "contador"}>
+          {atual.toLocaleString("pt-BR")}/{limite.toLocaleString("pt-BR")}
+        </span>
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function textoProgresso(p: Progresso | null) {
+  if (!p || p.fase === "analisando") return "analisando a descrição";
+  return p.secao ? `escrevendo: ${p.secao}` : "escrevendo";
+}
+
+function nomeArquivo(markdown: string) {
+  const titulo = markdown.match(/^# (.+)$/m)?.[1] ?? "issue";
+  return (
+    titulo
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 80) || "issue"
   );
 }
