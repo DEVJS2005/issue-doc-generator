@@ -1,4 +1,11 @@
-# Issue Doc Generator
+# Issue Doc Generator: gerador de issues testáveis com IA
+
+[![CI](https://github.com/DEVJS2005/issue-doc-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/DEVJS2005/issue-doc-generator/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/DEVJS2005/issue-doc-generator)](https://github.com/DEVJS2005/issue-doc-generator/releases)
+[![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
+![Node 22.13+](https://img.shields.io/badge/node-%3E%3D22.13-339933?logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 
 Transforma uma descrição curta ("o que está errado / o que queremos") numa **issue completa e
 testável**: Problema → Solução → Requisito Técnico → Critérios de Aceite → Casos de teste → Revisão.
@@ -9,6 +16,29 @@ A IA entrega um **rascunho**: o que ela não souber afirmar fica marcado como `[
 uma dúvida para o PO. Uma pessoa revisa antes de virar card.
 
 Próximos passos, pendências conhecidas e checklist para o DevOps: [docs/ROADMAP.md](docs/ROADMAP.md).
+Mudanças por versão: [CHANGELOG.md](CHANGELOG.md).
+
+## Recursos
+
+- **Issue completa a partir de 3 linhas:** user story / requisito, critérios de aceite, casos de
+  teste (técnicas caixa-preta do ISTQB: partição de equivalência, valor-limite, tabela de decisão,
+  transição de estado) e revisão com dúvidas para o PO.
+- **Vários provedores de IA:** Claude (Anthropic), ChatGPT (OpenAI), Gemini (Google) e servidores
+  compatíveis com a OpenAI (Ollama, LM Studio, OpenRouter, Groq), com saída JSON validada por schema.
+- **Refinar** em linguagem natural, com destaque do que mudou e **comparação de versões**.
+- **Histórico** por usuário, **administração** sem reiniciar o servidor e modelo reserva automático.
+- **Login** por e-mail e senha ou **SSO** (OpenID Connect: Entra ID, Google Workspace, Keycloak, Okta).
+- **Pronto para produção:** imagem Docker única, SQLite, logs JSON sem dados pessoais (LGPD), CI com
+  Vitest e Playwright.
+
+## In English
+
+**Issue Doc Generator** is an open-source, self-hosted **AI tool for product owners, QA and
+developers**: it turns a short description into a complete, testable issue (user story,
+acceptance criteria, test cases and review) following **ISTQB CTFL v4.0.1** test design techniques.
+Works with Claude, OpenAI, Gemini and OpenAI-compatible local models. Built with Node.js,
+TypeScript, React and SQLite; ships as a single Docker image. The UI and generated issues are in
+Brazilian Portuguese.
 
 ## Como usar
 
@@ -69,7 +99,7 @@ issue-doc-generator/
 Pré-requisito: Node 22.13 ou mais novo (o banco usa o `node:sqlite` nativo).
 
 ```bash
-git clone --recurse-submodules https://github.com/<seu-usuario>/issue-doc-generator.git
+git clone --recurse-submodules https://github.com/DEVJS2005/issue-doc-generator.git
 cd issue-doc-generator
 cp .env.example .env      # preencha a chave de API de pelo menos um provedor
 npm install
