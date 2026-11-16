@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testes:
+    name: Typecheck, testes e ponta a ponta
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Testes do servidor (Vitest)
+        run: npm test
+
+      - name: Navegador do Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Ponta a ponta (Playwright, IA falsa)
+        run: npm run test:e2e
+
+      - name: Guardar o relatório do Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: test-results/
+          retention-days: 7
+
+  docker:
+    name: Imagem Docker sobe e responde
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Valores fictícios, só para este teste de fumaça. Nenhuma IA é chamada.
+      USUARIO_CI: ci@exemplo.dev
+      SENHA_CI: senha-de-ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: docker build
+        run: docker build -t issue-doc-generator:ci .
+
+      - name: docker run (só com variáveis de ambiente, sem .env no repositório)
+        run: |
+          docker run -d --name idg -p 3000:3000 \
+            -e PROVEDOR=anthropic \
+            -e USUARIOS_PERMITIDOS="$USUARIO_CI:$SENHA_CI" \
+            -e SEGREDO_SESSAO=segredo-de-ci \
+            issue-doc-generator:ci
+
+      - name: Espera o /api/saude
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/api/saude; then echo; exit 0; fi
+            sleep 1
+          done
+          echo "o container não respondeu em 30 s"; exit 1
+
+      - name: Confere tela, login e rotas protegidas
+        run: |
+          set -e
+          curl -fsS http://localhost:3000/ | grep -q "<title>Issue Doc Generator</title>"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/gerar)" = "401"
+          curl -fsS -c cookies.txt -H 'content-type: application/json' \
+            -d "{\"email\":\"$USUARIO_CI\",\"senha\":\"$SENHA_CI\"}" http://localhost:3000/api/login
+          echo
+          curl -fsS -b cookies.txt http://localhost:3000/api/opcoes
+          echo
+          # Sem chave de API, a geração responde 503 "não configurado" (e não 500).
+          status=$(curl -s -o resposta.json -w '%{http_code}' -b cookies.txt -H 'content-type: application/json' \
+            -d '{"descricao":"teste","tipo":"Correção","produto":"CI","contexto":""}' http://localhost:3000/api/gerar)
+          cat resposta.json; echo
+          test "$status" = "503"
+          grep -q '"nao_configurado"' resposta.json
+
+      - name: Logs do container
+        if: always()
+        run: docker logs idg

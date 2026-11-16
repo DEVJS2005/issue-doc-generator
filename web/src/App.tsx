@@ -93,8 +93,7 @@ function Gerador({ aoSessaoExpirar }: { aoSessaoExpirar: () => void }) {
   const [opcoes, setOpcoes] = useState<Opcoes | null>(null);
   const [descricao, setDescricao] = useState("");
   const [tipo, setTipo] = useState("");
-  const [produto, setProduto] = useState("");
-  const [produtoOutro, setProdutoOutro] = useState("");
+  const [produto, setProduto] = useState(lerUltimoProduto);
   const [contexto, setContexto] = useState("");
 
   const [execucao, setExecucao] = useState<Execucao | null>(null);
@@ -113,7 +112,6 @@ function Gerador({ aoSessaoExpirar }: { aoSessaoExpirar: () => void }) {
       .then((o) => {
         setOpcoes(o);
         setTipo(o.tipos[0] ?? "");
-        setProduto(o.produtos[0] ?? "Outro");
       })
       .catch((e) => (e instanceof ErroApi && e.status === 401 ? aoSessaoExpirar() : setAviso("Não foi possível carregar as opções.")));
   }, [aoSessaoExpirar]);
@@ -124,7 +122,7 @@ function Gerador({ aoSessaoExpirar }: { aoSessaoExpirar: () => void }) {
     return () => clearInterval(t);
   }, [execucao]);
 
-  const nomeProduto = produto === "Outro" ? produtoOutro.trim() : produto;
+  const nomeProduto = produto.trim();
 
   async function executar(tipoExec: Execucao["tipo"], url: "/api/gerar" | "/api/refinar", corpo: unknown, aoConcluir: (r: Resultado) => void) {
     const c = new AbortController();
@@ -155,6 +153,7 @@ function Gerador({ aoSessaoExpirar }: { aoSessaoExpirar: () => void }) {
   function gerar(e: FormEvent) {
     e.preventDefault();
     const entrada: Entrada = { descricao, tipo, produto: nomeProduto, contexto };
+    salvarUltimoProduto(nomeProduto);
     void executar("gerar", "/api/gerar", entrada, (r) => {
       setResultado(r);
       setEntradaUsada(entrada);
@@ -221,19 +220,16 @@ function Gerador({ aoSessaoExpirar }: { aoSessaoExpirar: () => void }) {
             </select>
           </label>
           <label>
-            Produto
-            <select name="produto" value={produto} onChange={(e) => setProduto(e.target.value)}>
-              {opcoes.produtos.map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </select>
+            Nome do produto
+            <input
+              name="produto"
+              value={produto}
+              maxLength={120}
+              onChange={(e) => setProduto(e.target.value)}
+              placeholder="Ex.: Loja Exemplo"
+              required
+            />
           </label>
-          {produto === "Outro" && (
-            <label>
-              Nome do produto
-              <input name="produtoOutro" value={produtoOutro} maxLength={120} onChange={(e) => setProdutoOutro(e.target.value)} required />
-            </label>
-          )}
         </div>
         <Campo rotulo="Contexto (opcional)" atual={contexto.length} limite={opcoes.limites.contexto}>
           <textarea
@@ -344,6 +340,26 @@ function Campo({ rotulo, atual, limite, children }: { rotulo: string; atual: num
       {children}
     </label>
   );
+}
+
+// Lembra o último nome de produto só neste navegador, por conveniência. Se o armazenamento
+// estiver bloqueado (janela anônima, por exemplo), o campo só começa vazio.
+const CHAVE_PRODUTO = "idg:ultimo-produto";
+
+function lerUltimoProduto(): string {
+  try {
+    return localStorage.getItem(CHAVE_PRODUTO) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function salvarUltimoProduto(nome: string) {
+  try {
+    localStorage.setItem(CHAVE_PRODUTO, nome);
+  } catch {
+    // sem armazenamento: segue sem lembrar
+  }
 }
 
 function textoProgresso(p: Progresso | null) {

@@ -15,7 +15,6 @@ export class ErroApi extends Error {
 export type Usuario = { email: string };
 export type Opcoes = {
   tipos: string[];
-  produtos: string[];
   limites: { descricao: number; contexto: number; ajuste: number };
 };
 export type Entrada = { descricao: string; tipo: string; produto: string; contexto: string };

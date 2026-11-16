@@ -17,9 +17,8 @@ describe("configuração", () => {
   });
 
   it("lê listas separadas por vírgula", () => {
-    const c = carregarConfig({ PRODUTOS: " Loja, App ,", USUARIOS_PERMITIDOS: "a@x.dev,b@x.dev" });
-    expect(c.produtos).toEqual(["Loja", "App"]);
-    expect(c.usuariosPermitidos).toEqual(["a@x.dev", "b@x.dev"]);
+    const c = carregarConfig({ USUARIOS_PERMITIDOS: " a@x.dev:1, b@x.dev:2 ," });
+    expect(c.usuariosPermitidos).toEqual(["a@x.dev:1", "b@x.dev:2"]);
   });
 
   it("recusa esforço inválido", () => {
@@ -50,10 +49,13 @@ describe("rotas básicas", () => {
     expect(r.body).not.toContain("sk-teste-segredo");
   });
 
-  it("lista produtos do .env mais 'Outro'", async () => {
-    const app = await montarApp(carregarConfig({ PRODUTOS: "Loja,App", USUARIOS_PERMITIDOS: USUARIO_TESTE }));
+  it("as opções trazem tipos e limites, sem lista de produtos", async () => {
+    const app = await montarApp(carregarConfig({ USUARIOS_PERMITIDOS: USUARIO_TESTE }));
     const r = await app.inject({ method: "GET", url: "/api/opcoes", headers: { cookie: await entrar(app) } });
-    expect(r.json().produtos).toEqual(["Loja", "App", "Outro"]);
+    expect(r.json()).toEqual({
+      tipos: ["Correção", "Nova funcionalidade", "Ajuste técnico", "Melhoria"],
+      limites: { descricao: 4000, contexto: 8000, ajuste: 2000 },
+    });
   });
 
   it("entrega o index.html do web e 404 em JSON para /api desconhecida", async () => {

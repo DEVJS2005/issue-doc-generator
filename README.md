@@ -13,7 +13,8 @@ Próximos passos, pendências conhecidas e checklist para o DevOps: [docs/ROADMA
 ## Como usar
 
 1. Entre com seu e-mail e senha.
-2. Escreva a **descrição** (até 4.000 caracteres), escolha o **tipo** e o **produto** e, se tiver,
+2. Escreva a **descrição** (até 4.000 caracteres), escolha o **tipo**, informe o **nome do
+   produto** (a tela lembra o último usado) e, se tiver,
    cole o **contexto** (regras conhecidas, telas, links, protótipo em texto; até 8.000).
    Não cole dados pessoais reais: o texto vai para um provedor de IA.
 3. Clique em **Gerar issue**. A tela mostra o que a IA está escrevendo; passados 60 s aparece
@@ -72,6 +73,10 @@ Sem pelo menos um usuário em `USUARIOS_PERMITIDOS`, ninguém consegue entrar.
 | `npm test` | Vitest do servidor: schema, Markdown, prompt, exemplos, rotas, login, limite, refinar, custo |
 | `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar e chave fora do navegador |
 | `npm run typecheck` | TypeScript do servidor e da tela |
+
+O CI (`.github/workflows/ci.yml`) roda tudo isso a cada PR e push na `main`. Ele também faz o
+`docker build`, sobe o container só com variáveis de ambiente e confere a saúde, a tela, o login,
+o 401 sem login e o 503 sem chave de API.
 
 O teste de ponta a ponta usa o app real com um provedor de IA **falso**
 (`server/test/e2e/servidor-e2e.ts`): não gasta tokens nem precisa de chave. Na primeira vez,
@@ -232,7 +237,6 @@ O tempo depende do modelo e do esforço. Modelos que raciocinam bastante podem p
 | `SESSAO_HORAS` | `12` | Duração da sessão. |
 | `CONFIAR_PROXY` | `false` | `true` atrás de proxy reverso com HTTPS. |
 | `PRECO_POR_MTOK` | (vazio) | `entrada,saida,cacheLeitura,cacheEscrita` em US$/MTok, para o custo no log. |
-| `PRODUTOS` | (vazio) | Lista de produtos da tela; "Outro" é sempre incluído. |
 | `PORTA` | `3000` | Porta HTTP. |
 | `REGISTRAR_DESCRICAO` | `false` | Registrar o texto da descrição nos logs (LGPD). |
 

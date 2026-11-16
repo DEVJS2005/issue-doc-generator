@@ -43,7 +43,6 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
 
   app.get("/api/opcoes", async () => ({
     tipos: TIPOS_ISSUE,
-    produtos: [...config.produtos, "Outro"],
     limites: { descricao: LIMITE_DESCRICAO, contexto: LIMITE_CONTEXTO, ajuste: LIMITE_AJUSTE },
   }));
 

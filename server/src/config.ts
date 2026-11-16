@@ -32,7 +32,6 @@ const esquema = z.object({
   TEMPO_LIMITE_SEGUNDOS: z.coerce.number().int().positive().default(300),
   LIMITE_POR_HORA: z.coerce.number().int().positive().default(30),
   USUARIOS_PERMITIDOS: z.string().default(""),
-  PRODUTOS: z.string().default(""),
   PORTA: z.coerce.number().int().positive().default(3000),
   REGISTRAR_DESCRICAO: booleano("false"),
   SEGREDO_SESSAO: z.string().default(""),
@@ -54,7 +53,6 @@ export type Config = {
   tempoLimiteMs: number;
   limitePorHora: number;
   usuariosPermitidos: string[];
-  produtos: string[];
   porta: number;
   registrarDescricao: boolean;
   segredoSessao: string;
@@ -85,7 +83,6 @@ export function carregarConfig(env: NodeJS.ProcessEnv = process.env): Config {
     tempoLimiteMs: e.TEMPO_LIMITE_SEGUNDOS * 1000,
     limitePorHora: e.LIMITE_POR_HORA,
     usuariosPermitidos: lista(e.USUARIOS_PERMITIDOS),
-    produtos: lista(e.PRODUTOS),
     porta: e.PORTA,
     registrarDescricao: e.REGISTRAR_DESCRICAO,
     segredoSessao: e.SEGREDO_SESSAO,

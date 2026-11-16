@@ -42,7 +42,6 @@ const config = carregarConfig({
   PROVEDOR: "anthropic",
   ANTHROPIC_API_KEY: CHAVE_FALSA,
   USUARIOS_PERMITIDOS: "qa@exemplo.dev:senha-de-teste",
-  PRODUTOS: "Loja Exemplo",
   SEGREDO_SESSAO: "segredo-e2e",
   LIMITE_POR_HORA: "100",
   PORTA: String(PORTA_E2E),

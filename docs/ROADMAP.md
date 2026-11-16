@@ -20,7 +20,7 @@ problemas apontados), Refinar (mudou só o pedido) e cache de prompt (2ª chamad
 
 | Pendência | Situação |
 |---|---|
-| `docker build` / `docker run` | **Não verificados**: não há Docker na máquina de desenvolvimento. O item 1 resolve. |
+| `docker build` / `docker run` | Verificados pelo CI (job "Imagem Docker sobe e responde") a cada PR e push na `main`. |
 | Custo real com a Claude | Só estimado (~US$ 0,20 na 1ª chamada, ~US$ 0,10 depois). A conta de teste estava sem crédito. |
 | Gemini sob alta demanda | Respostas 503 e gerações de 150 a 260 s. Já tem 3 tentativas automáticas; o item 5 acrescenta um modelo reserva. |
 | Limite de uso em memória | Zera no reinício e não é compartilhado entre instâncias. Rodar **uma instância só**. |
@@ -29,8 +29,8 @@ problemas apontados), Refinar (mudou só o pedido) e cache de prompt (2ª chamad
 
 | # | Item | Estimativa | Depende de |
 |---|---|---|---|
-| 1 | **CI no GitHub Actions**: `npm test`, `npm run test:e2e`, typecheck, `docker build`, subir o container e chamar `/api/saude` | ~40 min | — |
-| 2 | **Campo Produto vira só "Nome do produto"** (texto livre, sem lista; `PRODUTOS` deixa de ser usado) | ~15 min | — |
+| 1 | ✅ **CI no GitHub Actions** (`.github/workflows/ci.yml`): typecheck, `npm test`, `npm run test:e2e`, `docker build`, container com só variáveis de ambiente, `/api/saude`, tela, login, 401 e 503 | feito | — |
+| 2 | ✅ **Campo Produto vira só "Nome do produto"** (texto livre, a tela lembra o último usado; `PRODUTOS` saiu) | feito | — |
 | 3 | **Tela de administração** (provedor, modelo, esforço, limite por hora, tempo limite) | ~2 h | decisões abaixo |
 | 4 | Lista de modelos da chave, buscada na API do provedor | ~45 min | 3 |
 | 5 | Modelo reserva automático quando o principal der 503/sobrecarga | ~45 min | 3 |

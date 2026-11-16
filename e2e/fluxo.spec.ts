@@ -17,6 +17,7 @@ async function entrar(page: Page) {
 
 async function gerar(page: Page, descricao: string) {
   await page.getByLabel(/^Descrição/).fill(descricao);
+  await page.getByLabel("Nome do produto").fill("Loja Exemplo");
   await page.getByRole("button", { name: "Gerar issue" }).click();
 }
 
@@ -79,6 +80,18 @@ test("erro da IA aparece como mensagem amigável com Tentar de novo", async ({ p
   await expect(alerta).toContainText("O provedor de IA atingiu o limite de uso no momento.");
   await expect(alerta.getByRole("button", { name: "Tentar de novo" })).toBeVisible();
   await expect(page.locator("body")).not.toContainText(/Error:|at .*\.ts/);
+});
+
+test("Nome do produto é obrigatório e a tela lembra o último usado", async ({ page }) => {
+  await entrar(page);
+  await page.getByLabel(/^Descrição/).fill("Limitar cupons a 3 por pedido.");
+  await page.getByLabel("Nome do produto").fill("");
+  await expect(page.getByRole("button", { name: "Gerar issue" })).toBeDisabled();
+
+  await gerar(page, "Limitar cupons a 3 por pedido.");
+  await expect(page.getByRole("heading", { name: "Rascunho da issue" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Nome do produto")).toHaveValue("Loja Exemplo");
 });
 
 test("Cancelar interrompe a geração", async ({ page }) => {
