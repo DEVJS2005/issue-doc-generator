@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Base ISTQB (istqb-ai-ready)
+    url: https://github.com/DEVJS2005/istqb-ai-ready/issues
+    about: Problemas no conteúdo da base ISTQB vão no repositório dela.
