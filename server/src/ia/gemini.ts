@@ -26,7 +26,8 @@ const RECUSAS = new Set<string>([
 // Saída estruturada por responseJsonSchema. O cache do Gemini é implícito: prefixos repetidos
 // (o prompt de sistema fixo) aparecem em cachedContentTokenCount.
 export function criarProvedorGemini(o: OpcoesGemini): Provedor {
-  const ai = new GoogleGenAI({ apiKey: o.apiKey });
+  // Como nos outros SDKs (maxRetries: 2): até 3 tentativas em 408, 429 e 5xx, com espera crescente.
+  const ai = new GoogleGenAI({ apiKey: o.apiKey, httpOptions: { retryOptions: { attempts: 3 } } });
   const schema = schemaParaProvedor();
 
   return {

@@ -28,7 +28,8 @@ const esquema = z.object({
   ESFORCO: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
   FALLBACK_RECUSA: booleano("true"),
   MAX_TOKENS_SAIDA: z.coerce.number().int().positive().default(64000),
-  TEMPO_LIMITE_SEGUNDOS: z.coerce.number().int().positive().default(180),
+  // 300 s: modelos que raciocinam bastante levaram até ~260 s em entradas longas e no Refinar.
+  TEMPO_LIMITE_SEGUNDOS: z.coerce.number().int().positive().default(300),
   LIMITE_POR_HORA: z.coerce.number().int().positive().default(30),
   USUARIOS_PERMITIDOS: z.string().default(""),
   PRODUTOS: z.string().default(""),
