@@ -1,27 +1,39 @@
+import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
-import { criarAutenticadorEnv, type Autenticador } from "./auth/autenticador.js";
-import { Limitador } from "./auth/limite.js";
+import { Ajustes } from "./ajustes/ajustes.js";
+import { criarAutenticadorBanco, lerUsuariosDoEnv, type Autenticador } from "./auth/autenticador.js";
 import { criarSessoes } from "./auth/sessao.js";
+import { abrirBanco } from "./banco/banco.js";
+import { RepositorioConfiguracao } from "./banco/configuracao.js";
+import { RepositorioHistorico } from "./banco/historico.js";
+import { RepositorioUsuarios } from "./banco/usuarios.js";
 import type { Config } from "./config.js";
 import { criarProvedor } from "./ia/index.js";
 import type { Provedor } from "./ia/tipos.js";
 import { TIPOS_ISSUE } from "./issue/schema.js";
+import { registrarAdmin } from "./rotas/admin.js";
 import { registrarAuth } from "./rotas/auth.js";
 import { LIMITE_CONTEXTO, LIMITE_DESCRICAO, registrarRotaGerar } from "./rotas/gerar.js";
+import { registrarHistorico } from "./rotas/historico.js";
 import { LIMITE_AJUSTE, registrarRotaRefinar } from "./rotas/refinar.js";
 
 const pastaWebPadrao = fileURLToPath(new URL("../../web/dist", import.meta.url));
+const EXPURGO_A_CADA_MS = 6 * 3_600_000;
 
 export type OpcoesApp = {
   pastaWeb?: string;
-  /** Provedor de IA. Se omitido, vem do .env; null simula "não configurado". Usado nos testes. */
+  /** Provedor fixo (testes). Se omitido, é criado a partir da configuração em uso. */
   provedor?: Provedor | null;
-  /** Login. Se omitido, usa USUARIOS_PERMITIDOS do .env. */
+  /** Fábrica de provedores (testes da administração). */
+  fabricaProvedor?: (c: Config) => Provedor | null;
+  /** Login. Se omitido, usa os usuários do banco. */
   autenticador?: Autenticador;
+  /** Código fixo da configuração inicial (testes). Se omitido, é aleatório. */
+  codigoConfiguracao?: string;
 };
 
 export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
@@ -29,26 +41,82 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     logger: { level: process.env.NODE_ENV === "test" ? "silent" : "info" },
     trustProxy: config.confiarProxy,
   });
-  const provedor = opcoes.provedor === undefined ? criarProvedor(config) : opcoes.provedor;
-  const autenticador = opcoes.autenticador ?? criarAutenticadorEnv(config.usuariosPermitidos);
+
+  const banco = abrirBanco(config.arquivoBanco);
+  const usuarios = new RepositorioUsuarios(banco);
+  const historico = new RepositorioHistorico(banco);
+  const fixo = opcoes.provedor;
+  const fabrica = opcoes.fabricaProvedor ?? (fixo !== undefined ? () => fixo : criarProvedor);
+  const ajustes = new Ajustes(config, new RepositorioConfiguracao(banco), fabrica, (m) => app.log.warn(m));
+
+  // Banco novo: importa os usuários do formato antigo (USUARIOS_PERMITIDOS) uma vez, com o 1º
+  // como admin; sem eles, gera um código de uso único para criar o 1º admin pela tela.
+  const codigoConfiguracao: { atual: string | null } = { atual: null };
+  if (usuarios.contar() === 0) {
+    const antigos = lerUsuariosDoEnv(config.usuariosPermitidos);
+    antigos.forEach((u, i) => usuarios.criar(u.email, u.senha, i === 0, { validar: false }));
+    if (antigos.length) {
+      app.log.warn(
+        `Importados ${antigos.length} usuário(s) de USUARIOS_PERMITIDOS; ${antigos[0].email} virou admin. ` +
+          "Agora os usuários ficam no banco: pode tirar USUARIOS_PERMITIDOS do .env.",
+      );
+    } else {
+      codigoConfiguracao.atual = opcoes.codigoConfiguracao ?? randomBytes(18).toString("base64url");
+      app.log.warn(
+        `Nenhum usuário cadastrado. Para criar o primeiro administrador, abra: ` +
+          `http://localhost:${config.porta}/configurar?codigo=${codigoConfiguracao.atual} ` +
+          "(o link vale uma vez e muda a cada reinício até alguém usá-lo).",
+      );
+    }
+  }
+
   const sessoes = criarSessoes(config.segredoSessao, config.sessaoHoras);
   if (sessoes.segredoTemporario) {
     app.log.warn("SEGREDO_SESSAO vazio: usando um segredo temporário; as sessões caem quando o servidor reinicia.");
   }
+  if (!ajustes.provedor()) {
+    app.log.warn("Nenhum provedor de IA pronto: confira a chave no .env e o provedor e o modelo na administração.");
+  } else {
+    const c = ajustes.config();
+    app.log.info(`IA: provedor ${c.provedor}, modelo ${c.modelo}, esforço ${c.esforco}`);
+  }
 
-  app.get("/api/saude", async () => ({ ok: true, provedor: config.provedor, modelo: config.modelo }));
+  // Retenção do histórico (administração): apaga as issues antigas agora e a cada 6 horas.
+  const expurgar = () => {
+    const apagadas = historico.expurgar(ajustes.valores().retencaoDias);
+    if (apagadas) app.log.info({ evento: "expurgo", apagadas }, `histórico: ${apagadas} issue(s) antiga(s) apagada(s)`);
+  };
+  expurgar();
+  const timerExpurgo = setInterval(expurgar, EXPURGO_A_CADA_MS);
+  timerExpurgo.unref();
+  app.addHook("onClose", async () => {
+    clearInterval(timerExpurgo);
+    banco.close();
+  });
 
-  // Login primeiro: o hook dele bloqueia (401) as rotas da IA para quem não está logado.
-  registrarAuth(app, { autenticador, sessoes });
+  app.get("/api/saude", async () => {
+    const c = ajustes.config();
+    return { ok: true, provedor: c.provedor, modelo: c.modelo };
+  });
+
+  // Login primeiro: o hook dele bloqueia (401/403) as rotas protegidas.
+  registrarAuth(app, {
+    autenticador: opcoes.autenticador ?? criarAutenticadorBanco(usuarios),
+    sessoes,
+    usuarios,
+    codigoConfiguracao,
+  });
 
   app.get("/api/opcoes", async () => ({
     tipos: TIPOS_ISSUE,
     limites: { descricao: LIMITE_DESCRICAO, contexto: LIMITE_CONTEXTO, ajuste: LIMITE_AJUSTE },
   }));
 
-  const opcoesGeracao = { config, provedor, limiteUso: new Limitador(config.limitePorHora, 3_600_000) };
+  const opcoesGeracao = { config, ajustes, historico };
   registrarRotaGerar(app, opcoesGeracao);
   registrarRotaRefinar(app, opcoesGeracao);
+  registrarHistorico(app, { historico });
+  registrarAdmin(app, { ajustes, usuarios });
 
   // Em produção o servidor também entrega o build do web/.
   const pastaWeb = opcoes.pastaWeb ?? pastaWebPadrao;

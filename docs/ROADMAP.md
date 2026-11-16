@@ -1,17 +1,21 @@
 # Roadmap
 
-Atualizado em 15/11/2026. As estimativas são de tempo de implementação com testes, sem contar a
+Atualizado em 16/11/2026. As estimativas são de tempo de implementação com testes, sem contar a
 revisão.
 
 ## Onde estamos
 
-Etapas 1 a 7 da especificação entregues na `main` (PRs #1 e #2) e correções no PR #3:
+Na `main` (PRs #1 a #3) e nos PRs #4 e #5:
 
 - geração e Refinar com streaming, cache de prompt, erros amigáveis e 4 provedores
   (Claude, OpenAI, compatível com OpenAI, Gemini);
-- tela com login, destaques, Copiar e Baixar;
-- login por adaptador, limite por hora, custo estimado no log;
-- 97 testes Vitest e 7 testes Playwright (com IA falsa).
+- tela com login, destaques, Copiar e Baixar, **histórico** e **administração**;
+- banco SQLite: usuários e admins (senha com hash scrypt), configuração da IA com registro de
+  alterações, histórico de issues com versões e retenção;
+- modelo reserva automático no 503 e lista de modelos da chave;
+- CI no GitHub Actions: typecheck, Vitest, Playwright e Docker (build, container, volume, link do
+  1º admin);
+- 114 testes Vitest e 11 testes Playwright (com IA falsa).
 
 Testado com IA real (Gemini `gemini-3.8-flash`): geração de 3 linhas, exemplo de Marcas (5/5
 problemas apontados), Refinar (mudou só o pedido) e cache de prompt (2ª chamada leu 20.931 tokens).
@@ -20,70 +24,60 @@ problemas apontados), Refinar (mudou só o pedido) e cache de prompt (2ª chamad
 
 | Pendência | Situação |
 |---|---|
-| `docker build` / `docker run` | Verificados pelo CI (job "Imagem Docker sobe e responde") a cada PR e push na `main`. |
 | Custo real com a Claude | Só estimado (~US$ 0,20 na 1ª chamada, ~US$ 0,10 depois). A conta de teste estava sem crédito. |
-| Gemini sob alta demanda | Respostas 503 e gerações de 150 a 260 s. Já tem 3 tentativas automáticas; o item 5 acrescenta um modelo reserva. |
-| Limite de uso em memória | Zera no reinício e não é compartilhado entre instâncias. Rodar **uma instância só**. |
+| Uma instância só | O banco é um arquivo SQLite local e o limite por hora fica em memória. Para mais de uma instância, ver item 9. |
+| Aviso do `node:sqlite` | O Node imprime `ExperimentalWarning` ao subir. É só um aviso. |
 
-## Próximos itens
+## Itens
 
-| # | Item | Estimativa | Depende de |
-|---|---|---|---|
-| 1 | ✅ **CI no GitHub Actions** (`.github/workflows/ci.yml`): typecheck, `npm test`, `npm run test:e2e`, `docker build`, container com só variáveis de ambiente, `/api/saude`, tela, login, 401 e 503 | feito | — |
-| 2 | ✅ **Campo Produto vira só "Nome do produto"** (texto livre, a tela lembra o último usado; `PRODUTOS` saiu) | feito | — |
-| 3 | **Tela de administração** (provedor, modelo, esforço, limite por hora, tempo limite) | ~2 h | decisões abaixo |
-| 4 | Lista de modelos da chave, buscada na API do provedor | ~45 min | 3 |
-| 5 | Modelo reserva automático quando o principal der 503/sobrecarga | ~45 min | 3 |
-| 6 | Painel de uso (gerações, tokens, custo, erros recentes) | 1h30 a 2h | 3 |
-| 7 | Medir o custo real com a Claude e atualizar o README | ~15 min | crédito na conta |
-| 8 | Dividir o JavaScript da tela (aviso de 579 KB) | ~20 min | — |
-| 9 | Limite de uso compartilhado (Redis), só se houver mais de uma instância | ~1 h | decisão do DevOps |
-
-Ordem sugerida para amanhã: **1 → 2 → 3 → 4 → 5**. O 6 em diante, conforme a prioridade.
-
-### Tela de administração: proposta
-
-- **Muda pela tela:** provedor, modelo, esforço, limite por hora e tempo limite. Vale para todos os
-  usuários e sem reiniciar o servidor.
-- **Fica no `.env`:** chaves de API (cadastre uma vez as de todos os provedores que quiser usar),
-  porta, `SEGREDO_SESSAO`, usuários.
-- A tela mostra quais provedores têm chave ("configurada" ou "sem chave") e só deixa escolher esses.
-
-**Decisões em aberto** (propostas; confirmar antes de começar):
-
-1. Quem administra: uma variável `ADMINS` no `.env` com os e-mails (proposta) ou todo usuário logado.
-2. Onde gravar: `data/configuracao.json`, que sobrescreve o `.env` (proposta; no Docker vira um
-   volume) ou SQLite.
-3. Itens 4, 5 e 6 entram junto com o 3 ou depois.
+| # | Item | Estado / estimativa |
+|---|---|---|
+| 1 | CI no GitHub Actions (testes, e2e, Docker) | ✅ PR #4 |
+| 2 | Campo "Nome do produto" (texto livre, lembrado no navegador) | ✅ PR #4 |
+| 3 | Tela de administração: provedor, modelo, esforço, limites, retenção, sem reiniciar | ✅ PR #5 |
+| 3b | Banco SQLite: usuários e admins, histórico de issues, 1º admin por link no log | ✅ PR #5 |
+| 4 | Lista de modelos da chave | ✅ PR #5 |
+| 5 | Modelo reserva no 503/limite de taxa | ✅ PR #5 |
+| 6 | Painel de uso (gerações, tokens, custo e erros por período e por pessoa) | 1h30 a 2h. O banco já tem a base: falta gravar tokens e custo por chamada. |
+| 7 | Medir o custo real com a Claude e atualizar o README | ~15 min, com crédito na conta |
+| 8 | Dividir o JavaScript da tela (aviso de 579 KB) | ~20 min |
+| 9 | Mais de uma instância: Postgres no lugar do SQLite e limite de uso compartilhado (Redis) | ~3 h, só se o DevOps precisar |
+| 10 | Login por SSO/OAuth da empresa (o adaptador `Autenticador` já está pronto) | ~2 h, depende do provedor de identidade |
+| 11 | Comparar versões de uma issue no histórico (o que cada refinamento mudou) | ~1 h |
 
 ## Para o DevOps
 
 Detalhes em "Subir num servidor", no README. Em resumo:
 
-- Imagem: `docker build -t issue-doc-generator .` e `docker run --env-file .env -p 3000:3000`.
-  Health check: `GET /api/saude`.
-- `.env` mínimo:
-  - `PROVEDOR`, `MODELO` e a chave do provedor;
-  - `USUARIOS_PERMITIDOS`;
-  - `SEGREDO_SESSAO` (longo e aleatório);
-  - `TEMPO_LIMITE_SEGUNDOS=300`.
-- Proxy com HTTPS:
+- **Imagem:** `docker build -t issue-doc-generator .` e
+  `docker run --env-file .env -p 3000:3000 -v issue-doc-generator-dados:/app/data issue-doc-generator`.
+  `HEALTHCHECK` embutido em `GET /api/saude`.
+- **`.env` mínimo:** a chave de API do provedor e `SEGREDO_SESSAO` (longo e aleatório). Nada de
+  usuários nem de modelo no `.env`.
+- **Primeiro acesso:** `docker logs <container> | grep configurar` mostra o link de uso único para
+  criar o primeiro admin. Depois disso, tudo pela aba Administração.
+- **Volume `/app/data`:** é o banco (usuários, configuração, histórico). Faça backup dele; para um
+  backup consistente com o servidor rodando, use `sqlite3 ... ".backup copia.db"`.
+- **Proxy com HTTPS:**
   - `CONFIAR_PROXY=true`;
   - `proxy_buffering off` na rota da API, porque o streaming SSE precisa disso;
-  - timeout de leitura acima de `TEMPO_LIMITE_SEGUNDOS`.
-- Uma instância só (o limite de uso é em memória).
-- Logs em JSON no stdout, sem o texto das descrições (LGPD).
-- Depois do item 3: um volume persistente para `data/`.
+  - timeout de leitura acima do tempo limite da Administração (padrão de 300 s).
+- **Uma instância só.**
+- **Logs:** JSON no stdout, sem o texto das descrições (LGPD). O histórico guarda as issues no banco
+  e as apaga depois da retenção configurada (padrão de 180 dias).
 
-## Retorno dos testes de 15/11
+## Histórico de decisões
 
-- Refinar interrompido por **tempo esgotado** aos 180 s (Gemini lento, ajuste com ~1.900
-  caracteres). Corrigido: o padrão passou a 300 s. **Quem copiou o `.env.example` antigo precisa
-  trocar `TEMPO_LIMITE_SEGUNDOS=180` para `300` no próprio `.env`.**
-- `npm run dev` não subia a tela no Windows (o `&` do `cmd` roda em sequência). Corrigido com
-  `concurrently`: servidor e tela sobem juntos.
-- "Campo Produto não é necessário, só o nome do produto": vira o item 2.
-- O Refinar funciona bem para responder às dúvidas do PO em bloco (perguntas e respostas coladas
-  no campo de ajuste). Quando a resposta traz um requisito novo (ex.: "quando a alocação do
-  servidor mudar, mudar automaticamente o perfil"), a IA o incorpora à issue. Vale conferir se
-  vira regra, critério e caso de teste.
+- **15/11:**
+  - gerador genérico, sem marca de empresa;
+  - base ISTQB pelo submódulo istqb-ai-ready;
+  - 4 provedores pelos SDKs oficiais.
+- **15/11, retorno dos testes:**
+  - tempo limite padrão passou para 300 s;
+  - `npm run dev` passou a usar `concurrently` (no Windows a tela não subia);
+  - Produto virou texto livre.
+- **16/11:**
+  - tudo que não é segredo nem infraestrutura saiu do `.env` e foi para o banco: configuração da
+    IA, usuários e admins, histórico;
+  - o 1º admin é criado por um link de uso único no log;
+  - histórico: cada um vê as suas issues, o admin vê todas, com retenção configurável.

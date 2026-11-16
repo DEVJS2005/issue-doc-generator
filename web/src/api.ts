@@ -12,7 +12,7 @@ export class ErroApi extends Error {
   }
 }
 
-export type Usuario = { email: string };
+export type Usuario = { email: string; admin: boolean };
 export type Opcoes = {
   tipos: string[];
   limites: { descricao: number; contexto: number; ajuste: number };
@@ -27,7 +27,37 @@ export type Resultado = {
   modelo: string;
   usouFallback: boolean;
   duracaoMs: number;
+  historicoId: number | null;
 };
+
+export type ResumoIssue = {
+  id: number;
+  usuario: string;
+  titulo: string;
+  tipo: string;
+  produto: string;
+  criadaEm: number;
+  atualizadaEm: number;
+  versoes: number;
+  modelo: string;
+};
+export type IssueGuardada = ResumoIssue & { entrada: Entrada; issue: unknown; markdown: string };
+export type Versao = { numero: number; quando: number; ajuste: string | null; modelo: string };
+
+export type NomeProvedor = "anthropic" | "openai" | "openai_compativel" | "gemini";
+export type ValoresAjustes = {
+  provedor: NomeProvedor;
+  modelo: string;
+  modeloReserva: string;
+  esforco: "low" | "medium" | "high" | "xhigh" | "max";
+  limitePorHora: number;
+  tempoLimiteSegundos: number;
+  retencaoDias: number;
+};
+export type InfoProvedor = { nome: NomeProvedor; rotulo: string; disponivel: boolean; motivo: string | null; modeloPadrao: string };
+export type Alteracao = { quando: number; quem: string; chave: string; de: unknown; para: unknown };
+export type EstadoAdmin = { valores: ValoresAjustes; provedores: InfoProvedor[]; alteracoes: Alteracao[] };
+export type UsuarioAdmin = { id: number; email: string; admin: boolean; ativo: boolean; criadoEm: number; atualizadoEm: number };
 
 const ERRO_GENERICO: ErroTela = { codigo: "desconhecido", mensagem: "Algo deu errado. Tente de novo.", podeTentarDeNovo: true };
 
@@ -46,11 +76,44 @@ function postar(url: string, corpo: unknown, signal?: AbortSignal) {
   });
 }
 
+function chamar<T>(metodo: "GET" | "PUT" | "PATCH" | "DELETE", url: string, corpo?: unknown) {
+  return fetch(url, {
+    method: metodo,
+    headers: corpo === undefined ? undefined : { "content-type": "application/json" },
+    body: corpo === undefined ? undefined : JSON.stringify(corpo),
+  }).then((r) => lerJson<T>(r));
+}
+
+/** Sessão: 401 vem com `precisaConfigurar` quando o banco ainda não tem nenhum usuário. */
+export async function lerSessao(): Promise<{ usuario: Usuario | null; precisaConfigurar: boolean }> {
+  const r = await fetch("/api/sessao");
+  const corpo = await r.json().catch(() => ({}));
+  return r.ok ? { usuario: corpo.usuario, precisaConfigurar: false } : { usuario: null, precisaConfigurar: Boolean(corpo.precisaConfigurar) };
+}
+
 export const api = {
-  sessao: () => fetch("/api/sessao").then((r) => lerJson<{ usuario: Usuario }>(r)),
   entrar: (email: string, senha: string) => postar("/api/login", { email, senha }).then((r) => lerJson<{ usuario: Usuario }>(r)),
+  configurar: (codigo: string, email: string, senha: string) =>
+    postar("/api/configurar", { codigo, email, senha }).then((r) => lerJson<{ usuario: Usuario }>(r)),
   sair: () => postar("/api/sair", {}).then((r) => lerJson<{ ok: true }>(r)),
   opcoes: () => fetch("/api/opcoes").then((r) => lerJson<Opcoes>(r)),
+
+  historico: (todos: boolean, usuario = "") =>
+    chamar<{ itens: ResumoIssue[]; podeVerTodos: boolean }>(
+      "GET",
+      `/api/historico${todos ? `?todos=1${usuario ? `&usuario=${encodeURIComponent(usuario)}` : ""}` : ""}`,
+    ),
+  issue: (id: number) => chamar<{ item: IssueGuardada; versoes: Versao[] }>("GET", `/api/historico/${id}`),
+  apagarIssue: (id: number) => chamar<{ ok: true }>("DELETE", `/api/historico/${id}`),
+
+  ajustes: () => chamar<EstadoAdmin>("GET", "/api/admin/ajustes"),
+  salvarAjustes: (valores: Partial<ValoresAjustes>) => chamar<EstadoAdmin>("PUT", "/api/admin/ajustes", valores),
+  modelos: (provedor: NomeProvedor) => chamar<{ modelos: string[] }>("GET", `/api/admin/modelos?provedor=${provedor}`),
+  usuarios: () => chamar<{ usuarios: UsuarioAdmin[] }>("GET", "/api/admin/usuarios"),
+  criarUsuario: (email: string, senha: string, admin: boolean) =>
+    postar("/api/admin/usuarios", { email, senha, admin }).then((r) => lerJson<{ usuario: UsuarioAdmin }>(r)),
+  alterarUsuario: (id: number, mudancas: { admin?: boolean; ativo?: boolean; senha?: string }) =>
+    chamar<{ usuario: UsuarioAdmin }>("PATCH", `/api/admin/usuarios/${id}`, mudancas),
 };
 
 /** Lê um bloco SSE ("event: x\ndata: {...}"). Comentários (": ping") são ignorados. */

@@ -5,6 +5,8 @@
 !.env.example
 logs
 *.log
+data
+server/data
 .git
 docs/istqb-ai-ready/.git
 coverage

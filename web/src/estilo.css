@@ -302,6 +302,132 @@ mark.lacuna {
   font-style: italic;
 }
 
+.abas {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--borda);
+  margin: -8px 0 20px;
+  overflow-x: auto;
+}
+
+.abas button {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--suave);
+  padding: 8px 14px;
+}
+
+.abas button[aria-current="page"] {
+  color: var(--texto);
+  border-bottom-color: var(--destaque);
+}
+
+.secao {
+  margin-top: 24px;
+}
+
+.tabela-rolagem {
+  overflow-x: auto;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.93rem;
+}
+
+.tabela th,
+.tabela td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--borda);
+  vertical-align: top;
+}
+
+.tabela th {
+  color: var(--suave);
+  font-weight: 600;
+}
+
+.tabela tr.inativo td {
+  color: var(--suave);
+}
+
+.acoes-linha {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.acoes-linha button + button {
+  margin-left: 4px;
+}
+
+button.pequeno {
+  padding: 4px 10px;
+  font-size: 0.88rem;
+}
+
+.opcao {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  margin: 0;
+}
+
+.opcao input {
+  width: auto;
+}
+
+.filtros {
+  align-items: center;
+}
+
+.filtros input[type="text"],
+.filtros input:not([type]) {
+  width: 220px;
+}
+
+.novo-usuario {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+
+.novo-usuario label {
+  margin: 0;
+}
+
+.alteracoes-lista {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.92rem;
+}
+
+.sucesso {
+  background: var(--aviso-fundo);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--texto);
+}
+
+.caixa {
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
 .refinar {
   margin-top: 24px;
   border-top: 1px solid var(--borda);

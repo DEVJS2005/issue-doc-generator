@@ -63,7 +63,7 @@ jobs:
 
       - name: docker run (só com variáveis de ambiente, sem .env no repositório)
         run: |
-          docker run -d --name idg -p 3000:3000 \
+          docker run -d --name idg -p 3000:3000 -v idg-dados:/app/data \
             -e PROVEDOR=anthropic \
             -e USUARIOS_PERMITIDOS="$USUARIO_CI:$SENHA_CI" \
             -e SEGREDO_SESSAO=segredo-de-ci \
@@ -94,6 +94,25 @@ jobs:
           test "$status" = "503"
           grep -q '"nao_configurado"' resposta.json
 
+      - name: O banco (volume) sobrevive a um reinício
+        run: |
+          set -e
+          docker exec idg ls -l /app/data/issue-doc-generator.db
+          docker rm -f idg
+          # Sem USUARIOS_PERMITIDOS: o usuário tem de vir do banco no volume.
+          docker run -d --name idg -p 3000:3000 -v idg-dados:/app/data -e SEGREDO_SESSAO=segredo-de-ci issue-doc-generator:ci
+          for i in $(seq 1 30); do curl -fsS http://localhost:3000/api/saude >/dev/null && break; sleep 1; done
+          curl -fsS -H 'content-type: application/json' \
+            -d "{\"email\":\"$USUARIO_CI\",\"senha\":\"$SENHA_CI\"}" http://localhost:3000/api/login
+
+      - name: Banco vazio mostra o link do primeiro admin no log
+        run: |
+          set -e
+          docker run -d --name idg-vazio -p 3001:3000 issue-doc-generator:ci
+          for i in $(seq 1 30); do curl -fsS http://localhost:3001/api/saude >/dev/null && break; sleep 1; done
+          docker logs idg-vazio 2>&1 | grep -q "/configurar?codigo="
+          curl -s http://localhost:3001/api/sessao | grep -q '"precisaConfigurar":true'
+
       - name: Logs do container
         if: always()
-        run: docker logs idg
+        run: docker logs idg; docker logs idg-vazio || true

@@ -25,14 +25,14 @@ describe("configuração", () => {
     expect(() => carregarConfig({ ESFORCO: "turbo" })).toThrow();
   });
 
-  it("exige MODELO para provedores sem modelo padrão", () => {
-    expect(() => carregarConfig({ PROVEDOR: "openai" })).toThrow(/MODELO é obrigatório/);
-    expect(() => carregarConfig({ PROVEDOR: "gemini" })).toThrow(/MODELO é obrigatório/);
+  it("só a Claude tem modelo padrão; nos outros o modelo fica vazio até a administração definir", () => {
+    expect(carregarConfig({ PROVEDOR: "openai" }).modelo).toBe("");
+    expect(carregarConfig({ PROVEDOR: "gemini" }).modelo).toBe("");
     expect(carregarConfig({ PROVEDOR: "openai", MODELO: "modelo-x" }).modelo).toBe("modelo-x");
   });
 
-  it("exige OPENAI_BASE_URL no provedor compatível", () => {
-    expect(() => carregarConfig({ PROVEDOR: "openai_compativel", MODELO: "llama" })).toThrow(/OPENAI_BASE_URL/);
+  it("usa banco em memória nos testes", () => {
+    expect(carregarConfig({}).arquivoBanco).toBe(":memory:");
   });
 
   it("recusa provedor desconhecido", () => {

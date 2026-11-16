@@ -3,6 +3,7 @@ import { z } from "zod";
 import { IssueSchema } from "../issue/schema.js";
 import { formatarRefinamento } from "../prompt/entrada.js";
 import { CorpoGerar, responderComGeracao, type OpcoesRotaGerar } from "./gerar.js";
+import { podeVer } from "./historico.js";
 
 export const LIMITE_AJUSTE = 2000;
 
@@ -14,6 +15,8 @@ export const CorpoRefinar = z.object({
     .trim()
     .min(1, "Escreva o ajuste que você quer.")
     .max(LIMITE_AJUSTE, `O ajuste pode ter até ${LIMITE_AJUSTE} caracteres.`),
+  /** Issue do histórico que está sendo refinada; sem ele, o resultado vira uma issue nova. */
+  historicoId: z.number().int().positive().nullable().optional(),
 });
 
 /** POST /api/refinar: devolve a issue inteira com só o ajuste aplicado (e a lista do que mudou). */
@@ -26,10 +29,13 @@ export function registrarRotaRefinar(app: FastifyInstance, o: OpcoesRotaGerar) {
       });
     }
     const { entrada, issue, ajuste } = corpo.data;
+    // Só refina no histórico uma issue que a pessoa pode ver; senão, guarda como nova.
+    const historicoId = corpo.data.historicoId && podeVer(request, o.historico.dono(corpo.data.historicoId)) ? corpo.data.historicoId : null;
     const logExtra: Record<string, unknown> = {
       tipo: entrada.tipo,
       produto: entrada.produto,
       caracteresAjuste: ajuste.length,
+      historicoId,
       ...(o.config.registrarDescricao ? { ajuste } : {}),
     };
     await responderComGeracao(app, reply, {
@@ -37,7 +43,8 @@ export function registrarRotaRefinar(app: FastifyInstance, o: OpcoesRotaGerar) {
       usuario: formatarRefinamento(entrada, issue, ajuste),
       tipoPedido: "refinar",
       logExtra,
-      issueAnterior: issue,
+      entrada,
+      refinamento: { issueAnterior: issue, ajuste, historicoId },
     });
   });
 }

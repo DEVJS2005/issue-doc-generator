@@ -7,9 +7,14 @@ export class Limitador {
   private readonly registros = new Map<string, number[]>();
 
   constructor(
-    private readonly maximo: number,
+    private maximo: number,
     private readonly janelaMs: number,
   ) {}
+
+  /** Muda o máximo sem perder as contagens (ex.: limite por hora alterado na administração). */
+  definirMaximo(maximo: number) {
+    this.maximo = maximo;
+  }
 
   /** Registra uma tentativa se ainda houver cota. */
   tentar(chave: string, agora = Date.now()): { ok: true; restam: number } | { ok: false; liberaEm: number } {

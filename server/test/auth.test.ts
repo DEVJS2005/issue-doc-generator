@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { montarApp } from "../src/app.js";
-import { criarAutenticadorEnv } from "../src/auth/autenticador.js";
+import { lerUsuariosDoEnv } from "../src/auth/autenticador.js";
 import { Limitador } from "../src/auth/limite.js";
 import { criarSessoes, lerCookie } from "../src/auth/sessao.js";
 import { carregarConfig } from "../src/config.js";
@@ -47,7 +47,7 @@ describe("login", () => {
     const a = await app();
     const r = await a.inject({ method: "POST", url: "/api/login", payload: { email: "QA@Exemplo.dev", senha: SENHA_TESTE } });
     expect(r.statusCode).toBe(200);
-    expect(r.json()).toEqual({ usuario: { email: EMAIL_TESTE } });
+    expect(r.json()).toEqual({ usuario: { email: EMAIL_TESTE, admin: true } });
     const cookie = String(r.headers["set-cookie"]);
     expect(cookie).toContain("HttpOnly");
     expect(cookie).toContain("SameSite=Strict");
@@ -78,7 +78,7 @@ describe("login", () => {
   it("informa a sessão e sai", async () => {
     const a = await app();
     const cookie = await entrar(a);
-    expect((await a.inject({ method: "GET", url: "/api/sessao", headers: { cookie } })).json()).toEqual({ usuario: { email: EMAIL_TESTE } });
+    expect((await a.inject({ method: "GET", url: "/api/sessao", headers: { cookie } })).json()).toEqual({ usuario: { email: EMAIL_TESTE, admin: true } });
     const saida = await a.inject({ method: "POST", url: "/api/sair", headers: { cookie } });
     expect(String(saida.headers["set-cookie"])).toContain("Max-Age=0");
     expect((await a.inject({ method: "GET", url: "/api/sessao" })).statusCode).toBe(401);
@@ -115,11 +115,17 @@ describe("sessão assinada", () => {
   });
 });
 
-describe("autenticador do .env", () => {
-  it("aceita senha com ':' e ignora entradas malformadas", async () => {
-    const a = criarAutenticadorEnv(["ana@x.dev:abc:123", "semsenha", ":sem-email", "bia@x.dev:"]);
-    expect(await a.autenticar("ana@x.dev", "abc:123")).toEqual({ email: "ana@x.dev" });
-    expect(await a.autenticar("bia@x.dev", "")).toBeNull();
+describe("usuários do formato antigo (USUARIOS_PERMITIDOS)", () => {
+  it("aceita senha com ':' e ignora entradas malformadas", () => {
+    expect(lerUsuariosDoEnv(["Ana@x.dev:abc:123", "semsenha", ":sem-email", "bia@x.dev:"])).toEqual([{ email: "ana@x.dev", senha: "abc:123" }]);
+  });
+
+  it("são importados uma vez no banco vazio, com o primeiro como admin", async () => {
+    const a = await app({ USUARIOS_PERMITIDOS: `${USUARIO_TESTE},ana@exemplo.dev:outra-senha` });
+    const cookie = await entrar(a);
+    expect((await a.inject({ method: "GET", url: "/api/sessao", headers: { cookie } })).json().usuario).toEqual({ email: EMAIL_TESTE, admin: true });
+    const ana = await entrar(a, "ana@exemplo.dev", "outra-senha");
+    expect((await a.inject({ method: "GET", url: "/api/sessao", headers: { cookie: ana } })).json().usuario).toEqual({ email: "ana@exemplo.dev", admin: false });
   });
 });
 
