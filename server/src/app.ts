@@ -6,6 +6,8 @@ import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import { Ajustes } from "./ajustes/ajustes.js";
 import { criarAutenticadorBanco, lerUsuariosDoEnv, type Autenticador } from "./auth/autenticador.js";
+import { criarProvedorOidc, type ProvedorSso } from "./auth/oidc.js";
+import { registrarSso } from "./rotas/sso.js";
 import { criarSessoes } from "./auth/sessao.js";
 import { abrirBanco } from "./banco/banco.js";
 import { RepositorioConfiguracao } from "./banco/configuracao.js";
@@ -34,6 +36,8 @@ export type OpcoesApp = {
   autenticador?: Autenticador;
   /** Código fixo da configuração inicial (testes). Se omitido, é aleatório. */
   codigoConfiguracao?: string;
+  /** Provedor de login único (testes). Se omitido, vem de OIDC_* no .env. */
+  sso?: ProvedorSso | null;
 };
 
 export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
@@ -99,12 +103,22 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     return { ok: true, provedor: c.provedor, modelo: c.modelo };
   });
 
+  const sso = opcoes.sso !== undefined ? opcoes.sso : config.oidc ? criarProvedorOidc(config.oidc) : null;
+  if (sso) app.log.info(`Login único (OIDC) ligado: ${config.oidc?.emissor ?? "provedor de teste"}`);
+
   // Login primeiro: o hook dele bloqueia (401/403) as rotas protegidas.
   registrarAuth(app, {
     autenticador: opcoes.autenticador ?? criarAutenticadorBanco(usuarios),
     sessoes,
     usuarios,
     codigoConfiguracao,
+    rotuloSso: sso?.rotulo ?? null,
+  });
+  registrarSso(app, {
+    sso,
+    sessoes,
+    usuarios,
+    urlRetorno: config.oidc?.urlRetorno ?? `http://localhost:${config.porta}/api/sso/retorno`,
   });
 
   app.get("/api/opcoes", async () => ({

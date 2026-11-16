@@ -23,6 +23,14 @@ export function registrarHistorico(app: FastifyInstance, o: { historico: Reposit
     return { item: o.historico.obter(id), versoes: o.historico.versoes(id) };
   });
 
+  app.get("/api/historico/:id/versoes/:numero", async (request, reply) => {
+    const p = request.params as { id: string; numero: string };
+    const id = Number(p.id);
+    if (!Number.isInteger(id) || !podeVer(request, o.historico.dono(id))) return reply.code(404).send(NAO_ENCONTRADA);
+    const versao = o.historico.versao(id, Number(p.numero));
+    return versao ? { versao } : reply.code(404).send(NAO_ENCONTRADA);
+  });
+
   app.delete("/api/historico/:id", async (request, reply) => {
     const id = Number((request.params as { id: string }).id);
     if (!Number.isInteger(id) || !podeVer(request, o.historico.dono(id))) return reply.code(404).send(NAO_ENCONTRADA);

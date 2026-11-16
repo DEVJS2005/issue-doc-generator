@@ -28,6 +28,7 @@ Próximos passos, pendências conhecidas e checklist para o DevOps: [docs/ROADMA
 6. **Copiar Markdown** ou **Baixar .md** entregam exatamente o texto mostrado.
 7. **Histórico**: toda issue gerada fica guardada, com cada refinamento como uma nova versão.
    Cada pessoa vê, reabre (para continuar refinando) e apaga as suas; o admin vê as de todos.
+   **Comparar versões**, abaixo da issue, mostra linha a linha o que cada refinamento mudou.
 8. **Administração** (só admins):
    - provedor, modelo, modelo reserva e esforço; o botão **Buscar modelos da chave** lista os
      modelos que a chave pode usar;
@@ -151,9 +152,8 @@ de login ficam na memória do processo (reiniciar zera as contagens).
 - **Senhas:** guardadas só como hash scrypt com sal. Mínimo de 8 caracteres.
 - **Primeiro admin:** link de uso único no log (veja "Rodar local"). Nunca fica sem administrador
   ativo: o servidor recusa tirar o último.
-- **Login** por adaptador (`server/src/auth/autenticador.ts`). Para SSO/OAuth, implemente a
-  interface `Autenticador`, ou troque a rota de login por um callback OAuth que crie a mesma
-  sessão; o perfil de admin continua vindo do banco.
+- **Login** por e-mail e senha (`server/src/auth/autenticador.ts`) e, opcionalmente, por **SSO**
+  (veja abaixo). O perfil de admin vem sempre do banco.
 - **Sessão:** cookie `HttpOnly` e `SameSite=Strict` assinado com HMAC (`SEGREDO_SESSAO`), válido
   por `SESSAO_HORAS`. O usuário é relido do banco a cada pedido: desativar alguém ou tirar o
   admin vale na hora.
@@ -169,6 +169,32 @@ de login ficam na memória do processo (reiniciar zera as contagens).
 - Login: até 10 tentativas por IP a cada 15 minutos.
 - O log de cada chamada registra usuário, data, provedor, modelo, tokens (entrada, saída, cache
   lido e gravado), custo estimado e duração.
+
+### Login único (SSO)
+
+OpenID Connect, que funciona com Microsoft Entra ID, Google Workspace, Keycloak, Okta e outros.
+Usa Authorization Code com PKCE (S256), `state` e `nonce`, pela biblioteca `openid-client`.
+
+1. No provedor de identidade, crie uma aplicação "web" e cadastre a URL de retorno
+   `https://<seu-domínio>/api/sso/retorno`.
+2. No `.env`, preencha `OIDC_EMISSOR`, `OIDC_CLIENTE_ID`, `OIDC_CLIENTE_SEGREDO` e
+   `OIDC_URL_RETORNO`, igual à URL do passo 1. Opcionalmente, `OIDC_ROTULO` (texto do botão).
+3. Reinicie o servidor. A tela de login ganha o botão de SSO, e o login por senha continua valendo.
+
+Quem pode entrar:
+
+- e-mails verificados de usuários já cadastrados e ativos no banco;
+- se `OIDC_DOMINIOS_AUTOCADASTRO` tiver domínios (ex.: `empresa.com.br`), e-mails verificados desses
+  domínios viram usuário comum no primeiro login. Tornar alguém admin continua sendo na
+  Administração.
+
+Se algo falhar (estado vencido, e-mail sem cadastro, usuário desativado, provedor fora do ar), a
+tela de login explica o motivo.
+
+**O que foi testado:** a URL de autorização (PKCE, `state`, `nonce`, escopo) é testada com a
+biblioteca real, sem rede. O retorno (cookie de estado, cadastro, domínio, desativado, erros) é
+testado com um provedor falso. A troca do código pelo token contra um provedor de verdade ainda não
+foi testada: faça um login de teste ao configurar.
 
 ## Provedores de IA
 
@@ -250,14 +276,18 @@ Esses tempos foram medidos com o Gemini sob alta demanda (houve respostas 503 an
 padrão de `TEMPO_LIMITE_SEGUNDOS` é 300: com 180, um refinamento real (ajuste de ~1.900
 caracteres) foi interrompido por tempo esgotado.
 
-**Custo por issue:**
+**Custo e consumo:** o app não tem tela de consumo. Para ver gasto e tokens, use o painel do
+próprio provedor:
 
-- **Claude (`claude-opus-5-5`, estimado, ainda não medido):** com os tokens acima e os preços da
-  tabela interna, fica em torno de **US$ 0,20 na 1ª chamada** (gravação do cache) e
-  **US$ 0,10 por issue depois**, quase tudo em tokens de saída. O raciocínio do modelo conta como
-  saída e pode aumentar esse valor; o log mostra o custo real de cada chamada (`custoEstimadoUsd`).
-- **Gemini e outros provedores:** o log só mostra custo com `PRECO_POR_MTOK` configurado com o
-  preço vigente do modelo.
+- Anthropic Console (Usage e Cost);
+- OpenAI Platform (Usage);
+- Google AI Studio ou Cloud Console (Gemini).
+
+Para ter uma ideia com a Claude (`claude-opus-5-5`): com os tokens acima e o preço público, fica
+em torno de US$ 0,20 na 1ª chamada (gravação do cache) e US$ 0,10 por issue depois. É uma
+estimativa, nunca medida, porque a conta de teste estava sem crédito. O log do servidor também
+traz uma estimativa por chamada (`custoEstimadoUsd`, que para provedores fora da Claude depende de
+`PRECO_POR_MTOK`).
 
 O tempo depende do modelo e do esforço. Modelos que raciocinam bastante podem passar de 60 s na
 1ª chamada; a tela avisa "ainda gerando…" e permite cancelar. O esforço "Baixo" (Administração)
@@ -280,6 +310,11 @@ Só segredos e infraestrutura. Provedor, modelo, limites, usuários e retenção
 | `PRECO_POR_MTOK` | (vazio) | `entrada,saida,cacheLeitura,cacheEscrita` em US$/MTok, para o custo no log. |
 | `FALLBACK_RECUSA` | `true` | Fallback de recusa do lado do servidor, só Claude. |
 | `MAX_TOKENS_SAIDA` | `64000` | Limite de tokens de saída por geração. |
+| `OIDC_EMISSOR` | (vazio = SSO desligado) | URL do emissor OpenID Connect. |
+| `OIDC_CLIENTE_ID` / `OIDC_CLIENTE_SEGREDO` | (vazio) | Credenciais da aplicação no provedor de identidade. |
+| `OIDC_URL_RETORNO` | `http://localhost:PORTA/api/sso/retorno` | URL de retorno cadastrada no provedor. |
+| `OIDC_ROTULO` | `Entrar com SSO` | Texto do botão de SSO. |
+| `OIDC_DOMINIOS_AUTOCADASTRO` | (vazio) | Domínios cujos e-mails viram usuário no 1º login. |
 
 **Formato antigo (opcional):** `PROVEDOR`, `MODELO`, `ESFORCO`, `LIMITE_POR_HORA` e
 `TEMPO_LIMITE_SEGUNDOS` ainda são lidos, mas só como ponto de partida enquanto a Administração

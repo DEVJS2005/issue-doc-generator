@@ -182,7 +182,7 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
           </button>
         </div>
 
-        <h2 className="secao">Uso</h2>
+        <h2 className="secao">Limites e retenção</h2>
         <div className="linha">
           <label>
             Gerações por pessoa por hora

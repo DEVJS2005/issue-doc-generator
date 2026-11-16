@@ -84,11 +84,16 @@ function chamar<T>(metodo: "GET" | "PUT" | "PATCH" | "DELETE", url: string, corp
   }).then((r) => lerJson<T>(r));
 }
 
-/** Sessão: 401 vem com `precisaConfigurar` quando o banco ainda não tem nenhum usuário. */
-export async function lerSessao(): Promise<{ usuario: Usuario | null; precisaConfigurar: boolean }> {
+/**
+ * Sessão: o 401 diz se o banco ainda não tem usuário (`precisaConfigurar`) e qual é o botão de
+ * login único, se houver (`sso`).
+ */
+export async function lerSessao(): Promise<{ usuario: Usuario | null; precisaConfigurar: boolean; sso: string | null }> {
   const r = await fetch("/api/sessao");
   const corpo = await r.json().catch(() => ({}));
-  return r.ok ? { usuario: corpo.usuario, precisaConfigurar: false } : { usuario: null, precisaConfigurar: Boolean(corpo.precisaConfigurar) };
+  return r.ok
+    ? { usuario: corpo.usuario, precisaConfigurar: false, sso: null }
+    : { usuario: null, precisaConfigurar: Boolean(corpo.precisaConfigurar), sso: corpo.sso ?? null };
 }
 
 export const api = {
@@ -105,6 +110,7 @@ export const api = {
     ),
   issue: (id: number) => chamar<{ item: IssueGuardada; versoes: Versao[] }>("GET", `/api/historico/${id}`),
   apagarIssue: (id: number) => chamar<{ ok: true }>("DELETE", `/api/historico/${id}`),
+  versao: (id: number, numero: number) => chamar<{ versao: Versao & { markdown: string } }>("GET", `/api/historico/${id}/versoes/${numero}`),
 
   ajustes: () => chamar<EstadoAdmin>("GET", "/api/admin/ajustes"),
   salvarAjustes: (valores: Partial<ValoresAjustes>) => chamar<EstadoAdmin>("PUT", "/api/admin/ajustes", valores),
