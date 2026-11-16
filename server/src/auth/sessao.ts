@@ -17,6 +17,27 @@ export function criarSessoes(segredo: string, horas: number) {
     segredoTemporario: !segredo,
     maxAgeSegundos: Math.round(horas * 3600),
 
+    /** Sela dados curtos (ex.: estado do SSO) num token assinado e com validade. */
+    selar(dados: object, validadeMs: number, agora = Date.now()): string {
+      const corpo = Buffer.from(JSON.stringify({ d: dados, e: agora + validadeMs })).toString("base64url");
+      return `${corpo}.${assinar(`selo:${corpo}`)}`;
+    },
+
+    abrir<T>(token: string | undefined, agora = Date.now()): T | null {
+      if (!token) return null;
+      const [corpo, assinatura] = token.split(".");
+      if (!corpo || !assinatura) return null;
+      const esperada = Buffer.from(assinar(`selo:${corpo}`));
+      const recebida = Buffer.from(assinatura);
+      if (esperada.length !== recebida.length || !timingSafeEqual(esperada, recebida)) return null;
+      try {
+        const { d, e } = JSON.parse(Buffer.from(corpo, "base64url").toString("utf8"));
+        return Number(e) > agora ? (d as T) : null;
+      } catch {
+        return null;
+      }
+    },
+
     criar(usuario: Usuario, agora = Date.now()): string {
       const dados = Buffer.from(`${usuario.email}|${agora + horas * 3_600_000}`).toString("base64url");
       return `${dados}.${assinar(dados)}`;

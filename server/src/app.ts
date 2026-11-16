@@ -6,10 +6,13 @@ import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import { Ajustes } from "./ajustes/ajustes.js";
 import { criarAutenticadorBanco, lerUsuariosDoEnv, type Autenticador } from "./auth/autenticador.js";
+import { criarProvedorOidc, type ProvedorSso } from "./auth/oidc.js";
+import { registrarSso } from "./rotas/sso.js";
 import { criarSessoes } from "./auth/sessao.js";
 import { abrirBanco } from "./banco/banco.js";
 import { RepositorioConfiguracao } from "./banco/configuracao.js";
 import { RepositorioHistorico } from "./banco/historico.js";
+import { RepositorioUso } from "./banco/uso.js";
 import { RepositorioUsuarios } from "./banco/usuarios.js";
 import type { Config } from "./config.js";
 import { criarProvedor } from "./ia/index.js";
@@ -34,6 +37,8 @@ export type OpcoesApp = {
   autenticador?: Autenticador;
   /** Código fixo da configuração inicial (testes). Se omitido, é aleatório. */
   codigoConfiguracao?: string;
+  /** Provedor de login único (testes). Se omitido, vem de OIDC_* no .env. */
+  sso?: ProvedorSso | null;
 };
 
 export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
@@ -45,6 +50,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   const banco = abrirBanco(config.arquivoBanco);
   const usuarios = new RepositorioUsuarios(banco);
   const historico = new RepositorioHistorico(banco);
+  const uso = new RepositorioUso(banco);
   const fixo = opcoes.provedor;
   const fabrica = opcoes.fabricaProvedor ?? (fixo !== undefined ? () => fixo : criarProvedor);
   const ajustes = new Ajustes(config, new RepositorioConfiguracao(banco), fabrica, (m) => app.log.warn(m));
@@ -83,7 +89,9 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
 
   // Retenção do histórico (administração): apaga as issues antigas agora e a cada 6 horas.
   const expurgar = () => {
-    const apagadas = historico.expurgar(ajustes.valores().retencaoDias);
+    const dias = ajustes.valores().retencaoDias;
+    uso.expurgar(dias);
+    const apagadas = historico.expurgar(dias);
     if (apagadas) app.log.info({ evento: "expurgo", apagadas }, `histórico: ${apagadas} issue(s) antiga(s) apagada(s)`);
   };
   expurgar();
@@ -99,12 +107,22 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     return { ok: true, provedor: c.provedor, modelo: c.modelo };
   });
 
+  const sso = opcoes.sso !== undefined ? opcoes.sso : config.oidc ? criarProvedorOidc(config.oidc) : null;
+  if (sso) app.log.info(`Login único (OIDC) ligado: ${config.oidc?.emissor ?? "provedor de teste"}`);
+
   // Login primeiro: o hook dele bloqueia (401/403) as rotas protegidas.
   registrarAuth(app, {
     autenticador: opcoes.autenticador ?? criarAutenticadorBanco(usuarios),
     sessoes,
     usuarios,
     codigoConfiguracao,
+    rotuloSso: sso?.rotulo ?? null,
+  });
+  registrarSso(app, {
+    sso,
+    sessoes,
+    usuarios,
+    urlRetorno: config.oidc?.urlRetorno ?? `http://localhost:${config.porta}/api/sso/retorno`,
   });
 
   app.get("/api/opcoes", async () => ({
@@ -112,11 +130,11 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     limites: { descricao: LIMITE_DESCRICAO, contexto: LIMITE_CONTEXTO, ajuste: LIMITE_AJUSTE },
   }));
 
-  const opcoesGeracao = { config, ajustes, historico };
+  const opcoesGeracao = { config, ajustes, historico, uso };
   registrarRotaGerar(app, opcoesGeracao);
   registrarRotaRefinar(app, opcoesGeracao);
   registrarHistorico(app, { historico });
-  registrarAdmin(app, { ajustes, usuarios });
+  registrarAdmin(app, { ajustes, usuarios, uso });
 
   // Em produção o servidor também entrega o build do web/.
   const pastaWeb = opcoes.pastaWeb ?? pastaWebPadrao;

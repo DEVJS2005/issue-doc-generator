@@ -41,6 +41,8 @@ export type OpcoesAuth = {
   usuarios: RepositorioUsuarios;
   /** Código de uso único para criar o 1º admin; null quando já existe usuário. */
   codigoConfiguracao: { atual: string | null };
+  /** Texto do botão de login único; null quando o SSO está desligado. */
+  rotuloSso: string | null;
 };
 
 /**
@@ -98,7 +100,11 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
   app.get("/api/sessao", async (request, reply) => {
     const usuario = usuarioDaRequisicao(request, o);
     if (!usuario) {
-      return reply.code(401).send({ ...erro("nao_autenticado", "Sem sessão."), precisaConfigurar: o.codigoConfiguracao.atual !== null });
+      return reply.code(401).send({
+        ...erro("nao_autenticado", "Sem sessão."),
+        precisaConfigurar: o.codigoConfiguracao.atual !== null,
+        sso: o.rotuloSso,
+      });
     }
     return { usuario };
   });

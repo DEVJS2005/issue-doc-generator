@@ -104,6 +104,14 @@ export class RepositorioHistorico {
       .all(id) as Versao[];
   }
 
+  /** Uma versão específica (1 = geração; 2 em diante = refinamentos), com o Markdown. */
+  versao(id: number, numero: number): (Versao & { markdown: string }) | null {
+    const l = this.db
+      .prepare("SELECT numero, quando, ajuste, modelo, markdown FROM issue_versoes WHERE issue_id = ? AND numero = ?")
+      .get(id, numero) as (Versao & { markdown: string }) | undefined;
+    return l ?? null;
+  }
+
   apagar(id: number): boolean {
     return Number(this.db.prepare("DELETE FROM issues WHERE id = ?").run(id).changes) > 0;
   }

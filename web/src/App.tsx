@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Admin } from "./Admin";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   api,
   ErroApi,
@@ -13,8 +12,23 @@ import {
   type Resultado,
   type Usuario,
 } from "./api";
-import { Historico } from "./Historico";
-import { Markdown } from "./Markdown";
+
+// Carregados sob demanda: o renderizador de Markdown (o maior pedaço do JavaScript) só baixa
+// quando há uma issue para mostrar; Histórico e Administração, quando a aba é aberta.
+const Markdown = lazy(() => import("./Markdown").then((m) => ({ default: m.Markdown })));
+const Historico = lazy(() => import("./Historico").then((m) => ({ default: m.Historico })));
+const Admin = lazy(() => import("./Admin").then((m) => ({ default: m.Admin })));
+const Versoes = lazy(() => import("./Versoes").then((m) => ({ default: m.Versoes })));
+const Carregando = () => <p className="carregando">Carregando…</p>;
+
+const ERROS_SSO: Record<string, string> = {
+  expirado: "O login único demorou demais ou foi aberto em outra aba. Tente de novo.",
+  email: "O provedor de identidade não informou um e-mail verificado.",
+  sem_cadastro: "Seu e-mail ainda não tem acesso. Peça a um administrador para cadastrá-lo.",
+  desativado: "Seu acesso está desativado. Fale com um administrador.",
+  recusado: "O provedor de identidade recusou o login. Tente de novo.",
+  indisponivel: "Não foi possível falar com o provedor de identidade. Tente de novo em instantes.",
+};
 
 const AVISO_DADOS = "Não cole dados pessoais reais (usuários, clientes, CPFs). O texto é enviado para processamento por IA.";
 const SEGUNDOS_AINDA_GERANDO = 60;
@@ -24,6 +38,7 @@ type Pagina = "gerar" | "historico" | "admin";
 export function App() {
   const [usuario, setUsuario] = useState<Usuario | null | undefined>(undefined);
   const [precisaConfigurar, setPrecisaConfigurar] = useState(false);
+  const [rotuloSso, setRotuloSso] = useState<string | null>(null);
   const [pagina, setPagina] = useState<Pagina>("gerar");
   // Issue aberta do histórico; a chave remonta o Gerador com ela.
   const [aberta, setAberta] = useState<{ chave: number; item: IssueGuardada | null }>({ chave: 0, item: null });
@@ -33,6 +48,7 @@ export function App() {
     lerSessao().then((s) => {
       setUsuario(s.usuario);
       setPrecisaConfigurar(s.precisaConfigurar);
+      setRotuloSso(s.sso);
     });
   }, []);
 
@@ -103,15 +119,19 @@ export function App() {
             <p>Ainda não há nenhum administrador. Abra o link de configuração que aparece no log do servidor ao iniciar.</p>
           </section>
         )}
-        {usuario === null && !precisaConfigurar && <Login aoEntrar={entrou} />}
+        {usuario === null && !precisaConfigurar && (
+          <Login aoEntrar={entrou} rotuloSso={rotuloSso} erroSso={ERROS_SSO[new URLSearchParams(window.location.search).get("sso") ?? ""] ?? null} />
+        )}
         {usuario && (
           // O Gerador fica montado ao trocar de aba, para não perder uma geração em andamento.
           <div hidden={pagina !== "gerar"}>
             <Gerador key={aberta.chave} aberta={aberta.item} aoNova={novaIssue} aoSessaoExpirar={expirou} />
           </div>
         )}
-        {usuario && pagina === "historico" && <Historico podeVerTodos={usuario.admin} aoAbrir={abrirDoHistorico} aoSessaoExpirar={expirou} />}
-        {usuario?.admin && pagina === "admin" && <Admin usuarioAtual={usuario.email} aoSessaoExpirar={expirou} />}
+        <Suspense fallback={<Carregando />}>
+          {usuario && pagina === "historico" && <Historico podeVerTodos={usuario.admin} aoAbrir={abrirDoHistorico} aoSessaoExpirar={expirou} />}
+          {usuario?.admin && pagina === "admin" && <Admin usuarioAtual={usuario.email} aoSessaoExpirar={expirou} />}
+        </Suspense>
       </main>
     </div>
   );
@@ -160,10 +180,10 @@ function Configurar({ codigo, aoEntrar }: { codigo: string; aoEntrar: (u: Usuari
   );
 }
 
-function Login({ aoEntrar }: { aoEntrar: (u: Usuario) => void }) {
+function Login({ aoEntrar, rotuloSso, erroSso }: { aoEntrar: (u: Usuario) => void; rotuloSso: string | null; erroSso: string | null }) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [erro, setErro] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(erroSso);
   const [enviando, setEnviando] = useState(false);
 
   async function enviar(e: FormEvent) {
@@ -198,6 +218,15 @@ function Login({ aoEntrar }: { aoEntrar: (u: Usuario) => void }) {
       <button type="submit" disabled={enviando}>
         {enviando ? "Entrando…" : "Entrar"}
       </button>
+      {rotuloSso && (
+        <>
+          <p className="separador">ou</p>
+          {/* Navegação de página inteira: o provedor de identidade não abre dentro de um fetch. */}
+          <a className="botao-sso" href="/api/sso/iniciar">
+            {rotuloSso}
+          </a>
+        </>
+      )}
     </form>
   );
 }
@@ -432,7 +461,14 @@ function Gerador({ aberta, aoNova, aoSessaoExpirar }: { aberta: IssueGuardada | 
               </ul>
             </div>
           )}
-          <Markdown fonte={resultado.markdown} />
+          <Suspense fallback={<Carregando />}>
+            <Markdown fonte={resultado.markdown} />
+          </Suspense>
+          {resultado.historicoId !== null && (
+            <Suspense fallback={<Carregando />}>
+              <Versoes historicoId={resultado.historicoId} atualizacao={resultado.markdown} />
+            </Suspense>
+          )}
 
           <form className="refinar" onSubmit={refinar}>
             <Campo rotulo="Refinar" atual={ajuste.length} limite={opcoes.limites.ajuste}>

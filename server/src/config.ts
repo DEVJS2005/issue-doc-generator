@@ -1,5 +1,6 @@
 import path from "node:path";
 import { z } from "zod";
+import type { ConfigOidc } from "./auth/oidc.js";
 import { lerPreco, type Preco } from "./custo.js";
 import type { NomeProvedor } from "./ia/tipos.js";
 
@@ -39,6 +40,13 @@ const esquema = z.object({
   SESSAO_HORAS: z.coerce.number().positive().default(12),
   CONFIAR_PROXY: booleano("false"),
   PRECO_POR_MTOK: z.string().trim().default(""),
+  // Login único (OpenID Connect). Desligado enquanto OIDC_EMISSOR estiver vazio.
+  OIDC_EMISSOR: z.string().trim().default(""),
+  OIDC_CLIENTE_ID: z.string().trim().default(""),
+  OIDC_CLIENTE_SEGREDO: z.string().default(""),
+  OIDC_URL_RETORNO: z.string().trim().default(""),
+  OIDC_ROTULO: z.string().trim().default("Entrar com SSO"),
+  OIDC_DOMINIOS_AUTOCADASTRO: z.string().default(""),
   // Nos testes (NODE_ENV=test) o banco é em memória; fora deles, data/ na pasta onde o servidor roda.
   ARQUIVO_BANCO: z
     .string()
@@ -48,6 +56,7 @@ const esquema = z.object({
 
 export type Config = {
   arquivoBanco: string;
+  oidc: ConfigOidc | null;
   provedor: NomeProvedor;
   modelo: string;
   anthropicApiKey: string;
@@ -74,8 +83,19 @@ export function carregarConfig(env: NodeJS.ProcessEnv = process.env): Config {
   // a tela de administração muda esses valores e os grava no banco. Sem modelo, a geração
   // responde "não configurado" e a administração pede o nome.
   const modelo = e.MODELO || MODELO_PADRAO[e.PROVEDOR] || "";
+  const oidc: ConfigOidc | null = e.OIDC_EMISSOR
+    ? {
+        emissor: e.OIDC_EMISSOR,
+        clienteId: e.OIDC_CLIENTE_ID,
+        clienteSegredo: e.OIDC_CLIENTE_SEGREDO,
+        urlRetorno: e.OIDC_URL_RETORNO || `http://localhost:${e.PORTA}/api/sso/retorno`,
+        rotulo: e.OIDC_ROTULO,
+        dominiosAutoCadastro: lista(e.OIDC_DOMINIOS_AUTOCADASTRO).map((d) => d.toLowerCase().replace(/^@/, "")),
+      }
+    : null;
   return {
     arquivoBanco: e.ARQUIVO_BANCO,
+    oidc,
     provedor: e.PROVEDOR,
     modelo,
     anthropicApiKey: e.ANTHROPIC_API_KEY,

@@ -428,6 +428,103 @@ button.pequeno {
   clip: rect(0 0 0 0);
 }
 
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 12px 0 20px;
+}
+
+.indicador {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.indicador-rotulo {
+  color: var(--suave);
+  font-size: 0.85rem;
+}
+
+.indicador-valor {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.grade-uso {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px 24px;
+  margin-bottom: 16px;
+}
+
+.titulo-tabela {
+  font-size: 0.95rem;
+  margin: 0 0 6px;
+}
+
+.tabela .numero {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.versoes {
+  margin-top: 20px;
+  border-top: 1px solid var(--borda);
+  padding-top: 12px;
+}
+
+.versoes h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.diff {
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  padding: 8px 0;
+  font-size: 0.82rem;
+  max-height: 480px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.diff > div {
+  padding: 0 12px;
+}
+
+.diff-adicionada {
+  background: color-mix(in srgb, #1f9d55 18%, transparent);
+}
+
+.diff-removida {
+  background: color-mix(in srgb, #d64545 16%, transparent);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+
+.separador {
+  text-align: center;
+  color: var(--suave);
+  margin: 14px 0 10px;
+}
+
+.botao-sso {
+  display: block;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid var(--destaque);
+  color: var(--destaque);
+  border-radius: 8px;
+  padding: 9px 16px;
+  text-decoration: none;
+}
+
 .refinar {
   margin-top: 24px;
   border-top: 1px solid var(--borda);

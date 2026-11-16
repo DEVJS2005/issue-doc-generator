@@ -36,6 +36,8 @@ test("gera a issue com as seções na ordem e os destaques", async ({ page }) =>
   await gerar(page, "No checkout, o cliente aplica quantos cupons quiser.\nQueremos limitar a 3 por pedido.\nNo 4º, avisar e não aplicar.");
 
   await expect(page.getByRole("heading", { name: "Rascunho da issue" })).toBeVisible();
+  // O Markdown carrega sob demanda: espera o último título antes de ler a lista.
+  await expect(page.locator(".issue h3", { hasText: "Dúvidas para o PO" })).toBeVisible();
   const titulos = await page.locator(".issue h2, .issue h3").allTextContents();
   const ordem = ["Problema", "Solução", "Requisito Técnico", "1. Contexto e Objetivo", "2. Estados / Ciclo de vida", "3. Regras de Negócio", "4. Interface", "5. Escopo e impacto", "6. Fora de escopo", "Critérios de Aceite", "Casos de teste", "Revisão da task", "Dúvidas para o PO"];
   expect(titulos).toEqual(ordem);
@@ -134,6 +136,11 @@ test("o histórico guarda a issue, reabre e continua o refinamento na mesma issu
   await page.getByRole("button", { name: "Refinar", exact: true }).click();
   await expect(page.getByText("Mudou neste refinamento: Estados / Ciclo de vida.")).toBeVisible();
 
+  await page.getByRole("button", { name: "Comparar versões" }).click();
+  await expect(page.getByText(/linha\(s\) diferente\(s\)/)).toBeVisible();
+  await expect(page.locator(".diff-adicionada", { hasText: "Disponível" })).toBeVisible();
+  await expect(page.getByText("Ajuste pedido na versão 2: “Troque o status Ativo por Disponível”")).toBeVisible();
+
   await page.getByRole("button", { name: "Histórico", exact: true }).click();
   await expect(page.getByRole("row", { name: /Limitar cupons por pedido/ }).first()).toContainText("2");
 });
@@ -149,6 +156,9 @@ test("administração salva ajustes, cria usuário e registra a alteração", as
   await entrar(page);
   await page.getByRole("button", { name: "Administração" }).click();
   await expect(page.getByRole("heading", { name: "Inteligência artificial" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Uso", exact: true })).toBeVisible();
+  await expect(page.locator(".indicador", { hasText: "Gerações e refinamentos" })).not.toContainText(/^Gerações e refinamentos0$/);
+  await expect(page.getByRole("heading", { name: "Por pessoa" })).toBeVisible();
   await expect(page.getByRole("option", { name: "Gemini (Google) (sem chave)" })).toBeDisabled();
 
   await page.getByLabel("Gerações por pessoa por hora").fill("50");

@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
 import type { Ajustes } from "../ajustes/ajustes.js";
 import type { RepositorioHistorico } from "../banco/historico.js";
+import type { Chamada, RepositorioUso } from "../banco/uso.js";
 import type { Config } from "../config.js";
 import { custoEstimado } from "../custo.js";
 import { gerarIssue, type ResultadoGeracao } from "../geracao/servico.js";
@@ -58,6 +59,7 @@ export type OpcoesRotaGerar = {
   config: Config;
   ajustes: Ajustes;
   historico: RepositorioHistorico;
+  uso: RepositorioUso;
 };
 
 function horaLocal(ms: number) {
@@ -112,6 +114,14 @@ export async function responderComGeracao(
 
   sse.enviar("inicio", { provedor: provedor.nome, modelo: provedor.modelo });
   const inicio = Date.now();
+  // Painel de uso: uma linha por chamada. Falha ao registrar não derruba a geração.
+  const registrar = (c: Omit<Chamada, "usuario" | "tipo">) => {
+    try {
+      o.uso.registrar({ usuario: quem, tipo: o.tipoPedido, ...c });
+    } catch (erroUso) {
+      app.log.error({ evento: "uso_falhou", detalhe: String(erroUso) }, "uso: não foi possível registrar a chamada");
+    }
+  };
 
   try {
     const r: ResultadoGeracao = await gerarIssue(provedor, o.usuario, {
@@ -134,6 +144,15 @@ export async function responderComGeracao(
       },
       `${o.tipoPedido}: ok (cache lido: ${r.uso.cacheLeitura} tokens${custo === null ? "" : `, ~US$ ${custo}`})`,
     );
+    registrar({
+      provedor: r.provedor,
+      modelo: r.modelo,
+      sucesso: true,
+      uso: r.uso,
+      custoUsd: custo,
+      duracaoMs: r.duracaoMs,
+      usouReserva: r.usouFallback,
+    });
 
     // Falha ao guardar no histórico não pode derrubar a geração: a issue já está pronta.
     let historicoId: number | null = null;
@@ -172,6 +191,7 @@ export async function responderComGeracao(
       },
       `${o.tipoPedido}: ${e.codigo}`,
     );
+    registrar({ provedor: provedor.nome, modelo: provedor.modelo, sucesso: false, codigoErro: e.codigo, duracaoMs: Date.now() - inicio });
     sse.enviar("erro", e.paraTela());
   } finally {
     terminou = true;
