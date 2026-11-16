@@ -285,22 +285,21 @@ mark.lacuna {
 }
 
 .issue .duvidas-titulo {
-  border-left: 4px solid var(--duvidas-borda);
-  padding-left: 10px;
+  color: var(--duvidas-borda);
 }
 
 .issue .duvidas {
   background: var(--duvidas-fundo);
-  border-left: 4px solid var(--duvidas-borda);
-  border-radius: 0 8px 8px 0;
+  border: 1px solid color-mix(in srgb, var(--duvidas-borda) 35%, transparent);
+  border-radius: 8px;
   padding: 12px 12px 12px 32px;
 }
 
 .issue blockquote {
   margin: 0 0 4px;
+  padding: 0;
   color: var(--suave);
-  border-left: 3px solid var(--borda);
-  padding-left: 10px;
+  font-style: italic;
 }
 
 .refinar {
