@@ -1,3 +1,4 @@
+import path from "node:path";
 import { z } from "zod";
 import { lerPreco, type Preco } from "./custo.js";
 import type { NomeProvedor } from "./ia/tipos.js";
@@ -32,16 +33,21 @@ const esquema = z.object({
   TEMPO_LIMITE_SEGUNDOS: z.coerce.number().int().positive().default(300),
   LIMITE_POR_HORA: z.coerce.number().int().positive().default(30),
   USUARIOS_PERMITIDOS: z.string().default(""),
-  PRODUTOS: z.string().default(""),
   PORTA: z.coerce.number().int().positive().default(3000),
   REGISTRAR_DESCRICAO: booleano("false"),
   SEGREDO_SESSAO: z.string().default(""),
   SESSAO_HORAS: z.coerce.number().positive().default(12),
   CONFIAR_PROXY: booleano("false"),
   PRECO_POR_MTOK: z.string().trim().default(""),
+  // Nos testes (NODE_ENV=test) o banco é em memória; fora deles, data/ na pasta onde o servidor roda.
+  ARQUIVO_BANCO: z
+    .string()
+    .trim()
+    .default(process.env.NODE_ENV === "test" ? ":memory:" : path.join(process.cwd(), "data", "issue-doc-generator.db")),
 });
 
 export type Config = {
+  arquivoBanco: string;
   provedor: NomeProvedor;
   modelo: string;
   anthropicApiKey: string;
@@ -54,7 +60,6 @@ export type Config = {
   tempoLimiteMs: number;
   limitePorHora: number;
   usuariosPermitidos: string[];
-  produtos: string[];
   porta: number;
   registrarDescricao: boolean;
   segredoSessao: string;
@@ -65,14 +70,12 @@ export type Config = {
 
 export function carregarConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const e = esquema.parse(env);
+  // PROVEDOR, MODELO, ESFORCO, LIMITE_POR_HORA e TEMPO_LIMITE_SEGUNDOS são só o ponto de partida:
+  // a tela de administração muda esses valores e os grava no banco. Sem modelo, a geração
+  // responde "não configurado" e a administração pede o nome.
   const modelo = e.MODELO || MODELO_PADRAO[e.PROVEDOR] || "";
-  if (!modelo) {
-    throw new Error(`MODELO é obrigatório quando PROVEDOR=${e.PROVEDOR}. Defina o nome do modelo no .env.`);
-  }
-  if (e.PROVEDOR === "openai_compativel" && !e.OPENAI_BASE_URL) {
-    throw new Error("OPENAI_BASE_URL é obrigatório quando PROVEDOR=openai_compativel.");
-  }
   return {
+    arquivoBanco: e.ARQUIVO_BANCO,
     provedor: e.PROVEDOR,
     modelo,
     anthropicApiKey: e.ANTHROPIC_API_KEY,
@@ -85,7 +88,6 @@ export function carregarConfig(env: NodeJS.ProcessEnv = process.env): Config {
     tempoLimiteMs: e.TEMPO_LIMITE_SEGUNDOS * 1000,
     limitePorHora: e.LIMITE_POR_HORA,
     usuariosPermitidos: lista(e.USUARIOS_PERMITIDOS),
-    produtos: lista(e.PRODUTOS),
     porta: e.PORTA,
     registrarDescricao: e.REGISTRAR_DESCRICAO,
     segredoSessao: e.SEGREDO_SESSAO,

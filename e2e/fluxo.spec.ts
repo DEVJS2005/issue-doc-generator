@@ -7,16 +7,17 @@ async function esperado(page: Page): Promise<Esperado> {
   return (await page.request.get("/e2e/esperado")).json();
 }
 
-async function entrar(page: Page) {
+async function entrar(page: Page, email = "qa@exemplo.dev", senha = "senha-de-teste") {
   await page.goto("/");
-  await page.getByLabel("E-mail").fill("qa@exemplo.dev");
-  await page.getByLabel("Senha").fill("senha-de-teste");
+  await page.getByLabel("E-mail").fill(email);
+  await page.getByLabel("Senha").fill(senha);
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page.getByRole("heading", { name: "O que está errado ou o que queremos" })).toBeVisible();
 }
 
 async function gerar(page: Page, descricao: string) {
   await page.getByLabel(/^Descrição/).fill(descricao);
+  await page.getByLabel("Nome do produto").fill("Loja Exemplo");
   await page.getByRole("button", { name: "Gerar issue" }).click();
 }
 
@@ -81,6 +82,18 @@ test("erro da IA aparece como mensagem amigável com Tentar de novo", async ({ p
   await expect(page.locator("body")).not.toContainText(/Error:|at .*\.ts/);
 });
 
+test("Nome do produto é obrigatório e a tela lembra o último usado", async ({ page }) => {
+  await entrar(page);
+  await page.getByLabel(/^Descrição/).fill("Limitar cupons a 3 por pedido.");
+  await page.getByLabel("Nome do produto").fill("");
+  await expect(page.getByRole("button", { name: "Gerar issue" })).toBeDisabled();
+
+  await gerar(page, "Limitar cupons a 3 por pedido.");
+  await expect(page.getByRole("heading", { name: "Rascunho da issue" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Nome do produto")).toHaveValue("Loja Exemplo");
+});
+
 test("Cancelar interrompe a geração", async ({ page }) => {
   await entrar(page);
   await gerar(page, "DEMORAR para testar o cancelamento");
@@ -103,4 +116,49 @@ test("a chave da API nunca chega ao navegador", async ({ page }) => {
   expect(corpos.length).toBeGreaterThan(3);
   for (const corpo of corpos) expect(corpo).not.toContain(chave);
   expect(await page.content()).not.toContain(chave);
+});
+
+test("o histórico guarda a issue, reabre e continua o refinamento na mesma issue", async ({ page }) => {
+  await entrar(page);
+  await gerar(page, "Histórico: limitar cupons a 3 por pedido.");
+  await expect(page.getByText("Guardada no histórico.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Histórico", exact: true }).click();
+  const linha = page.getByRole("row", { name: /Limitar cupons por pedido/ }).first();
+  await expect(linha).toContainText("Loja Exemplo");
+  await linha.getByRole("button", { name: "Abrir" }).click();
+
+  await expect(page.getByRole("heading", { name: "Rascunho da issue" })).toBeVisible();
+  await expect(page.getByLabel(/^Descrição/)).toHaveValue("Histórico: limitar cupons a 3 por pedido.");
+  await page.getByLabel(/^Refinar/).fill("Troque o status Ativo por Disponível");
+  await page.getByRole("button", { name: "Refinar", exact: true }).click();
+  await expect(page.getByText("Mudou neste refinamento: Estados / Ciclo de vida.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Histórico", exact: true }).click();
+  await expect(page.getByRole("row", { name: /Limitar cupons por pedido/ }).first()).toContainText("2");
+});
+
+test("usuário comum não vê a Administração", async ({ page }) => {
+  await entrar(page, "comum@exemplo.dev", "senha-comum");
+  await expect(page.getByRole("button", { name: "Histórico", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Administração" })).toHaveCount(0);
+  expect((await page.request.get("/api/admin/ajustes")).status()).toBe(403);
+});
+
+test("administração salva ajustes, cria usuário e registra a alteração", async ({ page }) => {
+  await entrar(page);
+  await page.getByRole("button", { name: "Administração" }).click();
+  await expect(page.getByRole("heading", { name: "Inteligência artificial" })).toBeVisible();
+  await expect(page.getByRole("option", { name: "Gemini (Google) (sem chave)" })).toBeDisabled();
+
+  await page.getByLabel("Gerações por pessoa por hora").fill("50");
+  await page.getByRole("button", { name: "Salvar ajustes" }).click();
+  await expect(page.getByText("Ajustes salvos. Valem a partir da próxima geração.")).toBeVisible();
+  await expect(page.locator(".alteracoes-lista")).toContainText("Limite por hora: 100 → 50");
+
+  await page.getByLabel("E-mail", { exact: true }).fill("nova@exemplo.dev");
+  await page.getByLabel("Senha inicial").fill("senha-da-nova");
+  await page.getByRole("button", { name: "Criar usuário" }).click();
+  await expect(page.getByText("Usuário nova@exemplo.dev criado.")).toBeVisible();
+  await expect(page.getByRole("row", { name: /nova@exemplo\.dev/ })).toContainText("Usuário");
 });

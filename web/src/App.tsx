@@ -1,23 +1,63 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { api, ErroApi, transmitir, type Entrada, type ErroTela, type Opcoes, type Progresso, type Resultado, type Usuario } from "./api";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { Admin } from "./Admin";
+import {
+  api,
+  ErroApi,
+  lerSessao,
+  transmitir,
+  type Entrada,
+  type ErroTela,
+  type IssueGuardada,
+  type Opcoes,
+  type Progresso,
+  type Resultado,
+  type Usuario,
+} from "./api";
+import { Historico } from "./Historico";
 import { Markdown } from "./Markdown";
 
 const AVISO_DADOS = "Não cole dados pessoais reais (usuários, clientes, CPFs). O texto é enviado para processamento por IA.";
 const SEGUNDOS_AINDA_GERANDO = 60;
 
+type Pagina = "gerar" | "historico" | "admin";
+
 export function App() {
   const [usuario, setUsuario] = useState<Usuario | null | undefined>(undefined);
+  const [precisaConfigurar, setPrecisaConfigurar] = useState(false);
+  const [pagina, setPagina] = useState<Pagina>("gerar");
+  // Issue aberta do histórico; a chave remonta o Gerador com ela.
+  const [aberta, setAberta] = useState<{ chave: number; item: IssueGuardada | null }>({ chave: 0, item: null });
+  const codigo = new URLSearchParams(window.location.search).get("codigo");
 
   useEffect(() => {
-    api
-      .sessao()
-      .then((r) => setUsuario(r.usuario))
-      .catch(() => setUsuario(null));
+    lerSessao().then((s) => {
+      setUsuario(s.usuario);
+      setPrecisaConfigurar(s.precisaConfigurar);
+    });
   }, []);
+
+  const expirou = useCallback(() => setUsuario(null), []);
+
+  function entrou(u: Usuario) {
+    if (window.location.search) window.history.replaceState(null, "", window.location.pathname);
+    setPrecisaConfigurar(false);
+    setPagina("gerar");
+    setUsuario(u);
+  }
 
   async function sair() {
     await api.sair().catch(() => undefined);
     setUsuario(null);
+  }
+
+  function abrirDoHistorico(item: IssueGuardada) {
+    setAberta((a) => ({ chave: a.chave + 1, item }));
+    setPagina("gerar");
+  }
+
+  function novaIssue() {
+    setAberta((a) => ({ chave: a.chave + 1, item: null }));
+    setPagina("gerar");
   }
 
   return (
@@ -29,19 +69,94 @@ export function App() {
         </div>
         {usuario && (
           <div className="conta">
-            <span>{usuario.email}</span>
+            <span>
+              {usuario.email}
+              {usuario.admin ? " · admin" : ""}
+            </span>
             <button type="button" className="botao-texto" onClick={sair}>
               Sair
             </button>
           </div>
         )}
       </header>
+      {usuario && (
+        <nav className="abas" aria-label="Seções">
+          <button type="button" aria-current={pagina === "gerar" ? "page" : undefined} onClick={() => setPagina("gerar")}>
+            Gerar
+          </button>
+          <button type="button" aria-current={pagina === "historico" ? "page" : undefined} onClick={() => setPagina("historico")}>
+            Histórico
+          </button>
+          {usuario.admin && (
+            <button type="button" aria-current={pagina === "admin" ? "page" : undefined} onClick={() => setPagina("admin")}>
+              Administração
+            </button>
+          )}
+        </nav>
+      )}
       <main>
         {usuario === undefined && <p className="carregando">Carregando…</p>}
-        {usuario === null && <Login aoEntrar={setUsuario} />}
-        {usuario && <Gerador aoSessaoExpirar={() => setUsuario(null)} />}
+        {usuario === null && precisaConfigurar && codigo && <Configurar codigo={codigo} aoEntrar={entrou} />}
+        {usuario === null && precisaConfigurar && !codigo && (
+          <section className="cartao login">
+            <h2>Configuração inicial</h2>
+            <p>Ainda não há nenhum administrador. Abra o link de configuração que aparece no log do servidor ao iniciar.</p>
+          </section>
+        )}
+        {usuario === null && !precisaConfigurar && <Login aoEntrar={entrou} />}
+        {usuario && (
+          // O Gerador fica montado ao trocar de aba, para não perder uma geração em andamento.
+          <div hidden={pagina !== "gerar"}>
+            <Gerador key={aberta.chave} aberta={aberta.item} aoNova={novaIssue} aoSessaoExpirar={expirou} />
+          </div>
+        )}
+        {usuario && pagina === "historico" && <Historico podeVerTodos={usuario.admin} aoAbrir={abrirDoHistorico} aoSessaoExpirar={expirou} />}
+        {usuario?.admin && pagina === "admin" && <Admin usuarioAtual={usuario.email} aoSessaoExpirar={expirou} />}
       </main>
     </div>
+  );
+}
+
+function Configurar({ codigo, aoEntrar }: { codigo: string; aoEntrar: (u: Usuario) => void }) {
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [confirmacao, setConfirmacao] = useState("");
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function enviar(e: FormEvent) {
+    e.preventDefault();
+    if (senha !== confirmacao) return setErro("As senhas não são iguais.");
+    setErro(null);
+    try {
+      aoEntrar((await api.configurar(codigo, email, senha)).usuario);
+    } catch (err) {
+      setErro(err instanceof ErroApi ? err.message : "Não foi possível concluir. Tente de novo.");
+    }
+  }
+
+  return (
+    <form className="cartao login" onSubmit={enviar}>
+      <h2>Criar o primeiro administrador</h2>
+      <p className="legenda">Depois, os demais usuários são criados na aba Administração.</p>
+      <label>
+        E-mail
+        <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+      </label>
+      <label>
+        Senha (mínimo 8 caracteres)
+        <input type="password" autoComplete="new-password" minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} required />
+      </label>
+      <label>
+        Confirme a senha
+        <input type="password" autoComplete="new-password" value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} required />
+      </label>
+      {erro && (
+        <p className="erro" role="alert">
+          {erro}
+        </p>
+      )}
+      <button type="submit">Criar administrador</button>
+    </form>
   );
 }
 
@@ -89,18 +204,21 @@ function Login({ aoEntrar }: { aoEntrar: (u: Usuario) => void }) {
 
 type Execucao = { tipo: "gerar" | "refinar"; inicio: number; progresso: Progresso | null };
 
-function Gerador({ aoSessaoExpirar }: { aoSessaoExpirar: () => void }) {
+function Gerador({ aberta, aoNova, aoSessaoExpirar }: { aberta: IssueGuardada | null; aoNova: () => void; aoSessaoExpirar: () => void }) {
   const [opcoes, setOpcoes] = useState<Opcoes | null>(null);
-  const [descricao, setDescricao] = useState("");
-  const [tipo, setTipo] = useState("");
-  const [produto, setProduto] = useState("");
-  const [produtoOutro, setProdutoOutro] = useState("");
-  const [contexto, setContexto] = useState("");
+  const [descricao, setDescricao] = useState(aberta?.entrada.descricao ?? "");
+  const [tipo, setTipo] = useState(aberta?.entrada.tipo ?? "");
+  const [produto, setProduto] = useState(() => aberta?.entrada.produto ?? lerUltimoProduto());
+  const [contexto, setContexto] = useState(aberta?.entrada.contexto ?? "");
 
   const [execucao, setExecucao] = useState<Execucao | null>(null);
   const [agora, setAgora] = useState(Date.now());
-  const [resultado, setResultado] = useState<Resultado | null>(null);
-  const [entradaUsada, setEntradaUsada] = useState<Entrada | null>(null);
+  const [resultado, setResultado] = useState<Resultado | null>(() =>
+    aberta
+      ? { issue: aberta.issue, markdown: aberta.markdown, avisos: [], alteracoes: null, modelo: aberta.modelo, usouFallback: false, duracaoMs: 0, historicoId: aberta.id }
+      : null,
+  );
+  const [entradaUsada, setEntradaUsada] = useState<Entrada | null>(aberta?.entrada ?? null);
   const [erro, setErro] = useState<{ erro: ErroTela; refazer: () => void } | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [ajuste, setAjuste] = useState("");
@@ -112,8 +230,7 @@ function Gerador({ aoSessaoExpirar }: { aoSessaoExpirar: () => void }) {
       .opcoes()
       .then((o) => {
         setOpcoes(o);
-        setTipo(o.tipos[0] ?? "");
-        setProduto(o.produtos[0] ?? "Outro");
+        setTipo((t) => t || (o.tipos[0] ?? ""));
       })
       .catch((e) => (e instanceof ErroApi && e.status === 401 ? aoSessaoExpirar() : setAviso("Não foi possível carregar as opções.")));
   }, [aoSessaoExpirar]);
@@ -124,7 +241,7 @@ function Gerador({ aoSessaoExpirar }: { aoSessaoExpirar: () => void }) {
     return () => clearInterval(t);
   }, [execucao]);
 
-  const nomeProduto = produto === "Outro" ? produtoOutro.trim() : produto;
+  const nomeProduto = produto.trim();
 
   async function executar(tipoExec: Execucao["tipo"], url: "/api/gerar" | "/api/refinar", corpo: unknown, aoConcluir: (r: Resultado) => void) {
     const c = new AbortController();
@@ -155,6 +272,7 @@ function Gerador({ aoSessaoExpirar }: { aoSessaoExpirar: () => void }) {
   function gerar(e: FormEvent) {
     e.preventDefault();
     const entrada: Entrada = { descricao, tipo, produto: nomeProduto, contexto };
+    salvarUltimoProduto(nomeProduto);
     void executar("gerar", "/api/gerar", entrada, (r) => {
       setResultado(r);
       setEntradaUsada(entrada);
@@ -165,7 +283,8 @@ function Gerador({ aoSessaoExpirar }: { aoSessaoExpirar: () => void }) {
   function refinar(e: FormEvent) {
     e.preventDefault();
     if (!resultado || !entradaUsada) return;
-    void executar("refinar", "/api/refinar", { entrada: entradaUsada, issue: resultado.issue, ajuste }, (r) => {
+    const corpo = { entrada: entradaUsada, issue: resultado.issue, ajuste, historicoId: resultado.historicoId };
+    void executar("refinar", "/api/refinar", corpo, (r) => {
       setResultado(r);
       setAjuste("");
     });
@@ -221,19 +340,16 @@ function Gerador({ aoSessaoExpirar }: { aoSessaoExpirar: () => void }) {
             </select>
           </label>
           <label>
-            Produto
-            <select name="produto" value={produto} onChange={(e) => setProduto(e.target.value)}>
-              {opcoes.produtos.map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </select>
+            Nome do produto
+            <input
+              name="produto"
+              value={produto}
+              maxLength={120}
+              onChange={(e) => setProduto(e.target.value)}
+              placeholder="Ex.: Loja Exemplo"
+              required
+            />
           </label>
-          {produto === "Outro" && (
-            <label>
-              Nome do produto
-              <input name="produtoOutro" value={produtoOutro} maxLength={120} onChange={(e) => setProdutoOutro(e.target.value)} required />
-            </label>
-          )}
         </div>
         <Campo rotulo="Contexto (opcional)" atual={contexto.length} limite={opcoes.limites.contexto}>
           <textarea
@@ -289,11 +405,18 @@ function Gerador({ aoSessaoExpirar }: { aoSessaoExpirar: () => void }) {
               <button type="button" className="secundario" onClick={baixar}>
                 Baixar .md
               </button>
+              <button type="button" className="botao-texto" onClick={aoNova} disabled={ocupado}>
+                Nova issue
+              </button>
             </div>
           </div>
           <p className="legenda">
             Revise antes de virar card. <mark className="lacuna">[a preencher]</mark> marca o que a IA não pôde afirmar.
+            {resultado.historicoId !== null && " Guardada no histórico."}
           </p>
+          {resultado.usouFallback && (
+            <p className="alteracoes">O modelo principal estava indisponível: esta versão foi gerada pelo modelo reserva ({resultado.modelo}).</p>
+          )}
           {resultado.alteracoes && (
             <p className="alteracoes">
               {resultado.alteracoes.length ? `Mudou neste refinamento: ${resultado.alteracoes.join(", ")}.` : "O refinamento não mudou nada na issue."}
@@ -344,6 +467,26 @@ function Campo({ rotulo, atual, limite, children }: { rotulo: string; atual: num
       {children}
     </label>
   );
+}
+
+// Lembra o último nome de produto só neste navegador, por conveniência. Se o armazenamento
+// estiver bloqueado (janela anônima, por exemplo), o campo só começa vazio.
+const CHAVE_PRODUTO = "idg:ultimo-produto";
+
+function lerUltimoProduto(): string {
+  try {
+    return localStorage.getItem(CHAVE_PRODUTO) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function salvarUltimoProduto(nome: string) {
+  try {
+    localStorage.setItem(CHAVE_PRODUTO, nome);
+  } catch {
+    // sem armazenamento: segue sem lembrar
+  }
 }
 
 function textoProgresso(p: Progresso | null) {

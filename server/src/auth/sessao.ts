@@ -1,5 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import type { Usuario } from "./autenticador.js";
+
+/** O token leva só o e-mail; o perfil (admin, ativo) é relido do banco a cada pedido. */
+type Usuario = { email: string };
 
 export const COOKIE_SESSAO = "idg_sessao";
 

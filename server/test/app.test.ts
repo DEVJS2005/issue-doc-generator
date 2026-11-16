@@ -17,23 +17,22 @@ describe("configuração", () => {
   });
 
   it("lê listas separadas por vírgula", () => {
-    const c = carregarConfig({ PRODUTOS: " Loja, App ,", USUARIOS_PERMITIDOS: "a@x.dev,b@x.dev" });
-    expect(c.produtos).toEqual(["Loja", "App"]);
-    expect(c.usuariosPermitidos).toEqual(["a@x.dev", "b@x.dev"]);
+    const c = carregarConfig({ USUARIOS_PERMITIDOS: " a@x.dev:1, b@x.dev:2 ," });
+    expect(c.usuariosPermitidos).toEqual(["a@x.dev:1", "b@x.dev:2"]);
   });
 
   it("recusa esforço inválido", () => {
     expect(() => carregarConfig({ ESFORCO: "turbo" })).toThrow();
   });
 
-  it("exige MODELO para provedores sem modelo padrão", () => {
-    expect(() => carregarConfig({ PROVEDOR: "openai" })).toThrow(/MODELO é obrigatório/);
-    expect(() => carregarConfig({ PROVEDOR: "gemini" })).toThrow(/MODELO é obrigatório/);
+  it("só a Claude tem modelo padrão; nos outros o modelo fica vazio até a administração definir", () => {
+    expect(carregarConfig({ PROVEDOR: "openai" }).modelo).toBe("");
+    expect(carregarConfig({ PROVEDOR: "gemini" }).modelo).toBe("");
     expect(carregarConfig({ PROVEDOR: "openai", MODELO: "modelo-x" }).modelo).toBe("modelo-x");
   });
 
-  it("exige OPENAI_BASE_URL no provedor compatível", () => {
-    expect(() => carregarConfig({ PROVEDOR: "openai_compativel", MODELO: "llama" })).toThrow(/OPENAI_BASE_URL/);
+  it("usa banco em memória nos testes", () => {
+    expect(carregarConfig({}).arquivoBanco).toBe(":memory:");
   });
 
   it("recusa provedor desconhecido", () => {
@@ -50,10 +49,13 @@ describe("rotas básicas", () => {
     expect(r.body).not.toContain("sk-teste-segredo");
   });
 
-  it("lista produtos do .env mais 'Outro'", async () => {
-    const app = await montarApp(carregarConfig({ PRODUTOS: "Loja,App", USUARIOS_PERMITIDOS: USUARIO_TESTE }));
+  it("as opções trazem tipos e limites, sem lista de produtos", async () => {
+    const app = await montarApp(carregarConfig({ USUARIOS_PERMITIDOS: USUARIO_TESTE }));
     const r = await app.inject({ method: "GET", url: "/api/opcoes", headers: { cookie: await entrar(app) } });
-    expect(r.json().produtos).toEqual(["Loja", "App", "Outro"]);
+    expect(r.json()).toEqual({
+      tipos: ["Correção", "Nova funcionalidade", "Ajuste técnico", "Melhoria"],
+      limites: { descricao: 4000, contexto: 8000, ajuste: 2000 },
+    });
   });
 
   it("entrega o index.html do web e 404 em JSON para /api desconhecida", async () => {

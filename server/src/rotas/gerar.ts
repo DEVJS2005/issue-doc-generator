@@ -1,14 +1,14 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
+import type { Ajustes } from "../ajustes/ajustes.js";
+import type { RepositorioHistorico } from "../banco/historico.js";
 import type { Config } from "../config.js";
+import { custoEstimado } from "../custo.js";
 import { gerarIssue, type ResultadoGeracao } from "../geracao/servico.js";
 import { ErroGeracao, normalizarErro } from "../ia/erros.js";
-import type { Provedor } from "../ia/tipos.js";
-import { TIPOS_ISSUE, type Issue } from "../issue/schema.js";
-import type { Limitador } from "../auth/limite.js";
-import { custoEstimado } from "../custo.js";
 import { partesAlteradas } from "../issue/alteracoes.js";
-import { formatarEntrada } from "../prompt/entrada.js";
+import { TIPOS_ISSUE, type Issue } from "../issue/schema.js";
+import { formatarEntrada, type Entrada } from "../prompt/entrada.js";
 
 export const LIMITE_DESCRICAO = 4000;
 export const LIMITE_CONTEXTO = 8000;
@@ -54,10 +54,10 @@ function abrirSse(reply: FastifyReply) {
 }
 
 export type OpcoesRotaGerar = {
+  /** Config do .env (log, preço). Provedor, modelo e limites em uso vêm de `ajustes`. */
   config: Config;
-  provedor: Provedor | null;
-  /** Gerações e refinamentos por usuário por hora (LIMITE_POR_HORA). */
-  limiteUso: Limitador;
+  ajustes: Ajustes;
+  historico: RepositorioHistorico;
 };
 
 function horaLocal(ms: number) {
@@ -65,8 +65,8 @@ function horaLocal(ms: number) {
 }
 
 /**
- * Executa uma geração (ou refinamento) com SSE, cancelamento e tempo limite. Exportado para a
- * rota de refinar reaproveitar o mesmo fluxo com outra mensagem de usuário.
+ * Executa uma geração (ou refinamento) com SSE, cancelamento e tempo limite, e guarda o
+ * resultado no histórico. Exportado para a rota de refinar reaproveitar o mesmo fluxo.
  */
 export async function responderComGeracao(
   app: FastifyInstance,
@@ -75,23 +75,26 @@ export async function responderComGeracao(
     usuario: string;
     tipoPedido: "gerar" | "refinar";
     logExtra: Record<string, unknown>;
-    /** No refinamento: a issue antes do ajuste, para listar o que mudou. */
-    issueAnterior?: Issue;
+    entrada: Entrada;
+    /** No refinamento: a issue antes do ajuste (para listar o que mudou), o ajuste e a issue do histórico. */
+    refinamento?: { issueAnterior: Issue; ajuste: string; historicoId: number | null };
   },
 ) {
-  if (!o.provedor) {
+  const provedor = o.ajustes.provedor();
+  const emUso = o.ajustes.config();
+  if (!provedor) {
     const e = new ErroGeracao("nao_configurado");
     return reply.code(503).send({ erro: e.paraTela() });
   }
 
   const quem = reply.request.usuario?.email ?? "anonimo";
-  const cota = o.limiteUso.tentar(quem);
+  const cota = o.ajustes.limiteUso.tentar(quem);
   if (!cota.ok) {
     app.log.warn({ evento: "limite_uso", usuario: quem }, "limite de uso atingido");
     return reply.code(429).send({
       erro: {
         codigo: "limite_uso",
-        mensagem: `Você atingiu o limite de ${o.config.limitePorHora} gerações por hora. Tente de novo a partir das ${horaLocal(cota.liberaEm)}.`,
+        mensagem: `Você atingiu o limite de ${emUso.limitePorHora} gerações por hora. Tente de novo a partir das ${horaLocal(cota.liberaEm)}.`,
         podeTentarDeNovo: false,
       },
     });
@@ -105,13 +108,13 @@ export async function responderComGeracao(
   reply.raw.on("close", () => {
     if (!terminou) controle.abort(new ErroGeracao("cancelado"));
   });
-  const limite = setTimeout(() => controle.abort(new ErroGeracao("tempo_esgotado")), o.config.tempoLimiteMs);
+  const limite = setTimeout(() => controle.abort(new ErroGeracao("tempo_esgotado")), emUso.tempoLimiteMs);
 
-  sse.enviar("inicio", { provedor: o.provedor.nome, modelo: o.provedor.modelo });
+  sse.enviar("inicio", { provedor: provedor.nome, modelo: provedor.modelo });
   const inicio = Date.now();
 
   try {
-    const r: ResultadoGeracao = await gerarIssue(o.provedor, o.usuario, {
+    const r: ResultadoGeracao = await gerarIssue(provedor, o.usuario, {
       signal: controle.signal,
       aoProgresso: (p) => sse.enviar("progresso", p),
     });
@@ -131,14 +134,30 @@ export async function responderComGeracao(
       },
       `${o.tipoPedido}: ok (cache lido: ${r.uso.cacheLeitura} tokens${custo === null ? "" : `, ~US$ ${custo}`})`,
     );
+
+    // Falha ao guardar no histórico não pode derrubar a geração: a issue já está pronta.
+    let historicoId: number | null = null;
+    try {
+      const ref = o.refinamento;
+      if (ref?.historicoId) {
+        o.historico.salvarRefinamento(ref.historicoId, ref.ajuste, r.issue, r.markdown, r.modelo);
+        historicoId = ref.historicoId;
+      } else {
+        historicoId = o.historico.salvarNova(quem, o.entrada, r.issue, r.markdown, r.modelo);
+      }
+    } catch (erroHistorico) {
+      app.log.error({ evento: "historico_falhou", usuario: quem, detalhe: String(erroHistorico) }, "histórico: não foi possível salvar");
+    }
+
     sse.enviar("resultado", {
       issue: r.issue,
       markdown: r.markdown,
       avisos: r.avisos,
-      alteracoes: o.issueAnterior ? partesAlteradas(o.issueAnterior, r.issue) : null,
+      alteracoes: o.refinamento ? partesAlteradas(o.refinamento.issueAnterior, r.issue) : null,
       modelo: r.modelo,
       usouFallback: r.usouFallback,
       duracaoMs: r.duracaoMs,
+      historicoId,
     });
   } catch (erro) {
     const e = normalizarErro(erro, controle.signal);
@@ -170,7 +189,8 @@ export function registrarRotaGerar(app: FastifyInstance, o: OpcoesRotaGerar) {
       });
     }
     const entrada = corpo.data;
-    // LGPD: o texto da descrição só vai para o log se REGISTRAR_DESCRICAO=true.
+    // LGPD: o texto da descrição só vai para o log se REGISTRAR_DESCRICAO=true. (No histórico ele
+    // fica, porque é a própria issue; a retenção da administração apaga as antigas.)
     const logExtra: Record<string, unknown> = {
       tipo: entrada.tipo,
       produto: entrada.produto,
@@ -178,6 +198,6 @@ export function registrarRotaGerar(app: FastifyInstance, o: OpcoesRotaGerar) {
       caracteresContexto: entrada.contexto.length,
       ...(o.config.registrarDescricao ? { descricao: entrada.descricao, contexto: entrada.contexto } : {}),
     };
-    await responderComGeracao(app, reply, { ...o, usuario: formatarEntrada(entrada), tipoPedido: "gerar", logExtra });
+    await responderComGeracao(app, reply, { ...o, usuario: formatarEntrada(entrada), tipoPedido: "gerar", logExtra, entrada });
   });
 }

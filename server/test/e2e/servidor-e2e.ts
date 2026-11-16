@@ -41,8 +41,8 @@ const config = carregarConfig({
   ...process.env,
   PROVEDOR: "anthropic",
   ANTHROPIC_API_KEY: CHAVE_FALSA,
-  USUARIOS_PERMITIDOS: "qa@exemplo.dev:senha-de-teste",
-  PRODUTOS: "Loja Exemplo",
+  // Importados no banco em memória na subida; o primeiro vira admin.
+  USUARIOS_PERMITIDOS: "qa@exemplo.dev:senha-de-teste,comum@exemplo.dev:senha-comum",
   SEGREDO_SESSAO: "segredo-e2e",
   LIMITE_POR_HORA: "100",
   PORTA: String(PORTA_E2E),
