@@ -156,9 +156,6 @@ test("administração salva ajustes, cria usuário e registra a alteração", as
   await entrar(page);
   await page.getByRole("button", { name: "Administração" }).click();
   await expect(page.getByRole("heading", { name: "Inteligência artificial" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Uso", exact: true })).toBeVisible();
-  await expect(page.locator(".indicador", { hasText: "Gerações e refinamentos" })).not.toContainText(/^Gerações e refinamentos0$/);
-  await expect(page.getByRole("heading", { name: "Por pessoa" })).toBeVisible();
   await expect(page.getByRole("option", { name: "Gemini (Google) (sem chave)" })).toBeDisabled();
 
   await page.getByLabel("Gerações por pessoa por hora").fill("50");

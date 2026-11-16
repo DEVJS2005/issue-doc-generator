@@ -38,36 +38,6 @@ function ultimoEvento(corpo: string) {
   return JSON.parse(bloco.split("\n")[1].slice(6));
 }
 
-describe("painel de uso", () => {
-  it("soma chamadas, tokens, custo, falhas e uso por pessoa", async () => {
-    const a = await app();
-    const admin = await entrar(a);
-    const comum = await entrar(a, "comum@exemplo.dev", "senha-comum");
-    await a.inject({ method: "POST", url: "/api/gerar", headers: { cookie: admin }, payload: ENTRADA });
-    await a.inject({ method: "POST", url: "/api/gerar", headers: { cookie: comum }, payload: ENTRADA });
-    await a.inject({ method: "POST", url: "/api/gerar", headers: { cookie: comum }, payload: { ...ENTRADA, descricao: "FALHAR" } });
-
-    const r = (await a.inject({ method: "GET", url: "/api/admin/uso?dias=7", headers: { cookie: admin } })).json();
-    expect(r.dias).toBe(7);
-    expect(r.totais).toMatchObject({ chamadas: 3, sucessos: 2, falhas: 1, tokensSaida: 10000, tokensCacheLeitura: 40000, chamadasSemPreco: 0 });
-    // 2 × (1000×4 + 5000×20 + 20000×0,2) / 1e6 = 2 × 0,108
-    expect(r.totais.custoUsd).toBe(0.216);
-    expect(r.erros).toEqual([{ codigo: "limite_taxa", quantidade: 1 }]);
-    expect(r.ultimosErros[0]).toMatchObject({ usuario: "comum@exemplo.dev", tipo: "gerar", codigo: "limite_taxa" });
-    expect(r.porUsuario.find((u: { usuario: string }) => u.usuario === "comum@exemplo.dev")).toMatchObject({ chamadas: 2, falhas: 1 });
-    expect(r.porModelo[0]).toMatchObject({ modelo: "claude-opus-5-5", chamadas: 3 });
-    expect(r.porDia).toHaveLength(1);
-    expect(r.porDia[0].chamadas).toBe(3);
-  });
-
-  it("limita o período e só admin vê", async () => {
-    const a = await app();
-    expect((await a.inject({ method: "GET", url: "/api/admin/uso?dias=9999", headers: { cookie: await entrar(a) } })).json().dias).toBe(365);
-    const comum = await entrar(a, "comum@exemplo.dev", "senha-comum");
-    expect((await a.inject({ method: "GET", url: "/api/admin/uso", headers: { cookie: comum } })).statusCode).toBe(403);
-  });
-});
-
 describe("versões de uma issue", () => {
   it("devolve o Markdown de cada versão só para quem pode ver", async () => {
     const a = await app();

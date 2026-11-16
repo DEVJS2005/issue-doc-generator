@@ -12,7 +12,6 @@ import { criarSessoes } from "./auth/sessao.js";
 import { abrirBanco } from "./banco/banco.js";
 import { RepositorioConfiguracao } from "./banco/configuracao.js";
 import { RepositorioHistorico } from "./banco/historico.js";
-import { RepositorioUso } from "./banco/uso.js";
 import { RepositorioUsuarios } from "./banco/usuarios.js";
 import type { Config } from "./config.js";
 import { criarProvedor } from "./ia/index.js";
@@ -50,7 +49,6 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   const banco = abrirBanco(config.arquivoBanco);
   const usuarios = new RepositorioUsuarios(banco);
   const historico = new RepositorioHistorico(banco);
-  const uso = new RepositorioUso(banco);
   const fixo = opcoes.provedor;
   const fabrica = opcoes.fabricaProvedor ?? (fixo !== undefined ? () => fixo : criarProvedor);
   const ajustes = new Ajustes(config, new RepositorioConfiguracao(banco), fabrica, (m) => app.log.warn(m));
@@ -89,9 +87,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
 
   // Retenção do histórico (administração): apaga as issues antigas agora e a cada 6 horas.
   const expurgar = () => {
-    const dias = ajustes.valores().retencaoDias;
-    uso.expurgar(dias);
-    const apagadas = historico.expurgar(dias);
+    const apagadas = historico.expurgar(ajustes.valores().retencaoDias);
     if (apagadas) app.log.info({ evento: "expurgo", apagadas }, `histórico: ${apagadas} issue(s) antiga(s) apagada(s)`);
   };
   expurgar();
@@ -130,11 +126,11 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     limites: { descricao: LIMITE_DESCRICAO, contexto: LIMITE_CONTEXTO, ajuste: LIMITE_AJUSTE },
   }));
 
-  const opcoesGeracao = { config, ajustes, historico, uso };
+  const opcoesGeracao = { config, ajustes, historico };
   registrarRotaGerar(app, opcoesGeracao);
   registrarRotaRefinar(app, opcoesGeracao);
   registrarHistorico(app, { historico });
-  registrarAdmin(app, { ajustes, usuarios, uso });
+  registrarAdmin(app, { ajustes, usuarios });
 
   // Em produção o servidor também entrega o build do web/.
   const pastaWeb = opcoes.pastaWeb ?? pastaWebPadrao;

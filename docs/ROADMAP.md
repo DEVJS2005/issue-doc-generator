@@ -15,8 +15,8 @@ Na `main` (PRs #1 a #3) e nos PRs #4, #5 e #6:
 - modelo reserva automático no 503 e lista de modelos da chave;
 - CI no GitHub Actions: typecheck, Vitest, Playwright e Docker (build, container, volume, link do
   1º admin);
-- painel de uso, comparação de versões, login único (SSO) e JavaScript dividido sob demanda;
-- 128 testes Vitest e 11 testes Playwright (com IA falsa).
+- comparação de versões, login único (SSO) e JavaScript dividido sob demanda;
+- 126 testes Vitest e 11 testes Playwright (com IA falsa).
 
 Testado com IA real (Gemini `gemini-3.8-flash`): geração de 3 linhas, exemplo de Marcas (5/5
 problemas apontados), Refinar (mudou só o pedido) e cache de prompt (2ª chamada leu 20.931 tokens).
@@ -25,8 +25,9 @@ problemas apontados), Refinar (mudou só o pedido) e cache de prompt (2ª chamad
 
 | Pendência | Situação |
 |---|---|
-| Custo real com a Claude | Só estimado (~US$ 0,20 na 1ª chamada, ~US$ 0,10 depois). A conta de teste estava sem crédito. |
-| Uma instância só | O banco é um arquivo SQLite local e o limite por hora fica em memória. Para mais de uma instância, ver item 9. |
+| Consumo e custo | Não há tela no app: ver no painel do provedor. Com a Claude, a estimativa é de ~US$ 0,20 na 1ª chamada e ~US$ 0,10 depois. |
+| Uma instância só | O banco é um arquivo SQLite local e o limite por hora fica em memória. Decisão: SQLite, uma instância. |
+| SSO com o provedor real | Testado com um provedor simulado. Falta um login de teste com o provedor da empresa. |
 | Aviso do `node:sqlite` | O Node imprime `ExperimentalWarning` ao subir. É só um aviso. |
 
 ## Itens
@@ -39,10 +40,10 @@ problemas apontados), Refinar (mudou só o pedido) e cache de prompt (2ª chamad
 | 3b | Banco SQLite: usuários e admins, histórico de issues, 1º admin por link no log | ✅ PR #5 |
 | 4 | Lista de modelos da chave | ✅ PR #5 |
 | 5 | Modelo reserva no 503/limite de taxa | ✅ PR #5 |
-| 6 | Painel de uso: gerações, falhas, custo, tempo, tokens e reserva por dia, pessoa e modelo | ✅ PR #6 |
-| 7 | Medir o custo real com a Claude e atualizar o README | ~15 min. **Bloqueado:** a conta da Anthropic está sem crédito. |
+| 6 | Painel de uso | ❌ Descartado em 16/11: o consumo é visto no painel do próprio provedor (Anthropic Console, OpenAI, Google). |
+| 7 | Medir o custo real com a Claude | ❌ Descartado pelo mesmo motivo. O README traz só uma estimativa. |
 | 8 | Dividir o JavaScript da tela: de 579 KB para 237 KB iniciais; Markdown, Histórico, Administração e Versões sob demanda | ✅ PR #6 |
-| 9 | Mais de uma instância: Postgres no lugar do SQLite e limite de uso compartilhado (Redis) | ~3 h. **Em espera:** só se o DevOps for rodar mais de uma instância; para uma, o SQLite basta. |
+| 9 | Postgres e Redis para várias instâncias | ❌ Descartado em 16/11: fica o SQLite, com uma instância. |
 | 10 | Login por SSO (OpenID Connect: Entra ID, Google, Keycloak, Okta…) | ✅ PR #6. Falta um login de teste com o provedor real da empresa. |
 | 11 | Comparar versões de uma issue (diferença linha a linha entre duas versões) | ✅ PR #6 |
 
@@ -82,3 +83,6 @@ Detalhes em "Subir num servidor", no README. Em resumo:
     IA, usuários e admins, histórico;
   - o 1º admin é criado por um link de uso único no log;
   - histórico: cada um vê as suas issues, o admin vê todas, com retenção configurável.
+- **16/11, mais tarde:**
+  - fica o SQLite, com uma instância; nada de Postgres ou Redis;
+  - sem tela de consumo no app, porque o consumo é visto no painel do provedor.

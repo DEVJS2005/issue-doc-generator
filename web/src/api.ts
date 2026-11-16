@@ -84,28 +84,6 @@ function chamar<T>(metodo: "GET" | "PUT" | "PATCH" | "DELETE", url: string, corp
   }).then((r) => lerJson<T>(r));
 }
 
-export type ResumoUso = {
-  dias: number;
-  totais: {
-    chamadas: number;
-    sucessos: number;
-    falhas: number;
-    tokensEntrada: number;
-    tokensSaida: number;
-    tokensCacheLeitura: number;
-    tokensCacheEscrita: number;
-    custoUsd: number;
-    chamadasSemPreco: number;
-    duracaoMediaMs: number;
-    usouReserva: number;
-  };
-  porDia: { dia: string; chamadas: number; falhas: number; custoUsd: number }[];
-  porUsuario: { usuario: string; chamadas: number; falhas: number; tokensSaida: number; custoUsd: number }[];
-  porModelo: { modelo: string; chamadas: number; falhas: number; custoUsd: number; duracaoMediaMs: number }[];
-  erros: { codigo: string; quantidade: number }[];
-  ultimosErros: { quando: number; usuario: string; tipo: string; modelo: string; codigo: string }[];
-};
-
 /**
  * Sessão: o 401 diz se o banco ainda não tem usuário (`precisaConfigurar`) e qual é o botão de
  * login único, se houver (`sso`).
@@ -133,7 +111,6 @@ export const api = {
   issue: (id: number) => chamar<{ item: IssueGuardada; versoes: Versao[] }>("GET", `/api/historico/${id}`),
   apagarIssue: (id: number) => chamar<{ ok: true }>("DELETE", `/api/historico/${id}`),
   versao: (id: number, numero: number) => chamar<{ versao: Versao & { markdown: string } }>("GET", `/api/historico/${id}/versoes/${numero}`),
-  uso: (dias: number) => chamar<ResumoUso>("GET", `/api/admin/uso?dias=${dias}`),
 
   ajustes: () => chamar<EstadoAdmin>("GET", "/api/admin/ajustes"),
   salvarAjustes: (valores: Partial<ValoresAjustes>) => chamar<EstadoAdmin>("PUT", "/api/admin/ajustes", valores),

@@ -30,8 +30,6 @@ Próximos passos, pendências conhecidas e checklist para o DevOps: [docs/ROADMA
    Cada pessoa vê, reabre (para continuar refinando) e apaga as suas; o admin vê as de todos.
    **Comparar versões**, abaixo da issue, mostra linha a linha o que cada refinamento mudou.
 8. **Administração** (só admins):
-   - **painel de uso** por período: gerações, falhas, custo estimado, tempo médio, tokens, uso do
-     modelo reserva; quebrado por dia, pessoa e modelo, com as falhas por motivo e as últimas falhas;
    - provedor, modelo, modelo reserva e esforço; o botão **Buscar modelos da chave** lista os
      modelos que a chave pode usar;
    - limite por hora, tempo limite e por quantos dias guardar o histórico;
@@ -278,14 +276,18 @@ Esses tempos foram medidos com o Gemini sob alta demanda (houve respostas 503 an
 padrão de `TEMPO_LIMITE_SEGUNDOS` é 300: com 180, um refinamento real (ajuste de ~1.900
 caracteres) foi interrompido por tempo esgotado.
 
-**Custo por issue:**
+**Custo e consumo:** o app não tem tela de consumo. Para ver gasto e tokens, use o painel do
+próprio provedor:
 
-- **Claude (`claude-opus-5-5`, estimado, ainda não medido):** com os tokens acima e os preços da
-  tabela interna, fica em torno de **US$ 0,20 na 1ª chamada** (gravação do cache) e
-  **US$ 0,10 por issue depois**, quase tudo em tokens de saída. O raciocínio do modelo conta como
-  saída e pode aumentar esse valor; o log mostra o custo real de cada chamada (`custoEstimadoUsd`).
-- **Gemini e outros provedores:** o log só mostra custo com `PRECO_POR_MTOK` configurado com o
-  preço vigente do modelo.
+- Anthropic Console (Usage e Cost);
+- OpenAI Platform (Usage);
+- Google AI Studio ou Cloud Console (Gemini).
+
+Para ter uma ideia com a Claude (`claude-opus-5-5`): com os tokens acima e o preço público, fica
+em torno de US$ 0,20 na 1ª chamada (gravação do cache) e US$ 0,10 por issue depois. É uma
+estimativa, nunca medida, porque a conta de teste estava sem crédito. O log do servidor também
+traz uma estimativa por chamada (`custoEstimadoUsd`, que para provedores fora da Claude depende de
+`PRECO_POR_MTOK`).
 
 O tempo depende do modelo e do esforço. Modelos que raciocinam bastante podem passar de 60 s na
 1ª chamada; a tela avisa "ainda gerando…" e permite cancelar. O esforço "Baixo" (Administração)

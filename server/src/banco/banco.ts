@@ -57,27 +57,6 @@ const MIGRACOES: string[] = [
     modelo TEXT NOT NULL
   );
   `,
-  // 2: uma linha por chamada à IA, para o painel de uso (sem o texto da issue).
-  `
-  CREATE TABLE chamadas (
-    id INTEGER PRIMARY KEY,
-    quando INTEGER NOT NULL,
-    usuario TEXT NOT NULL,
-    tipo TEXT NOT NULL,
-    provedor TEXT NOT NULL,
-    modelo TEXT NOT NULL,
-    sucesso INTEGER NOT NULL,
-    codigo_erro TEXT,
-    tokens_entrada INTEGER NOT NULL DEFAULT 0,
-    tokens_saida INTEGER NOT NULL DEFAULT 0,
-    tokens_cache_leitura INTEGER NOT NULL DEFAULT 0,
-    tokens_cache_escrita INTEGER NOT NULL DEFAULT 0,
-    custo_usd REAL,
-    duracao_ms INTEGER NOT NULL,
-    usou_reserva INTEGER NOT NULL DEFAULT 0
-  );
-  CREATE INDEX chamadas_por_data ON chamadas (quando);
-  `,
 ];
 
 export type Banco = DatabaseSync;

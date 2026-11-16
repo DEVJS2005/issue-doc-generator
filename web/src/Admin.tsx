@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { api, ErroApi, type EstadoAdmin, type UsuarioAdmin, type ValoresAjustes } from "./api";
 import { dataHora } from "./Historico";
-import { Uso } from "./Uso";
 
 const ESFORCOS: { valor: ValoresAjustes["esforco"]; rotulo: string }[] = [
   { valor: "low", rotulo: "Baixo (mais rápido)" },
@@ -109,7 +108,6 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
 
   return (
     <>
-      <Uso aoSessaoExpirar={aoSessaoExpirar} />
       {mensagem && (
         <p className={mensagem.tipo === "ok" ? "info sucesso" : "erro caixa"} role={mensagem.tipo === "erro" ? "alert" : "status"}>
           {mensagem.texto}

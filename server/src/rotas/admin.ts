@@ -2,7 +2,6 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
 import type { Ajustes } from "../ajustes/ajustes.js";
 import { ErroValidacao } from "../banco/banco.js";
-import type { RepositorioUso } from "../banco/uso.js";
 import type { RepositorioUsuarios } from "../banco/usuarios.js";
 import { ErroGeracao } from "../ia/erros.js";
 import { listarModelos } from "../ia/modelos.js";
@@ -31,14 +30,8 @@ const CorpoAlterarUsuario = z.object({
 const PROVEDORES = ["anthropic", "openai", "openai_compativel", "gemini"] as const;
 
 /** /api/admin/*: o hook de auth já garante login e perfil de admin. */
-export function registrarAdmin(app: FastifyInstance, o: { ajustes: Ajustes; usuarios: RepositorioUsuarios; uso: RepositorioUso }) {
+export function registrarAdmin(app: FastifyInstance, o: { ajustes: Ajustes; usuarios: RepositorioUsuarios }) {
   const estado = () => ({ valores: o.ajustes.valores(), provedores: o.ajustes.provedores(), alteracoes: o.ajustes.alteracoes() });
-
-  // Painel de uso: ?dias=1..365 (padrão 30).
-  app.get("/api/admin/uso", async (request) => {
-    const dias = Math.min(365, Math.max(1, Math.trunc(Number((request.query as { dias?: string }).dias) || 30)));
-    return { dias, ...o.uso.resumo(dias) };
-  });
 
   app.get("/api/admin/ajustes", async () => estado());
 
