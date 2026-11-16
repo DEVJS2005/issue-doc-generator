@@ -86,7 +86,10 @@ export function normalizarErro(erro: unknown, signal?: AbortSignal): ErroGeracao
   if (erro instanceof ErroGeracao) return erro;
   if (signal?.aborted) {
     const motivo = signal.reason;
-    return motivo instanceof ErroGeracao ? motivo : new ErroGeracao("cancelado");
+    if (motivo instanceof ErroGeracao) return motivo;
+    // AbortSignal.timeout() aborta com um DOMException "TimeoutError": é tempo esgotado, não cancelamento.
+    if ((motivo as { name?: unknown } | undefined)?.name === "TimeoutError") return new ErroGeracao("tempo_esgotado");
+    return new ErroGeracao("cancelado");
   }
   const e = erro as { status?: unknown; name?: unknown; message?: unknown } | undefined;
   const detalhe = typeof e?.message === "string" ? e.message : String(erro);

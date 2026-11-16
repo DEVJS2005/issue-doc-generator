@@ -193,6 +193,11 @@ Entrada de teste: descrição de 3 linhas (limitar cupons a 3 por pedido). O pro
 |---|---|---|---|---|
 | Gemini `gemini-3.8-flash` | 1ª (grava o cache) | ~104 s | 0 | ~2,5 a 4,3 mil tokens |
 | Gemini `gemini-3.8-flash` | 2ª em diante | ~32 s | 20.931 de 22.822 | ~4,6 mil tokens |
+| Gemini `gemini-3.8-flash` | Exemplo de Marcas (entrada longa) | ~264 s | — | 15 critérios, 31 casos, 5/5 problemas apontados |
+| Gemini `gemini-3.8-flash` | Refinar ("prioridade Alta") | ~130 s | — | mudou só Prioridade e Revisão |
+
+Esses tempos foram medidos com o Gemini sob alta demanda (houve respostas 503 antes). Para
+entradas longas, deixe `TEMPO_LIMITE_SEGUNDOS` em 300 ou mais.
 
 **Custo por issue:**
 

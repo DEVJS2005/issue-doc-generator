@@ -190,5 +190,8 @@ describe("utilitários da IA", () => {
     const c2 = new AbortController();
     c2.abort();
     expect(normalizarErro(new Error("x"), c2.signal).codigo).toBe("cancelado");
+    const c3 = new AbortController();
+    c3.abort(new DOMException("passou do tempo", "TimeoutError"));
+    expect(normalizarErro(new Error("x"), c3.signal).codigo).toBe("tempo_esgotado");
   });
 });
