@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { criarProvedorGemini, VERSAO_API_GEMINI } from "../src/ia/gemini.js";
+import { configRaciocinio, criarProvedorGemini, VERSAO_API_GEMINI } from "../src/ia/gemini.js";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -28,5 +28,13 @@ describe("Gemini", () => {
     expect(pedidos.length).toBeGreaterThan(0);
     expect(pedidos[0].url).toContain("/v1beta/models/gemini-teste:streamGenerateContent");
     expect(pedidos[0].corpo).toContain("INSTRUCAO-DE-SISTEMA");
+  });
+
+  // Regressão: o Gemini 2.5 recusa thinkingLevel ("Thinking level is not supported for this model").
+  it("Gemini 2.x usa orçamento de raciocínio; Gemini 3 em diante usa nível", () => {
+    expect(configRaciocinio("gemini-2.5-flash", "low")).toEqual({ thinkingBudget: 1024, includeThoughts: true });
+    expect(configRaciocinio("gemini-2.5-pro", "max")).toEqual({ thinkingBudget: -1, includeThoughts: true });
+    expect(configRaciocinio("gemini-3-flash-preview", "low")).toMatchObject({ thinkingLevel: expect.any(String), includeThoughts: true });
+    expect(configRaciocinio("gemini-3-flash-preview", "low")).not.toHaveProperty("thinkingBudget");
   });
 });

@@ -25,7 +25,8 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 - **Gemini:** a geração falhava com "configuração inválida" porque o SDK `@google/genai` 3.x
   passou a usar a API `v1` por padrão, e essa versão não aceita instrução de sistema. A versão
-  agora vai fixa em `v1beta`. Encontrado no teste de instalação limpa com Docker.
+  agora vai fixa em `v1beta`. O Gemini 2.x recebe orçamento de raciocínio (`thinkingBudget`), já
+  que só o 3 em diante aceita `thinkingLevel`. Ambos encontrados no teste de instalação limpa.
 - Na Administração, o campo Modelo é obrigatório e avisa embaixo dele quando está vazio. Ao
   trocar para um provedor sem modelo padrão, a lista de modelos da chave já é buscada.
 

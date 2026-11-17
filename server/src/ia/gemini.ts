@@ -21,6 +21,18 @@ const NIVEL: Record<Esforco, ThinkingLevel> = {
   max: ThinkingLevel.HIGH,
 };
 
+// Gemini 2.x não aceita thinkingLevel ("Thinking level is not supported for this model"): usa
+// um orçamento de tokens de raciocínio. -1 deixa o modelo decidir.
+const ORCAMENTO: Record<Esforco, number> = { low: 1024, medium: 8192, high: -1, xhigh: -1, max: -1 };
+
+/** Configuração de raciocínio conforme a geração do modelo (2.x por orçamento, 3+ por nível). */
+export function configRaciocinio(modelo: string, esforco: Esforco) {
+  // includeThoughts faz o raciocínio vir no stream: a tela mostra progresso enquanto o modelo
+  // pensa, em vez de ficar parada até o primeiro trecho de JSON.
+  if (/^gemini-[12]\./.test(modelo)) return { thinkingBudget: ORCAMENTO[esforco], includeThoughts: true };
+  return { thinkingLevel: NIVEL[esforco], includeThoughts: true };
+}
+
 const RECUSAS = new Set<string>([
   FinishReason.SAFETY,
   FinishReason.RECITATION,
@@ -49,9 +61,7 @@ export function criarProvedorGemini(o: OpcoesGemini): Provedor {
             responseMimeType: "application/json",
             responseJsonSchema: schema,
             maxOutputTokens: o.maxTokens,
-            // includeThoughts faz o raciocínio vir no stream: a tela mostra progresso enquanto o
-            // modelo pensa, em vez de ficar parada até o primeiro trecho de JSON.
-            thinkingConfig: { thinkingLevel: NIVEL[o.esforco], includeThoughts: true },
+            thinkingConfig: configRaciocinio(o.modelo, o.esforco),
             abortSignal: signal,
           },
         });
