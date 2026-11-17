@@ -23,6 +23,10 @@ updates:
       interval: weekly
     commit-message:
       prefix: "ci"
+    # Todas as Actions num PR só por semana (antes vinha um PR por Action).
+    groups:
+      actions:
+        patterns: ["*"]
 
   - package-ecosystem: docker
     directory: /

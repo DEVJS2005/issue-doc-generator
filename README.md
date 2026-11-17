@@ -145,7 +145,11 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 - **CodeQL** (`.github/workflows/codeql.yml`): análise de segurança em cada PR e uma vez por
   semana.
 - **Dependabot** (`.github/dependabot.yml`): PRs semanais de atualização de npm, Actions e Docker,
-  que passam pelo mesmo CI.
+  que passam pelo mesmo CI. As Actions vêm agrupadas num PR só.
+- **IA real** (`.github/workflows/ia-real.yml`): toda segunda-feira (ou pelo botão "Run workflow"),
+  gera uma issue curta em cada provedor com chave nos *secrets* do repositório (`ANTHROPIC_API_KEY`,
+  `OPENAI_API_KEY`, `GEMINI_API_KEY`) e valida pelo schema. Provedores sem chave são pulados. Pega
+  mudanças de SDK que os testes com IA falsa não veem. Localmente: `npm run teste:ia-real --workspace server`.
 - **Publicar** (`.github/workflows/publicar.yml`): depois que o CI passa na `main`, publica
   `ghcr.io/devjs2005/issue-doc-generator:main`. Uma tag `vX.Y.Z` publica `:X.Y.Z` e `:latest` e
   cria o Release com o trecho do CHANGELOG. A tag só é aceita se bater com o `package.json` e
