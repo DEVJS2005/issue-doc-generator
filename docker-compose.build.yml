@@ -1,0 +1,6 @@
+# Opcional: constrói a imagem a partir deste código, em vez de baixar a do ghcr.io.
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+services:
+  app:
+    build: .
+    image: issue-doc-generator:local

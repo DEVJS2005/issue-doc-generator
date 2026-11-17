@@ -164,7 +164,7 @@ instale o navegador com `npx playwright install chromium`.
 
 ```bash
 cp .env.example .env   # preencha uma chave de IA e o SEGREDO_SESSAO
-docker compose up -d --build
+docker compose pull && docker compose up -d   # imagem pronta do ghcr.io
 docker compose logs app | grep configurar   # link do primeiro admin
 ```
 

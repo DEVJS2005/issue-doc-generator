@@ -18,6 +18,8 @@ import {
 import { IconeAlerta, IconeSeta, Logo, Rodape, SeletorTema } from "./Interface";
 
 import { ERRO_NOME, PADRAO_NOME, useValidacao } from "./Formulario";
+import { baixarPdf, metadadosPdf, nomeArquivo } from "./impressao";
+import { lerRascunho, limparRascunho, salvarRascunho } from "./rascunho";
 
 const Markdown = lazy(() => import("./Markdown").then((m) => ({ default: m.Markdown })));
 const Historico = lazy(() => import("./Historico").then((m) => ({ default: m.Historico })));
@@ -44,8 +46,8 @@ export function App() {
   const [precisaConfigurar, setPrecisaConfigurar] = useState(false);
   const [rotuloSso, setRotuloSso] = useState<string | null>(null);
   const [pagina, setPagina] = useState<Pagina>("gerar");
-  // Issue aberta do histórico; a chave remonta o Gerador com ela.
-  const [aberta, setAberta] = useState<{ chave: number; item: IssueGuardada | null }>({ chave: 0, item: null });
+  // Issue aberta do histórico (ou usada como base de uma nova); a chave remonta o Gerador com ela.
+  const [aberta, setAberta] = useState<{ chave: number; item: IssueGuardada | null; base: Entrada | null }>({ chave: 0, item: null, base: null });
   const codigo = new URLSearchParams(window.location.search).get("codigo");
 
   useEffect(() => {
@@ -71,12 +73,19 @@ export function App() {
   }
 
   function abrirDoHistorico(item: IssueGuardada) {
-    setAberta((a) => ({ chave: a.chave + 1, item }));
+    setAberta((a) => ({ chave: a.chave + 1, item, base: null }));
+    setPagina("gerar");
+  }
+
+  /** Duplicar como base: uma issue nova com a descrição, o tipo, o produto e o contexto de outra. */
+  function usarComoBase(item: IssueGuardada) {
+    setAberta((a) => ({ chave: a.chave + 1, item: null, base: item.entrada }));
     setPagina("gerar");
   }
 
   function novaIssue() {
-    setAberta((a) => ({ chave: a.chave + 1, item: null }));
+    if (usuario) limparRascunho(usuario.nome);
+    setAberta((a) => ({ chave: a.chave + 1, item: null, base: null }));
     setPagina("gerar");
   }
 
@@ -138,11 +147,11 @@ export function App() {
         {usuario && (
           // O Gerador fica montado ao trocar de aba, para não perder uma geração em andamento.
           <div hidden={pagina !== "gerar"}>
-            <Gerador key={aberta.chave} aberta={aberta.item} aoNova={novaIssue} aoSessaoExpirar={expirou} />
+            <Gerador key={aberta.chave} pessoa={usuario.nome} aberta={aberta.item} base={aberta.base} aoNova={novaIssue} aoSessaoExpirar={expirou} />
           </div>
         )}
         <Suspense fallback={<Carregando />}>
-          {usuario && pagina === "historico" && <Historico podeVerTodos={usuario.admin} aoAbrir={abrirDoHistorico} aoSessaoExpirar={expirou} />}
+          {usuario && pagina === "historico" && <Historico podeVerTodos={usuario.admin} aoAbrir={abrirDoHistorico} aoUsarComoBase={usarComoBase} aoSessaoExpirar={expirou} />}
           {usuario?.admin && pagina === "admin" && <Admin usuarioAtual={usuario.email} aoSessaoExpirar={expirou} />}
         </Suspense>
       </main>
@@ -295,12 +304,40 @@ function Login({ aoEntrar, rotuloSso, erroSso }: { aoEntrar: (u: Usuario) => voi
 
 type Execucao = { tipo: "gerar" | "refinar"; inicio: number; progresso: Progresso | null };
 
-function Gerador({ aberta, aoNova, aoSessaoExpirar }: { aberta: IssueGuardada | null; aoNova: () => void; aoSessaoExpirar: () => void }) {
+function Gerador({
+  pessoa,
+  aberta,
+  base,
+  aoNova,
+  aoSessaoExpirar,
+}: {
+  /** Nome de usuário de quem está usando: dono do rascunho e autor das issues novas. */
+  pessoa: string;
+  aberta: IssueGuardada | null;
+  /** Entrada de outra issue, para começar uma nova a partir dela ("Usar como base"). */
+  base: Entrada | null;
+  aoNova: () => void;
+  aoSessaoExpirar: () => void;
+}) {
+  // Issue nova: começa do rascunho guardado (se houver). Aberta do histórico ou "usar como base":
+  // começa dos dados dela.
+  const [inicial] = useState<Entrada | null>(() => aberta?.entrada ?? base ?? lerRascunho(pessoa));
   const [opcoes, setOpcoes] = useState<Opcoes | null>(null);
-  const [descricao, setDescricao] = useState(aberta?.entrada.descricao ?? "");
-  const [tipo, setTipo] = useState(aberta?.entrada.tipo ?? "");
-  const [produto, setProduto] = useState(() => aberta?.entrada.produto ?? lerUltimoProduto());
-  const [contexto, setContexto] = useState(aberta?.entrada.contexto ?? "");
+  const [descricao, setDescricao] = useState(inicial?.descricao ?? "");
+  const [tipo, setTipo] = useState(inicial?.tipo ?? "");
+  const [produto, setProduto] = useState(() => inicial?.produto || lerUltimoProduto());
+  const [contexto, setContexto] = useState(inicial?.contexto ?? "");
+  // Cabeçalho do PDF: quem gerou, quando e qual versão está na tela.
+  const [meta, setMeta] = useState(() => ({
+    autor: aberta?.autor ?? (aberta ? aberta.usuario : pessoa),
+    quando: aberta?.atualizadaEm ?? Date.now(),
+    versao: aberta?.versoes ?? 1,
+  }));
+
+  // Rascunho automático das issues novas (não da que foi aberta do histórico).
+  useEffect(() => {
+    if (!aberta) salvarRascunho(pessoa, { descricao, tipo, produto, contexto });
+  }, [aberta, pessoa, descricao, tipo, produto, contexto]);
 
   const [execucao, setExecucao] = useState<Execucao | null>(null);
   const [agora, setAgora] = useState(Date.now());
@@ -368,6 +405,8 @@ function Gerador({ aberta, aoNova, aoSessaoExpirar }: { aberta: IssueGuardada | 
       setResultado(r);
       setEntradaUsada(entrada);
       setAjuste("");
+      setMeta({ autor: pessoa, quando: Date.now(), versao: 1 });
+      limparRascunho(pessoa);
     });
   }
 
@@ -378,6 +417,7 @@ function Gerador({ aberta, aoNova, aoSessaoExpirar }: { aberta: IssueGuardada | 
     void executar("refinar", "/api/refinar", corpo, (r) => {
       setResultado(r);
       setAjuste("");
+      setMeta((m) => ({ ...m, quando: Date.now(), versao: m.versao + 1 }));
     });
   }
 
@@ -405,7 +445,7 @@ function Gerador({ aberta, aoNova, aoSessaoExpirar }: { aberta: IssueGuardada | 
 
   return (
     <>
-      <form className="cartao" onSubmit={gerar} aria-busy={ocupado}>
+      <form className="cartao nao-imprimir" onSubmit={gerar} aria-busy={ocupado}>
         <h2>O que está errado ou o que queremos</h2>
         <div className="aviso-dados" role="note">
           <IconeAlerta />
@@ -461,7 +501,7 @@ function Gerador({ aberta, aoNova, aoSessaoExpirar }: { aberta: IssueGuardada | 
       </form>
 
       {execucao && (
-        <section className="cartao progresso" aria-live="polite">
+        <section className="cartao progresso nao-imprimir" aria-live="polite">
           <div className="trilho" aria-hidden="true" />
           <p>
             <strong>{execucao.tipo === "gerar" ? "Gerando a issue" : "Refinando a issue"}</strong>
@@ -475,9 +515,9 @@ function Gerador({ aberta, aoNova, aoSessaoExpirar }: { aberta: IssueGuardada | 
         </section>
       )}
 
-      {aviso && <p className="info">{aviso}</p>}
+      {aviso && <p className="info nao-imprimir">{aviso}</p>}
       {erro && (
-        <section className="cartao erro" role="alert">
+        <section className="cartao erro nao-imprimir" role="alert">
           <p>{erro.erro.mensagem}</p>
           {erro.erro.podeTentarDeNovo && (
             <button type="button" onClick={erro.refazer} disabled={ocupado}>
@@ -489,7 +529,7 @@ function Gerador({ aberta, aoNova, aoSessaoExpirar }: { aberta: IssueGuardada | 
 
       {resultado && (
         <section className="cartao resultado">
-          <div className="barra">
+          <div className="barra nao-imprimir">
             <h2>Rascunho da issue</h2>
             <div className="acoes">
               <button type="button" className="secundario" onClick={copiar}>
@@ -498,25 +538,28 @@ function Gerador({ aberta, aoNova, aoSessaoExpirar }: { aberta: IssueGuardada | 
               <button type="button" className="secundario" onClick={baixar}>
                 Baixar .md
               </button>
+              <button type="button" className="secundario" onClick={() => baixarPdf(resultado.markdown)}>
+                Baixar PDF
+              </button>
               <button type="button" className="botao-texto" onClick={aoNova} disabled={ocupado}>
                 Nova issue
               </button>
             </div>
           </div>
-          <p className="legenda">
+          <p className="legenda nao-imprimir">
             Revise antes de virar card. <mark className="lacuna">[a preencher]</mark> marca o que a IA não pôde afirmar.
             {resultado.historicoId !== null && " Guardada no histórico."}
           </p>
           {resultado.usouFallback && (
-            <p className="alteracoes">O modelo principal estava indisponível: esta versão foi gerada pelo modelo reserva ({resultado.modelo}).</p>
+            <p className="alteracoes nao-imprimir">O modelo principal estava indisponível: esta versão foi gerada pelo modelo reserva ({resultado.modelo}).</p>
           )}
           {resultado.alteracoes && (
-            <p className="alteracoes">
+            <p className="alteracoes nao-imprimir">
               {resultado.alteracoes.length ? `Mudou neste refinamento: ${resultado.alteracoes.join(", ")}.` : "O refinamento não mudou nada na issue."}
             </p>
           )}
           {resultado.avisos.length > 0 && (
-            <div className="avisos">
+            <div className="avisos nao-imprimir">
               <strong>Pontos para conferir</strong>
               <ul>
                 {resultado.avisos.map((a, i) => (
@@ -525,16 +568,28 @@ function Gerador({ aberta, aoNova, aoSessaoExpirar }: { aberta: IssueGuardada | 
               </ul>
             </div>
           )}
+          {entradaUsada && (
+            <dl className="metadados-pdf so-impressao" aria-hidden="true">
+              {metadadosPdf({ produto: entradaUsada.produto, tipo: entradaUsada.tipo, ...meta }).map(([rotulo, valor]) => (
+                <div key={rotulo}>
+                  <dt>{rotulo}</dt>
+                  <dd>{valor}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
           <Suspense fallback={<Carregando />}>
             <Markdown fonte={resultado.markdown} />
           </Suspense>
           {resultado.historicoId !== null && (
-            <Suspense fallback={<Carregando />}>
-              <Versoes historicoId={resultado.historicoId} atualizacao={resultado.markdown} />
-            </Suspense>
+            <div className="nao-imprimir">
+              <Suspense fallback={<Carregando />}>
+                <Versoes historicoId={resultado.historicoId} atualizacao={resultado.markdown} />
+              </Suspense>
+            </div>
           )}
 
-          <form className="refinar" onSubmit={refinar}>
+          <form className="refinar nao-imprimir" onSubmit={refinar}>
             <Campo rotulo="Refinar" atual={ajuste.length} limite={opcoes.limites.ajuste}>
               <textarea
                 name="ajuste"
@@ -594,15 +649,3 @@ function textoProgresso(p: Progresso | null) {
   return p.secao ? `escrevendo: ${p.secao}` : "escrevendo";
 }
 
-function nomeArquivo(markdown: string) {
-  const titulo = markdown.match(/^# (.+)$/m)?.[1] ?? "issue";
-  return (
-    titulo
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 80) || "issue"
-  );
-}

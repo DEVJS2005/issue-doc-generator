@@ -241,3 +241,79 @@ test("apagar do histórico pede confirmação no diálogo do sistema", async ({ 
   await dialogo.getByRole("button", { name: "Apagar" }).click();
   await expect(linhas).toHaveCount(antes - 1);
 });
+
+test("rascunho automático: o que foi digitado volta depois de recarregar e some ao gerar", async ({ page }) => {
+  await entrar(page);
+  await page.getByLabel(/^Descrição/).fill("Rascunho: limitar cupons a 3 por pedido.");
+  await page.getByLabel("Nome do produto").fill("Loja Rascunho");
+  await page.getByLabel(/^Contexto/).fill("Regra do checkout.");
+  await page.reload();
+  await expect(page.getByLabel(/^Descrição/)).toHaveValue("Rascunho: limitar cupons a 3 por pedido.");
+  await expect(page.getByLabel("Nome do produto")).toHaveValue("Loja Rascunho");
+  await expect(page.getByLabel(/^Contexto/)).toHaveValue("Regra do checkout.");
+
+  await page.getByRole("button", { name: "Gerar issue" }).click();
+  await expect(page.getByRole("heading", { name: "Rascunho da issue" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel(/^Descrição/)).toHaveValue("");
+});
+
+test("usar como base abre uma issue nova com a entrada de outra", async ({ page }) => {
+  await entrar(page);
+  await gerar(page, "Base: limitar cupons a 3 por pedido.");
+  await expect(page.getByText("Guardada no histórico.")).toBeVisible();
+  await page.getByRole("button", { name: "Histórico", exact: true }).click();
+  await page.getByRole("row", { name: /Limitar cupons por pedido/ }).first().getByRole("button", { name: "Usar como base" }).click();
+
+  await expect(page.getByLabel(/^Descrição/)).toHaveValue("Base: limitar cupons a 3 por pedido.");
+  await expect(page.getByLabel("Nome do produto")).toHaveValue("Loja Exemplo");
+  await expect(page.getByRole("heading", { name: "Rascunho da issue" })).toHaveCount(0);
+});
+
+test("Baixar PDF abre a impressão só com a issue e o cabeçalho", async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as unknown as { titulosImpressos: string[] }).titulosImpressos = [];
+    window.print = () => (window as unknown as { titulosImpressos: string[] }).titulosImpressos.push(document.title);
+  });
+  await entrar(page);
+  await gerar(page, "PDF: limitar cupons a 3 por pedido.");
+  await expect(page.locator(".issue h3", { hasText: "Dúvidas para o PO" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Baixar PDF" }).click();
+  expect(await page.evaluate(() => (window as unknown as { titulosImpressos: string[] }).titulosImpressos)).toEqual(["limitar-cupons-por-pedido"]);
+  expect(await page.title()).toBe("Issue Doc Generator");
+
+  await page.emulateMedia({ media: "print" });
+  const cabecalho = page.locator(".metadados-pdf");
+  await expect(cabecalho).toBeVisible();
+  await expect(cabecalho).toContainText("ProdutoLoja Exemplo");
+  await expect(cabecalho).toContainText("Autorqa");
+  await expect(cabecalho).toContainText("Versão1");
+  await expect(page.locator(".issue h3", { hasText: "Dúvidas para o PO" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Gerar issue" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Baixar PDF" })).toBeHidden();
+  await expect(page.locator(".rodape")).toBeHidden();
+});
+
+test("busca no histórico filtra por produto e por texto", async ({ page }) => {
+  await entrar(page);
+  await page.getByLabel(/^Descrição/).fill("Busca: limitar cupons a 3 por pedido.");
+  await page.getByLabel("Nome do produto").fill("Portal Busca");
+  await page.getByRole("button", { name: "Gerar issue" }).click();
+  await expect(page.getByText("Guardada no histórico.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Histórico", exact: true }).click();
+  const linhas = page.getByRole("row", { name: /Limitar cupons por pedido/ });
+  await expect(linhas.first()).toBeVisible();
+
+  await page.getByLabel("Produto", { exact: true }).fill("portal busca");
+  await expect(linhas).toHaveCount(1);
+  await expect(linhas.first()).toContainText("Portal Busca");
+
+  await page.getByLabel("Buscar").fill("nada-com-isso-xyz");
+  await expect(page.getByText("Nenhuma issue encontrada com esses filtros.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Limpar filtros" }).click();
+  await expect(page.getByLabel("Buscar")).toHaveValue("");
+  await expect(linhas.first()).toBeVisible();
+});

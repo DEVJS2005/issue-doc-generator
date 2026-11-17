@@ -59,15 +59,15 @@ problemas apontados), Refinar (mudou só o pedido) e cache de prompt (2ª chamad
 
 Sugestão de ordem: primeiro o que dá mais retorno com menos esforço. Ao todo são cerca de 40 h.
 
-### Lote 1: amanhã (~7 h)
+### Lote 1 (~7 h)
 
-| # | Item | Estimativa |
+| # | Item | Estado / estimativa |
 |---|---|---|
-| 13 | **Release v1.1.0 e imagem pronta:** criar a tag `v1.1.0` (o CD publica a imagem no ghcr.io e cria o Release) e mudar o guia para o DevOps só baixar a imagem, sem build no servidor. | ~1 h |
-| 14 | **Baixar PDF da issue pronta e refinada:** botão ao lado de Copiar e Baixar `.md`, com as seções formatadas, os destaques e os metadados (produto, tipo, autor, data e versão). Também ao abrir uma issue do histórico. | ~2 h |
-| 15 | **Rascunho automático:** descrição, tipo, produto e contexto salvos no navegador enquanto a pessoa digita. Nada se perde ao recarregar ou quando a sessão expira. | ~1 h |
-| 16 | **Duplicar como base:** abrir uma issue do histórico como ponto de partida de uma nova. | ~1 h |
-| 17 | **Busca no histórico:** texto livre e filtros por produto, tipo, autor e período. | ~2 h |
+| 13 | **Release v1.1.0 e imagem pronta:** criar a tag `v1.1.0` (o CD publica a imagem no ghcr.io e cria o Release) e mudar o guia para o DevOps só baixar a imagem, sem build no servidor. | Guia e `docker-compose.yml` com a imagem do ghcr.io: ✅. Falta criar a tag. |
+| 14 | **Baixar PDF da issue pronta e refinada:** botão ao lado de Copiar e Baixar `.md`, com as seções formatadas, os destaques e os metadados (produto, tipo, autor, data e versão). Também ao abrir uma issue do histórico. | ✅ Pela impressão do navegador ("Salvar como PDF"), sem biblioteca nova. |
+| 15 | **Rascunho automático:** descrição, tipo, produto e contexto salvos no navegador enquanto a pessoa digita. Nada se perde ao recarregar ou quando a sessão expira. | ✅ |
+| 16 | **Duplicar como base:** abrir uma issue do histórico como ponto de partida de uma nova. | ✅ Botão "Usar como base". |
+| 17 | **Busca no histórico:** texto livre e filtros por produto, tipo, autor e período. | ✅ |
 
 ### Lote 2: fluxo do time e saída (~12 h)
 
@@ -97,7 +97,8 @@ Ficaram de fora nesta rodada:
 
 Passo a passo completo em [INSTALACAO-DOCKER.md](INSTALACAO-DOCKER.md). Em resumo:
 
-- **Subir:** `cp .env.example .env` e `docker compose up -d --build`. A imagem tem
+- **Subir:** `cp .env.example .env`, `docker compose pull` e `docker compose up -d` (imagem pronta do
+  ghcr.io; `VERSAO_IMAGEM` fixa uma versão). A imagem tem
   `HEALTHCHECK` embutido em `GET /api/saude`.
 - **`.env` mínimo:** a chave de API do provedor e `SEGREDO_SESSAO` (longo e aleatório). Nada de
   usuários nem de modelo no `.env`.

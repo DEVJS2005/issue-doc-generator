@@ -33,7 +33,7 @@ export type Resultado = {
 export type ResumoIssue = {
   id: number;
   usuario: string;
-  /** Nome de usuário do autor (só na listagem). */
+  /** Nome de usuário do autor (na listagem e na issue aberta). */
   autor?: string;
   titulo: string;
   tipo: string;
@@ -44,6 +44,29 @@ export type ResumoIssue = {
   modelo: string;
 };
 export type IssueGuardada = ResumoIssue & { entrada: Entrada; issue: unknown; markdown: string };
+
+/** Busca no histórico. Datas no formato do <input type="date"> (AAAA-MM-DD), no fuso de quem busca. */
+export type BuscaHistorico = {
+  todos: boolean;
+  usuario?: string;
+  texto?: string;
+  produto?: string;
+  tipo?: string;
+  de?: string;
+  ate?: string;
+};
+
+/** Monta a query da busca só com os filtros preenchidos; o período cobre os dias inteiros. */
+export function paramsHistorico(b: BuscaHistorico): string {
+  const p = new URLSearchParams();
+  if (b.todos) p.set("todos", "1");
+  const texto = (v?: string) => v?.trim() ?? "";
+  if (b.todos && texto(b.usuario)) p.set("usuario", texto(b.usuario));
+  for (const k of ["texto", "produto", "tipo"] as const) if (texto(b[k])) p.set(k, texto(b[k]));
+  if (b.de) p.set("de", String(new Date(`${b.de}T00:00:00`).getTime()));
+  if (b.ate) p.set("ate", String(new Date(`${b.ate}T23:59:59.999`).getTime()));
+  return p.toString();
+}
 export type Versao = { numero: number; quando: number; ajuste: string | null; modelo: string };
 
 export type NomeProvedor = "anthropic" | "openai" | "openai_compativel" | "gemini";
@@ -106,11 +129,10 @@ export const api = {
   sair: () => postar("/api/sair", {}).then((r) => lerJson<{ ok: true }>(r)),
   opcoes: () => fetch("/api/opcoes").then((r) => lerJson<Opcoes>(r)),
 
-  historico: (todos: boolean, usuario = "") =>
-    chamar<{ itens: ResumoIssue[]; podeVerTodos: boolean }>(
-      "GET",
-      `/api/historico${todos ? `?todos=1${usuario ? `&usuario=${encodeURIComponent(usuario)}` : ""}` : ""}`,
-    ),
+  historico: (busca: BuscaHistorico) => {
+    const q = paramsHistorico(busca);
+    return chamar<{ itens: ResumoIssue[]; podeVerTodos: boolean; produtos: string[] }>("GET", `/api/historico${q ? `?${q}` : ""}`);
+  },
   issue: (id: number) => chamar<{ item: IssueGuardada; versoes: Versao[] }>("GET", `/api/historico/${id}`),
   apagarIssue: (id: number) => chamar<{ ok: true }>("DELETE", `/api/historico/${id}`),
   versao: (id: number, numero: number) => chamar<{ versao: Versao & { markdown: string } }>("GET", `/api/historico/${id}/versoes/${numero}`),
