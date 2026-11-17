@@ -5,7 +5,9 @@ revisão.
 
 ## Onde estamos
 
-Versão 1.1.0 na `main` (PRs #1 a #16). O PR #17, com as correções do Gemini, está em revisão.
+Último release: **v1.1.0** (MIT), publicado em 17/11 a partir do merge do PR #8. Depois dele, a
+`main` recebeu, ainda sem release: as correções do Gemini (#17), a licença AGPL (#19), o lote 1
+(#20) e uma correção de tabelas no Markdown (#21). O lote 2 está no PR #22, em revisão.
 
 - Geração e Refinar com streaming, cache de prompt, erros amigáveis e 4 provedores
   (Claude, OpenAI, compatível com OpenAI, Gemini).
@@ -23,8 +25,9 @@ Versão 1.1.0 na `main` (PRs #1 a #16). O PR #17, com as correções do Gemini, 
   - CodeQL e Dependabot;
   - publicação da imagem no ghcr.io;
   - `main` protegida (só por PR, com os checks verdes).
-- Testes: 132 no servidor e 16 na tela (Vitest), mais 14 de ponta a ponta (Playwright, com IA
-  falsa).
+- Licença do código: AGPL-3.0-or-later. A base ISTQB do prompt é CC BY-NC 4.0.
+- Testes na `main`: Vitest no servidor e na tela, mais Playwright de ponta a ponta (com IA falsa).
+  Com o PR #22: 157 no servidor, 28 na tela e 23 de ponta a ponta.
 
 Testado com IA real (Gemini `gemini-3.8-flash`): geração de 3 linhas, exemplo de Marcas (5/5
 problemas apontados), Refinar (mudou só o pedido) e cache de prompt (2ª chamada leu 20.931 tokens).
@@ -33,6 +36,8 @@ problemas apontados), Refinar (mudou só o pedido) e cache de prompt (2ª chamad
 
 | Pendência | Situação |
 |---|---|
+| **A imagem `latest` do ghcr.io é a v1.1.0, com o Gemini quebrado** | O guia usa `latest` por padrão, e a v1.1.0 saiu antes das correções do Gemini (#17). Quem instalar hoje com o Gemini não consegue gerar issues. Resolve com o item 27 (release v1.2.0). |
+| Os testes não pegam mudança no SDK do provedor | Os testes usam IA falsa. Os 2 bugs do Gemini só apareceram na instalação limpa. Resolve com o item 29. |
 | Consumo e custo | Não há tela no app: ver no painel do provedor. Com a Claude, a estimativa é de ~US$ 0,20 na 1ª chamada e ~US$ 0,10 depois. |
 | Uma instância só | O banco é um arquivo SQLite local e o limite por hora fica em memória. Decisão: SQLite, uma instância. |
 | SSO com o provedor real | Testado com um provedor simulado. Falta um login de teste com o provedor da empresa. |
@@ -55,6 +60,9 @@ problemas apontados), Refinar (mudou só o pedido) e cache de prompt (2ª chamad
 | 10 | Login por SSO (OpenID Connect: Entra ID, Google, Keycloak, Okta…) | ✅ PR #6. Falta um login de teste com o provedor real da empresa. |
 | 11 | Comparar versões de uma issue (diferença linha a linha entre duas versões) | ✅ PR #6 |
 | 12 | Login por nome de usuário, tema claro/escuro, diálogos do sistema, Docker Compose, CI/CD e proteção da `main` | ✅ PR #8 (v1.1.0) |
+| 12b | Correções do Gemini achadas na instalação limpa: API `v1beta` e `thinkingBudget` no 2.x | ✅ PR #17 (sem release ainda) |
+| 12c | Licença AGPL-3.0-or-later e link do código-fonte no rodapé | ✅ PR #19 (sem release ainda) |
+| 12d | Barra invertida nas células de tabela do Markdown | ✅ PR #21 (sem release ainda) |
 ## Próximos (escolhidos em 17/11)
 
 Sugestão de ordem: primeiro o que dá mais retorno com menos esforço. Ao todo são cerca de 40 h.
@@ -63,7 +71,7 @@ Sugestão de ordem: primeiro o que dá mais retorno com menos esforço. Ao todo 
 
 | # | Item | Estado / estimativa |
 |---|---|---|
-| 13 | **Release v1.1.0 e imagem pronta:** criar a tag `v1.1.0` (o CD publica a imagem no ghcr.io e cria o Release) e mudar o guia para o DevOps só baixar a imagem, sem build no servidor. | Guia e `docker-compose.yml` com a imagem do ghcr.io: ✅. Falta criar a tag. |
+| 13 | **Release v1.1.0 e imagem pronta:** criar a tag `v1.1.0` (o CD publica a imagem no ghcr.io e cria o Release) e mudar o guia para o DevOps só baixar a imagem, sem build no servidor. | Guia e `docker-compose.yml` com a imagem do ghcr.io: ✅. ✅ Tag `v1.1.0` criada em 17/11 (MIT, sem as correções do Gemini: veja o item 27). |
 | 14 | **Baixar PDF da issue pronta e refinada:** botão ao lado de Copiar e Baixar `.md`, com as seções formatadas, os destaques e os metadados (produto, tipo, autor, data e versão). Também ao abrir uma issue do histórico. | ✅ Pela impressão do navegador ("Salvar como PDF"), sem biblioteca nova. |
 | 15 | **Rascunho automático:** descrição, tipo, produto e contexto salvos no navegador enquanto a pessoa digita. Nada se perde ao recarregar ou quando a sessão expira. | ✅ |
 | 16 | **Duplicar como base:** abrir uma issue do histórico como ponto de partida de uma nova. | ✅ Botão "Usar como base". |
@@ -87,6 +95,17 @@ Sugestão de ordem: primeiro o que dá mais retorno com menos esforço. Ao todo 
 | 24 | **Anexar print ou imagem** junto da descrição; a IA lê a imagem (os 4 provedores aceitam). | ~3 h |
 | 25 | **Log de auditoria:** quem gerou, apagou ou mudou usuários e ajustes, com tela de consulta para o admin. | ~3 h |
 | 26 | **Criar a issue direto no GitHub Issues, Jira ou Azure DevOps:** token no `.env` e projeto escolhido na tela. Começar por uma ferramenta, a que o time usa. | ~4 h cada |
+
+### Antes de tudo: fechar o que já está pronto (~2 h)
+
+Encontrado na revisão de 17/11. Vem antes do lote 3.
+
+| # | Item | Estimativa |
+|---|---|---|
+| 27 | **Release v1.2.0.** Revisar e mesclar o PR #22 (lote 2), subir a versão nos `package.json`, trocar "Não lançado" por `[1.2.0]` no CHANGELOG e criar a tag `v1.2.0`. O CD publica a imagem e o `latest` deixa de ter o Gemini quebrado. É o primeiro release em AGPL. Na revisão do #22, decidir se o download do backup (que traz os hashes das senhas e o histórico inteiro) fica liberado para qualquer admin. | ~1 h |
+| 28 | **Instalação limpa de novo, pela imagem do ghcr.io.** Repetir o teste de 16/11 seguindo o guia atual (`docker compose pull`, sem build), já com a v1.2.0, e com geração real. Conferir também o link de compartilhamento e o backup dentro do container. | ~30 min |
+| 29 | **Teste com IA real no CI.** Workflow semanal (e manual) que gera uma issue curta em cada provedor com chave guardada nos *secrets* do GitHub. Se o SDK ou a API mudar, o CI avisa antes do usuário. Fica fora dos PRs, para não gastar tokens a cada push. | ~2 h |
+| 30 | **Menos PRs do Dependabot.** Agrupar as atualizações das Actions num PR só por semana (`groups` no `dependabot.yml`). Hoje vieram 8 PRs separados. | ~15 min |
 
 Ficaram de fora nesta rodada:
 - cenários em Gherkin;
@@ -140,4 +159,10 @@ Passo a passo completo em [INSTALACAO-DOCKER.md](INSTALACAO-DOCKER.md). Em resum
   - instalação limpa no Docker validada (achou 2 bugs do Gemini, corrigidos no PR #17).
 - **17/11:**
   - botão de PDF entra no roadmap;
-  - do brainstorm, entram os itens 13 a 26, em três lotes.
+  - do brainstorm, entram os itens 13 a 26, em três lotes;
+  - licença do código: AGPL-3.0-or-later; as versões até a 1.1.0 continuam MIT;
+  - a base ISTQB do prompt segue CC BY-NC 4.0: o projeto como está não serve para uso comercial,
+    e isso é intencional;
+  - o PDF sai pela impressão do navegador, sem biblioteca nova;
+  - a instalação para o DevOps passa a usar a imagem pronta do ghcr.io;
+  - na revisão do fim do dia, entram os itens 27 a 30.
