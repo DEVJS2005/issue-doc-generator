@@ -1,14 +1,21 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import type { RepositorioHistorico } from "../banco/historico.js";
+import { z } from "zod";
+import { STATUS_ISSUE, type RepositorioHistorico, type StatusIssue } from "../banco/historico.js";
 import type { RepositorioUsuarios } from "../banco/usuarios.js";
 
 const NAO_ENCONTRADA = { erro: { codigo: "nao_encontrado", mensagem: "Issue não encontrada.", podeTentarDeNovo: false } };
+
+const CorpoStatus = z.object({ status: z.enum(STATUS_ISSUE, { error: "Escolha um status válido." }) });
 
 /** Período da busca: ms desde 1970, vindo da tela já no fuso de quem busca. */
 function lerData(valor: string | undefined): number | undefined | null {
   if (valor === undefined || valor === "") return undefined;
   const n = Number(valor);
   return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+function statusDoFiltro(valor: string | undefined): StatusIssue | undefined {
+  return STATUS_ISSUE.includes(valor as StatusIssue) ? (valor as StatusIssue) : undefined;
 }
 
 /** Cada pessoa vê as próprias issues; o admin vê as de todos. */
@@ -18,7 +25,16 @@ export function podeVer(request: FastifyRequest, dono: string | null) {
 
 export function registrarHistorico(app: FastifyInstance, o: { historico: RepositorioHistorico; usuarios: RepositorioUsuarios }) {
   app.get("/api/historico", async (request, reply) => {
-    const q = request.query as { todos?: string; usuario?: string; texto?: string; produto?: string; tipo?: string; de?: string; ate?: string };
+    const q = request.query as {
+      todos?: string;
+      usuario?: string;
+      texto?: string;
+      produto?: string;
+      tipo?: string;
+      status?: string;
+      de?: string;
+      ate?: string;
+    };
     const de = lerData(q.de);
     const ate = lerData(q.ate);
     if (de === null || ate === null) {
@@ -33,7 +49,7 @@ export function registrarHistorico(app: FastifyInstance, o: { historico: Reposit
     const usuario = todos ? emailDoFiltro || undefined : u.email;
     const curto = (v?: string) => v?.slice(0, 200);
     const itens = o.historico
-      .listar({ usuario, texto: curto(q.texto), produto: curto(q.produto), tipo: curto(q.tipo), de, ate })
+      .listar({ usuario, texto: curto(q.texto), produto: curto(q.produto), tipo: curto(q.tipo), status: statusDoFiltro(q.status), de, ate })
       .map((i) => ({ ...i, autor: nomes.get(i.usuario) ?? i.usuario }));
     return { itens, podeVerTodos: u.admin, produtos: o.historico.produtos(todos ? undefined : u.email) };
   });
@@ -42,8 +58,27 @@ export function registrarHistorico(app: FastifyInstance, o: { historico: Reposit
     const id = Number((request.params as { id: string }).id);
     if (!Number.isInteger(id) || !podeVer(request, o.historico.dono(id))) return reply.code(404).send(NAO_ENCONTRADA);
     const item = o.historico.obter(id);
-    const autor = item ? (o.usuarios.nomesPorEmail().get(item.usuario) ?? item.usuario) : null;
-    return { item: item && { ...item, autor }, versoes: o.historico.versoes(id) };
+    const nomes = o.usuarios.nomesPorEmail();
+    const autor = item ? (nomes.get(item.usuario) ?? item.usuario) : null;
+    const mudancasStatus = o.historico.mudancasStatus(id).map((m) => ({ ...m, quem: nomes.get(m.quem) ?? m.quem }));
+    return { item: item && { ...item, autor }, versoes: o.historico.versoes(id), mudancasStatus };
+  });
+
+  // Status: Rascunho → Revisada → Aprovada (e de volta). Quem pode ver a issue pode mudar.
+  app.patch("/api/historico/:id/status", async (request, reply) => {
+    const id = Number((request.params as { id: string }).id);
+    if (!Number.isInteger(id) || !podeVer(request, o.historico.dono(id))) return reply.code(404).send(NAO_ENCONTRADA);
+    const corpo = CorpoStatus.safeParse(request.body);
+    if (!corpo.success) {
+      return reply.code(400).send({ erro: { codigo: "entrada_invalida", mensagem: "Escolha um status válido.", podeTentarDeNovo: false } });
+    }
+    const mudanca = o.historico.mudarStatus(id, corpo.data.status, request.usuario!.email);
+    if (mudanca) request.log.info({ evento: "issue_status", id, de: mudanca.de, para: mudanca.para, usuario: request.usuario!.email }, "histórico: status");
+    const nomes = o.usuarios.nomesPorEmail();
+    return {
+      status: corpo.data.status,
+      mudancasStatus: o.historico.mudancasStatus(id).map((m) => ({ ...m, quem: nomes.get(m.quem) ?? m.quem })),
+    };
   });
 
   app.get("/api/historico/:id/versoes/:numero", async (request, reply) => {

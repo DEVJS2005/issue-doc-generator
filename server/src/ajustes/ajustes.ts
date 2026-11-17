@@ -27,6 +27,11 @@ export const EsquemaAjustes = z.object({
     .int("Use um número inteiro.")
     .min(1, "A retenção vai de 1 a 3.650 dias.")
     .max(3650, "A retenção vai de 1 a 3.650 dias."),
+  backupCopias: z.coerce
+    .number({ error: "Informe um número." })
+    .int("Use um número inteiro.")
+    .min(1, "Guarde de 1 a 90 backups.")
+    .max(90, "Guarde de 1 a 90 backups."),
 });
 
 export type ValoresAjustes = z.infer<typeof EsquemaAjustes>;
@@ -34,6 +39,7 @@ type Chave = keyof ValoresAjustes;
 
 export const MODELO_PADRAO: Partial<Record<NomeProvedor, string>> = { anthropic: "claude-opus-5-5" };
 export const RETENCAO_PADRAO_DIAS = 180;
+export const BACKUP_PADRAO_COPIAS = 7;
 
 const ROTULOS: Record<NomeProvedor, string> = {
   anthropic: "Claude (Anthropic)",
@@ -68,6 +74,7 @@ export class Ajustes {
       limitePorHora: base.limitePorHora,
       tempoLimiteSegundos: Math.round(base.tempoLimiteMs / 1000),
       retencaoDias: RETENCAO_PADRAO_DIAS,
+      backupCopias: BACKUP_PADRAO_COPIAS,
     };
     // Valor salvo inválido (ex.: provedor cuja chave saiu do .env) é ignorado, com aviso no log.
     const salvos = repo.ler();

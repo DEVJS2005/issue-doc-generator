@@ -8,7 +8,7 @@ import { gerarIssue, type ResultadoGeracao } from "../geracao/servico.js";
 import { ErroGeracao, normalizarErro } from "../ia/erros.js";
 import { partesAlteradas } from "../issue/alteracoes.js";
 import { TIPOS_ISSUE, type Issue } from "../issue/schema.js";
-import { formatarEntrada, type Entrada } from "../prompt/entrada.js";
+import { formatarEntrada, IDIOMAS, type Entrada } from "../prompt/entrada.js";
 
 export const LIMITE_DESCRICAO = 4000;
 export const LIMITE_CONTEXTO = 8000;
@@ -26,6 +26,7 @@ export const CorpoGerar = z.object({
     .trim()
     .max(LIMITE_CONTEXTO, `O contexto pode ter até ${LIMITE_CONTEXTO} caracteres.`)
     .default(""),
+  idioma: z.enum(IDIOMAS, { error: "Escolha o idioma: português, inglês ou espanhol." }).default("pt-BR"),
 });
 
 const INTERVALO_PING_MS = 15_000;
@@ -115,6 +116,7 @@ export async function responderComGeracao(
 
   try {
     const r: ResultadoGeracao = await gerarIssue(provedor, o.usuario, {
+      idioma: o.entrada.idioma,
       signal: controle.signal,
       aoProgresso: (p) => sse.enviar("progresso", p),
     });
@@ -140,7 +142,7 @@ export async function responderComGeracao(
     try {
       const ref = o.refinamento;
       if (ref?.historicoId) {
-        o.historico.salvarRefinamento(ref.historicoId, ref.ajuste, r.issue, r.markdown, r.modelo);
+        o.historico.salvarRefinamento(ref.historicoId, ref.ajuste, r.issue, r.markdown, r.modelo, quem);
         historicoId = ref.historicoId;
       } else {
         historicoId = o.historico.salvarNova(quem, o.entrada, r.issue, r.markdown, r.modelo);
