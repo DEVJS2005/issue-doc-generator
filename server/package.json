@@ -10,7 +10,8 @@
     "start": "node --env-file-if-exists=../.env dist/index.js",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "prompt:istqb": "tsx scripts/gerar-base-istqb.ts"
+    "prompt:istqb": "tsx scripts/gerar-base-istqb.ts",
+    "teste:ia-real": "tsx --env-file-if-exists=../.env scripts/teste-ia-real.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
