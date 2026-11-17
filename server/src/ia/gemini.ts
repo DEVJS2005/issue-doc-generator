@@ -3,6 +3,12 @@ import { ErroGeracao, normalizarErro } from "./erros.js";
 import { schemaParaProvedor } from "./json.js";
 import type { Provedor, Uso } from "./tipos.js";
 
+/**
+ * O SDK 3.x usa a API "v1" por padrão, que recusa instrução de sistema e saída por schema
+ * ("Developer instruction is not enabled for api version v1"). Por isso a versão vai fixa.
+ */
+export const VERSAO_API_GEMINI = "v1beta";
+
 type Esforco = "low" | "medium" | "high" | "xhigh" | "max";
 type OpcoesGemini = { apiKey: string; modelo: string; maxTokens: number; esforco: Esforco };
 
@@ -27,7 +33,7 @@ const RECUSAS = new Set<string>([
 // (o prompt de sistema fixo) aparecem em cachedContentTokenCount.
 export function criarProvedorGemini(o: OpcoesGemini): Provedor {
   // Como nos outros SDKs (maxRetries: 2): até 3 tentativas em 408, 429 e 5xx, com espera crescente.
-  const ai = new GoogleGenAI({ apiKey: o.apiKey, httpOptions: { retryOptions: { attempts: 3 } } });
+  const ai = new GoogleGenAI({ apiKey: o.apiKey, apiVersion: VERSAO_API_GEMINI, httpOptions: { retryOptions: { attempts: 3 } } });
   const schema = schemaParaProvedor();
 
   return {
