@@ -17,6 +17,8 @@ import {
 // quando há uma issue para mostrar; Histórico e Administração, quando a aba é aberta.
 import { IconeAlerta, IconeSeta, Logo, Rodape, SeletorTema } from "./Interface";
 
+import { ERRO_NOME, PADRAO_NOME, useValidacao } from "./Formulario";
+
 const Markdown = lazy(() => import("./Markdown").then((m) => ({ default: m.Markdown })));
 const Historico = lazy(() => import("./Historico").then((m) => ({ default: m.Historico })));
 const Admin = lazy(() => import("./Admin").then((m) => ({ default: m.Admin })));
@@ -179,10 +181,12 @@ function Configurar({ codigo, aoEntrar }: { codigo: string; aoEntrar: (u: Usuari
   const [senha, setSenha] = useState("");
   const [confirmacao, setConfirmacao] = useState("");
   const [erro, setErro] = useState<string | null>(null);
+  const v = useValidacao();
 
-  async function enviar(e: FormEvent) {
+  async function enviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (senha !== confirmacao) return setErro("As senhas não são iguais.");
+    if (!v.validar(e.currentTarget)) return;
+    if (senha !== confirmacao) return v.definir("confirmacao", "As senhas não são iguais.");
     setErro(null);
     try {
       aoEntrar((await api.configurar(codigo, nome, email, senha)).usuario);
@@ -192,32 +196,37 @@ function Configurar({ codigo, aoEntrar }: { codigo: string; aoEntrar: (u: Usuari
   }
 
   return (
-    <form className="cartao login" onSubmit={enviar}>
+    <form className="cartao login" onSubmit={enviar} noValidate>
       <h2>Criar o primeiro administrador</h2>
       <p className="legenda">Depois, os demais usuários são criados na aba Administração.</p>
       <label>
         Nome de usuário
         <input
+          {...v.campo("nome")}
           autoComplete="username"
           value={nome}
           onChange={(e) => setNome(e.target.value.toLowerCase())}
           placeholder="Ex.: ana.souza"
-          pattern="[a-z0-9][a-z0-9._\-]{1,39}"
-          title="De 2 a 40 caracteres: letras minúsculas, números, ponto, hífen ou sublinhado."
+          pattern={PADRAO_NOME}
+          data-erro={ERRO_NOME}
           required
         />
+        {v.erro("nome")}
       </label>
       <label>
         E-mail
-        <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input {...v.campo("email")} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        {v.erro("email")}
       </label>
       <label>
         Senha (mínimo 8 caracteres)
-        <input type="password" autoComplete="new-password" minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} required />
+        <input {...v.campo("senha")} type="password" autoComplete="new-password" minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} required />
+        {v.erro("senha")}
       </label>
       <label>
         Confirme a senha
-        <input type="password" autoComplete="new-password" value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} required />
+        <input {...v.campo("confirmacao")} type="password" autoComplete="new-password" value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} required />
+        {v.erro("confirmacao")}
       </label>
       {erro && (
         <p className="erro" role="alert">
@@ -234,9 +243,11 @@ function Login({ aoEntrar, rotuloSso, erroSso }: { aoEntrar: (u: Usuario) => voi
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(erroSso);
   const [enviando, setEnviando] = useState(false);
+  const v = useValidacao();
 
-  async function enviar(e: FormEvent) {
+  async function enviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!v.validar(e.currentTarget)) return;
     setEnviando(true);
     setErro(null);
     try {
@@ -249,15 +260,17 @@ function Login({ aoEntrar, rotuloSso, erroSso }: { aoEntrar: (u: Usuario) => voi
   }
 
   return (
-    <form className="cartao login" onSubmit={enviar}>
+    <form className="cartao login" onSubmit={enviar} noValidate>
       <h2>Entrar</h2>
       <label>
         Usuário ou e-mail
-        <input autoComplete="username" autoCapitalize="none" spellCheck={false} value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input {...v.campo("usuario")} autoComplete="username" autoCapitalize="none" spellCheck={false} value={email} onChange={(e) => setEmail(e.target.value)} required />
+        {v.erro("usuario")}
       </label>
       <label>
         Senha
-        <input type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
+        <input {...v.campo("senha")} type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
+        {v.erro("senha")}
       </label>
       {erro && (
         <p className="erro" role="alert">

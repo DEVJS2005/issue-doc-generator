@@ -169,3 +169,75 @@ test("administração salva ajustes, cria usuário e registra a alteração", as
   await expect(page.getByText("Usuário nova criado.")).toBeVisible();
   await expect(page.getByRole("row", { name: /nova@exemplo\.dev/ })).toContainText("Usuário");
 });
+
+test("formulários avisam no próprio campo, sem o balão do navegador", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Entrar" }).click();
+  const usuario = page.getByLabel("Usuário ou e-mail");
+  await expect(usuario).toHaveAttribute("aria-invalid", "true");
+  await expect(usuario).toHaveAccessibleDescription("Preencha este campo.");
+  await expect(usuario).toBeFocused();
+  await usuario.fill("qa");
+  await expect(usuario).not.toHaveAttribute("aria-invalid", "true");
+
+  await entrar(page);
+  await page.getByRole("button", { name: "Administração" }).click();
+  await page.getByLabel("E-mail", { exact: true }).fill("sem-arroba");
+  await page.getByLabel("Senha inicial").fill("curta");
+  await page.getByRole("button", { name: "Criar usuário" }).click();
+  // getByRole usa o nome acessível, que não inclui a mensagem de erro (aria-hidden).
+  await expect(page.getByRole("textbox", { name: "E-mail", exact: true })).toHaveAccessibleDescription("Digite um e-mail válido, como nome@empresa.com.");
+  await expect(page.getByLabel(/^Senha inicial/)).toHaveAccessibleDescription("Use pelo menos 8 caracteres.");
+});
+
+test("trocar nome usa o diálogo do sistema e valida o formato", async ({ page }) => {
+  page.on("dialog", () => {
+    throw new Error("abriu uma caixa nativa do navegador");
+  });
+  await entrar(page);
+  await page.getByRole("button", { name: "Administração" }).click();
+  await page.getByLabel("E-mail", { exact: true }).fill("bia@exemplo.dev");
+  await page.getByLabel("Senha inicial").fill("senha-da-bia");
+  await page.getByRole("button", { name: "Criar usuário" }).click();
+  const linha = page.getByRole("row", { name: /bia@exemplo\.dev/ });
+
+  await linha.getByRole("button", { name: "Trocar nome" }).click();
+  const dialogo = page.getByRole("dialog", { name: "Trocar o nome de usuário" });
+  await expect(dialogo).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialogo).toBeHidden();
+
+  await linha.getByRole("button", { name: "Trocar nome" }).click();
+  const campo = dialogo.getByLabel("Nome de usuário");
+  await expect(campo).toHaveValue("bia");
+  await campo.fill("x");
+  await dialogo.getByRole("button", { name: "Salvar nome" }).click();
+  await expect(campo).toHaveAccessibleDescription(/de 2 a 40 caracteres/);
+  await campo.fill("Bia.Souza");
+  await dialogo.getByRole("button", { name: "Salvar nome" }).click();
+  await expect(dialogo).toBeHidden();
+  await expect(page.getByText("Nome de usuário trocado para bia.souza.")).toBeVisible();
+});
+
+test("apagar do histórico pede confirmação no diálogo do sistema", async ({ page }) => {
+  page.on("dialog", () => {
+    throw new Error("abriu uma caixa nativa do navegador");
+  });
+  await entrar(page);
+  await gerar(page, "Apagar: limitar cupons a 3 por pedido.");
+  await expect(page.getByText("Guardada no histórico.")).toBeVisible();
+  await page.getByRole("button", { name: "Histórico", exact: true }).click();
+  const linhas = page.getByRole("row", { name: /Limitar cupons por pedido/ });
+  await expect(linhas.first()).toBeVisible();
+  const antes = await linhas.count();
+
+  await linhas.first().getByRole("button", { name: "Apagar" }).click();
+  const dialogo = page.getByRole("dialog", { name: "Apagar esta issue?" });
+  await expect(dialogo.getByRole("button", { name: "Cancelar" })).toBeFocused();
+  await dialogo.getByRole("button", { name: "Cancelar" }).click();
+  await expect(linhas).toHaveCount(antes);
+
+  await linhas.first().getByRole("button", { name: "Apagar" }).click();
+  await dialogo.getByRole("button", { name: "Apagar" }).click();
+  await expect(linhas).toHaveCount(antes - 1);
+});

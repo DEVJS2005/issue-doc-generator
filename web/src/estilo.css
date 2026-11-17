@@ -29,6 +29,8 @@
   --erro-texto: oklch(0.45 0.16 25);
   --sucesso-fundo: oklch(0.96 0.035 155);
   --sucesso-texto: oklch(0.4 0.09 155);
+  --perigo: oklch(0.55 0.19 25);
+  --perigo-hover: oklch(0.49 0.19 25);
   --diff-mais: oklch(0.93 0.06 155);
   --diff-menos: oklch(0.94 0.04 25);
   --sombra: 0 1px 2px oklch(0.3 0.02 260 / 0.06), 0 4px 16px -6px oklch(0.3 0.02 260 / 0.1);
@@ -974,5 +976,108 @@ mark.lacuna {
 
   .cartao {
     padding: 16px;
+  }
+}
+
+/* ---------- Validação dos campos (no lugar dos balões do navegador) ---------- */
+
+.erro-campo {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--erro-texto);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.erro-campo svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  margin-top: 2px;
+}
+
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+select[aria-invalid="true"],
+input[aria-invalid="true"]:hover {
+  border-color: var(--erro-texto);
+}
+
+input[aria-invalid="true"]:focus-visible,
+textarea[aria-invalid="true"]:focus-visible {
+  border-color: var(--erro-texto);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--erro-texto) 20%, transparent);
+}
+
+/* ---------- Diálogo (no lugar de confirm e prompt do navegador) ---------- */
+
+.dialogo {
+  width: min(440px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--superficie);
+  color: var(--texto);
+  box-shadow: 0 24px 64px -24px oklch(0.15 0.02 260 / 0.5), var(--sombra);
+}
+
+.dialogo::backdrop {
+  background: oklch(0.18 0.02 260 / 0.5);
+}
+
+.dialogo[open] {
+  animation: dialogo-entra 0.16s ease-out;
+}
+
+@keyframes dialogo-entra {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.dialogo form {
+  margin: 0;
+  padding: 22px 22px 18px;
+}
+
+.dialogo h2 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.dialogo-mensagem {
+  margin: 0 0 18px;
+  color: var(--suave);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.dialogo-mensagem strong {
+  color: var(--texto);
+  font-weight: 600;
+}
+
+.dialogo-acoes {
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+button.perigo {
+  background: var(--perigo);
+  border-color: var(--perigo);
+  color: oklch(0.99 0.005 25);
+}
+
+button.perigo:hover:not(:disabled) {
+  background: var(--perigo-hover);
+  border-color: var(--perigo-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialogo[open] {
+    animation: none;
   }
 }
