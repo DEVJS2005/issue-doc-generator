@@ -9,6 +9,7 @@ import { criarAutenticadorBanco, lerUsuariosDoEnv, type Autenticador } from "./a
 import { criarProvedorOidc, type ProvedorSso } from "./auth/oidc.js";
 import { registrarSso } from "./rotas/sso.js";
 import { criarSessoes } from "./auth/sessao.js";
+import { Backups } from "./banco/backup.js";
 import { abrirBanco } from "./banco/banco.js";
 import { RepositorioConfiguracao } from "./banco/configuracao.js";
 import { RepositorioHistorico } from "./banco/historico.js";
@@ -85,10 +86,18 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     app.log.info(`IA: provedor ${c.provedor}, modelo ${c.modelo}, esforço ${c.esforco}`);
   }
 
-  // Retenção do histórico (administração): apaga as issues antigas agora e a cada 6 horas.
+  // Retenção do histórico e backup diário do banco: agora e a cada 6 horas. O backup só roda se o
+  // último tiver mais de 24 h; falha no backup vira aviso no log e não derruba o servidor.
+  const backups = new Backups(banco, config.arquivoBanco);
   const expurgar = () => {
     const apagadas = historico.expurgar(ajustes.valores().retencaoDias);
     if (apagadas) app.log.info({ evento: "expurgo", apagadas }, `histórico: ${apagadas} issue(s) antiga(s) apagada(s)`);
+    try {
+      const feito = backups.diario(ajustes.valores().backupCopias);
+      if (feito) app.log.info({ evento: "backup", nome: feito.nome, bytes: feito.bytes }, `backup: ${feito.nome}`);
+    } catch (erro) {
+      app.log.warn({ evento: "backup_falhou", detalhe: String(erro) }, "backup: não foi possível copiar o banco");
+    }
   };
   expurgar();
   const timerExpurgo = setInterval(expurgar, EXPURGO_A_CADA_MS);
@@ -130,7 +139,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   registrarRotaGerar(app, opcoesGeracao);
   registrarRotaRefinar(app, opcoesGeracao);
   registrarHistorico(app, { historico, usuarios });
-  registrarAdmin(app, { ajustes, usuarios });
+  registrarAdmin(app, { ajustes, usuarios, backups });
 
   // Em produção o servidor também entrega o build do web/.
   const pastaWeb = opcoes.pastaWeb ?? pastaWebPadrao;

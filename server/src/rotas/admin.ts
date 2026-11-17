@@ -1,6 +1,8 @@
+import { createReadStream } from "node:fs";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
 import type { Ajustes } from "../ajustes/ajustes.js";
+import type { Backups } from "../banco/backup.js";
 import { ErroValidacao } from "../banco/banco.js";
 import type { RepositorioUsuarios } from "../banco/usuarios.js";
 import { ErroGeracao } from "../ia/erros.js";
@@ -32,7 +34,38 @@ const CorpoAlterarUsuario = z.object({
 const PROVEDORES = ["anthropic", "openai", "openai_compativel", "gemini"] as const;
 
 /** /api/admin/*: o hook de auth já garante login e perfil de admin. */
-export function registrarAdmin(app: FastifyInstance, o: { ajustes: Ajustes; usuarios: RepositorioUsuarios }) {
+export function registrarAdmin(app: FastifyInstance, o: { ajustes: Ajustes; usuarios: RepositorioUsuarios; backups: Backups }) {
+  // Backups do banco: lista, "Fazer backup agora" e download. Só o admin chega aqui.
+  app.get("/api/admin/backups", async () => ({
+    disponivel: o.backups.disponivel,
+    copias: o.ajustes.valores().backupCopias,
+    backups: o.backups.listar(),
+  }));
+
+  app.post("/api/admin/backups", async (request, reply) => {
+    if (!o.backups.disponivel) {
+      return reply
+        .code(409)
+        .send({ erro: { codigo: "backup_indisponivel", mensagem: "Backup indisponível: o banco está em memória.", podeTentarDeNovo: false } });
+    }
+    const backup = o.backups.fazer();
+    o.backups.podar(o.ajustes.valores().backupCopias);
+    request.log.info({ evento: "backup", nome: backup.nome, usuario: request.usuario!.email }, "administração: backup feito");
+    return reply.code(201).send({ backup });
+  });
+
+  app.get("/api/admin/backups/:nome", async (request, reply) => {
+    const nome = (request.params as { nome: string }).nome;
+    const arquivo = o.backups.caminho(nome);
+    if (!arquivo) return reply.code(404).send({ erro: { codigo: "nao_encontrado", mensagem: "Backup não encontrado.", podeTentarDeNovo: false } });
+    request.log.info({ evento: "backup_baixado", nome, usuario: request.usuario!.email }, "administração: backup baixado");
+    return reply
+      .header("content-type", "application/vnd.sqlite3")
+      .header("content-disposition", `attachment; filename="${nome}"`)
+      .header("cache-control", "no-store")
+      .send(createReadStream(arquivo));
+  });
+
   const estado = () => ({ valores: o.ajustes.valores(), provedores: o.ajustes.provedores(), alteracoes: o.ajustes.alteracoes() });
 
   app.get("/api/admin/ajustes", async () => estado());
