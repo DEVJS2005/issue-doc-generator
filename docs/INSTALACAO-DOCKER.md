@@ -10,8 +10,15 @@ Desktop. Tudo roda num container só, e os dados ficam num volume.
 - A chave de API de pelo menos um provedor de IA: Anthropic, OpenAI ou Google (Gemini).
 - Para produção: um domínio e um proxy com HTTPS (nginx, Traefik ou Caddy). Veja o passo 7.
 
-No Windows, o Docker Desktop precisa do WSL 2. Rode `wsl --install` como administrador e reinicie
-a máquina.
+No Windows, o Docker Desktop precisa do WSL 2. Antes de instalar o Docker Desktop, rode como
+administrador e reinicie a máquina:
+
+```powershell
+wsl --install --no-distribution
+```
+
+Sem isso, o Docker Desktop instala, mas o motor não sobe: o `docker version` mostra o cliente e
+falha ao falar com o servidor.
 
 ## 2. Baixar o projeto
 
@@ -60,6 +67,9 @@ curl http://localhost:3000/api/saude
 
 O container passa a "healthy" em alguns segundos, porque o `HEALTHCHECK` chama `/api/saude`.
 
+Como referência, numa máquina comum a primeira subida (com o build da imagem) leva cerca de
+1 minuto e meio, e a imagem fica com cerca de 400 MB. As atualizações seguintes levam segundos.
+
 Para usar outra porta no servidor: `PORTA_HOST=8080 docker compose up -d`.
 
 ## 5. Criar o primeiro administrador
@@ -78,9 +88,11 @@ usá-lo, aparece um link novo no log.
 
 Na aba **Administração**:
 
-1. Escolha o **provedor** e o **modelo**. O botão "Buscar modelos da chave" lista os modelos
-   disponíveis. Se quiser, escolha também um **modelo reserva**, usado quando o principal estiver
-   sobrecarregado.
+1. Escolha o **provedor** e o **modelo**. Só aparecem habilitados os provedores que têm chave no
+   `.env`. Para os provedores sem modelo padrão (Gemini e OpenAI), a tela busca sozinha os modelos
+   da chave: clique no campo Modelo e escolha um da lista (no Gemini, por exemplo,
+   `gemini-2.5-flash`). Se quiser, escolha também um **modelo reserva**, usado quando o principal
+   estiver sobrecarregado.
 2. Ajuste três valores: o limite de gerações por pessoa por hora, o tempo limite (300 s é um bom
    padrão) e por quantos dias guardar o histórico.
 3. Crie os usuários do time, com nome de usuário, e-mail e senha inicial.
@@ -183,6 +195,8 @@ docker compose up -d --build
 | `port is already allocated` | A porta 3000 já está em uso. Use `PORTA_HOST=8080 docker compose up -d`. |
 | Não acho o link do 1º admin | Rode `docker compose logs app \| grep configurar`. Se alguém já criou o admin, o link não aparece mais: entre com o usuário criado. |
 | "Nenhum provedor de IA está configurado" | Falta a chave no `.env`, ou falta escolher o provedor e o modelo na Administração. Depois de mudar o `.env`, rode `docker compose up -d` de novo. |
+| "O provedor de IA recusou o pedido por configuração inválida" | O modelo escolhido não aceita algum parâmetro. Veja o motivo exato com `docker compose logs app \| grep gerar_falhou` e troque o modelo na Administração. |
+| `docker version` mostra só o cliente (Windows) | Falta o WSL 2 ou o Docker Desktop ainda está iniciando. Veja o passo 1. |
 | "O provedor de IA está instável" | O provedor está sobrecarregado (erro 503). Tente de novo ou configure um modelo reserva. |
 | A geração para no meio quando passa pelo proxy | Faltam `proxy_buffering off` e um `proxy_read_timeout` maior no proxy (passo 7). |
 | Todos precisam entrar de novo a cada reinício | O `SEGREDO_SESSAO` está vazio no `.env`. |
