@@ -124,6 +124,12 @@ export function SeletorTema() {
 }
 
 /** Rodapé fixo com o crédito do projeto. */
+/**
+ * Endereço do código-fonte. A AGPL (seção 13) pede que quem usa o sistema pela rede tenha acesso
+ * ao código: quem publicar uma versão modificada deve apontar este link para o próprio código.
+ */
+export const REPOSITORIO = "https://github.com/DEVJS2005/issue-doc-generator";
+
 export function Rodape() {
   return (
     <footer className="rodape">
@@ -131,6 +137,10 @@ export function Rodape() {
       <a href="https://github.com/DEVJS2005" target="_blank" rel="noopener noreferrer">
         <IconeGithub />
         JSBATIS
+      </a>
+      <span aria-hidden="true">·</span>
+      <a href={REPOSITORIO} target="_blank" rel="noopener noreferrer license">
+        Código-fonte (AGPLv3)
       </a>
     </footer>
   );

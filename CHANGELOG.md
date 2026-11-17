@@ -4,6 +4,15 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e as versões seguem o
 [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [Não lançado]
+
+### Alterado
+
+- **Licença:** o código passou de MIT para **GNU AGPL-3.0-or-later**. As versões até a 1.1.0
+  continuam MIT. A base ISTQB do prompt (`server/prompts/istqb-base.md`) segue CC BY-NC 4.0, sem
+  uso comercial; o README explica como trocá-la por uma base própria.
+- O rodapé ganhou o link "Código-fonte (AGPLv3)", como pede a seção 13 da AGPL.
+
 ## [1.1.0] - 2026-11-16
 
 ### Adicionado
@@ -78,5 +87,6 @@ Primeira versão estável.
   imagem Docker.
 - JavaScript da tela dividido sob demanda (de 579 KB para 237 KB iniciais).
 
+[Não lançado]: https://github.com/DEVJS2005/issue-doc-generator/compare/v1.1.0...HEAD
 [1.1.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.1.0
 [1.0.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.0.0
