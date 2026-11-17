@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, ErroApi, type BuscaHistorico, type IssueGuardada, type ResumoIssue } from "./api";
+import { api, ErroApi, rotuloStatus, STATUS, type BuscaHistorico, type IssueGuardada, type ResumoIssue } from "./api";
 import { useDialogo } from "./Dialogo";
 
 export function dataHora(ms: number) {
@@ -7,7 +7,7 @@ export function dataHora(ms: number) {
 }
 
 type Filtros = Omit<BuscaHistorico, "todos">;
-const SEM_FILTROS: Filtros = { usuario: "", texto: "", produto: "", tipo: "", de: "", ate: "" };
+const SEM_FILTROS: Filtros = { usuario: "", texto: "", produto: "", tipo: "", status: "", de: "", ate: "" };
 
 /**
  * Lista as issues guardadas, com busca por texto e filtros por produto, tipo e período. O admin
@@ -137,6 +137,17 @@ export function Historico({
             ))}
           </select>
         </label>
+        <label>
+          Status
+          <select aria-label="Filtrar por status" value={filtros.status} onChange={(e) => mudar("status", e.target.value)}>
+            <option value="">Todos</option>
+            {STATUS.map((s) => (
+              <option key={s.valor} value={s.valor}>
+                {s.rotulo}
+              </option>
+            ))}
+          </select>
+        </label>
         {podeVerTodos && todos && (
           <label>
             Autor
@@ -177,6 +188,7 @@ export function Historico({
                 <th>Título</th>
                 <th>Produto</th>
                 <th>Tipo</th>
+                <th>Status</th>
                 {todos && <th>Autor</th>}
                 <th>Atualizada</th>
                 <th>Versões</th>
@@ -191,6 +203,9 @@ export function Historico({
                   <td>{i.titulo}</td>
                   <td>{i.produto}</td>
                   <td>{i.tipo}</td>
+                  <td>
+                    <span className={`selo-status ${i.status}`}>{rotuloStatus(i.status)}</span>
+                  </td>
                   {todos && <td title={i.usuario}>{i.autor ?? i.usuario}</td>}
                   <td>{dataHora(i.atualizadaEm)}</td>
                   <td>{i.versoes}</td>

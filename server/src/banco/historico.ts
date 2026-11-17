@@ -2,8 +2,13 @@ import type { Issue } from "../issue/schema.js";
 import type { Entrada } from "../prompt/entrada.js";
 import type { Banco } from "./banco.js";
 
+export const STATUS_ISSUE = ["rascunho", "revisada", "aprovada"] as const;
+export type StatusIssue = (typeof STATUS_ISSUE)[number];
+export type MudancaStatus = { de: StatusIssue; para: StatusIssue; quem: string; quando: number };
+
 export type ResumoIssue = {
   id: number;
+  status: StatusIssue;
   usuario: string;
   titulo: string;
   tipo: string;
@@ -25,6 +30,7 @@ export type FiltroHistorico = {
   /** Nome do produto, sem diferenciar maiúsculas. */
   produto?: string;
   tipo?: string;
+  status?: StatusIssue;
   /** Período pela última atualização, em ms desde 1970 (inclusive). */
   de?: number;
   ate?: number;
@@ -39,6 +45,7 @@ export type Versao = { numero: number; quando: number; ajuste: string | null; mo
 
 type Linha = {
   id: number;
+  status: StatusIssue;
   usuario: string;
   titulo: string;
   tipo: string;
@@ -52,11 +59,12 @@ type Linha = {
   markdown?: string;
 };
 
-const RESUMO = "id, usuario, titulo, tipo, produto, criada_em, atualizada_em, versoes, modelo";
+const RESUMO = "id, status, usuario, titulo, tipo, produto, criada_em, atualizada_em, versoes, modelo";
 
 function paraResumo(l: Linha): ResumoIssue {
   return {
     id: l.id,
+    status: l.status,
     usuario: l.usuario,
     titulo: l.titulo,
     tipo: l.tipo,
@@ -86,9 +94,14 @@ export class RepositorioHistorico {
     return id;
   }
 
-  salvarRefinamento(id: number, ajuste: string, issue: Issue, markdown: string, modelo: string, agora = Date.now()) {
+  /**
+   * Nova versão de uma issue. Se ela estava Revisada ou Aprovada, volta para Rascunho: o conteúdo
+   * mudou e precisa de nova revisão (`quem` fica registrado na mudança).
+   */
+  salvarRefinamento(id: number, ajuste: string, issue: Issue, markdown: string, modelo: string, quem: string, agora = Date.now()) {
     const atual = this.db.prepare("SELECT versoes FROM issues WHERE id = ?").get(id) as { versoes: number } | undefined;
     if (!atual) return;
+    this.mudarStatus(id, "rascunho", quem, agora);
     const numero = atual.versoes + 1;
     this.db
       .prepare("UPDATE issues SET atualizada_em = ?, titulo = ?, issue_json = ?, markdown = ?, modelo = ?, versoes = ? WHERE id = ?")
@@ -123,6 +136,10 @@ export class RepositorioHistorico {
       condicoes.push("tipo = ?");
       valores.push(filtro.tipo.trim());
     }
+    if (filtro.status) {
+      condicoes.push("status = ?");
+      valores.push(filtro.status);
+    }
     if (filtro.de !== undefined) {
       condicoes.push("atualizada_em >= ?");
       valores.push(filtro.de);
@@ -148,6 +165,20 @@ export class RepositorioHistorico {
     const l = this.db.prepare("SELECT * FROM issues WHERE id = ?").get(id) as Linha | undefined;
     if (!l) return null;
     return { ...paraResumo(l), entrada: JSON.parse(l.entrada_json!), issue: JSON.parse(l.issue_json!), markdown: l.markdown! };
+  }
+
+  /** Muda o status e registra quem e quando. Devolve null se já estava nesse status ou a issue não existe. */
+  mudarStatus(id: number, para: StatusIssue, quem: string, agora = Date.now()): MudancaStatus | null {
+    const l = this.db.prepare("SELECT status FROM issues WHERE id = ?").get(id) as { status: StatusIssue } | undefined;
+    if (!l || l.status === para) return null;
+    this.db.prepare("UPDATE issues SET status = ? WHERE id = ?").run(para, id);
+    this.db.prepare("INSERT INTO issue_status (issue_id, de, para, quem, quando) VALUES (?, ?, ?, ?, ?)").run(id, l.status, para, quem, agora);
+    return { de: l.status, para, quem, quando: agora };
+  }
+
+  /** Mudanças de status de uma issue, da mais antiga para a mais nova. */
+  mudancasStatus(id: number): MudancaStatus[] {
+    return this.db.prepare("SELECT de, para, quem, quando FROM issue_status WHERE issue_id = ? ORDER BY id").all(id) as MudancaStatus[];
   }
 
   dono(id: number): string | null {

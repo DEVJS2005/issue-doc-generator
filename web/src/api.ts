@@ -17,7 +17,34 @@ export type Opcoes = {
   tipos: string[];
   limites: { descricao: number; contexto: number; ajuste: number };
 };
-export type Entrada = { descricao: string; tipo: string; produto: string; contexto: string };
+export type Idioma = "pt-BR" | "en" | "es";
+export const IDIOMAS: { valor: Idioma; rotulo: string }[] = [
+  { valor: "pt-BR", rotulo: "Português" },
+  { valor: "en", rotulo: "Inglês" },
+  { valor: "es", rotulo: "Espanhol" },
+];
+export type Entrada = { descricao: string; tipo: string; produto: string; contexto: string; idioma?: Idioma };
+
+export type StatusIssue = "rascunho" | "revisada" | "aprovada";
+export const STATUS: { valor: StatusIssue; rotulo: string }[] = [
+  { valor: "rascunho", rotulo: "Rascunho" },
+  { valor: "revisada", rotulo: "Revisada" },
+  { valor: "aprovada", rotulo: "Aprovada" },
+];
+export const rotuloStatus = (s: StatusIssue) => STATUS.find((x) => x.valor === s)?.rotulo ?? s;
+export type MudancaStatus = { de: StatusIssue; para: StatusIssue; quem: string; quando: number };
+export type LinkCompartilhado = { id: number; criadoPor: string; criadoEm: number; expiraEm: number };
+export type IssuePublica = {
+  titulo: string;
+  produto: string;
+  tipo: string;
+  status: StatusIssue;
+  versoes: number;
+  atualizadaEm: number;
+  autor: string;
+  markdown: string;
+};
+export type InfoBackup = { nome: string; bytes: number; criadoEm: number };
 export type Progresso = { fase: "analisando" | "escrevendo"; caracteres: number; secao: string | null };
 export type Resultado = {
   issue: unknown;
@@ -32,6 +59,7 @@ export type Resultado = {
 
 export type ResumoIssue = {
   id: number;
+  status: StatusIssue;
   usuario: string;
   /** Nome de usuário do autor (na listagem e na issue aberta). */
   autor?: string;
@@ -52,6 +80,7 @@ export type BuscaHistorico = {
   texto?: string;
   produto?: string;
   tipo?: string;
+  status?: string;
   de?: string;
   ate?: string;
 };
@@ -62,7 +91,7 @@ export function paramsHistorico(b: BuscaHistorico): string {
   if (b.todos) p.set("todos", "1");
   const texto = (v?: string) => v?.trim() ?? "";
   if (b.todos && texto(b.usuario)) p.set("usuario", texto(b.usuario));
-  for (const k of ["texto", "produto", "tipo"] as const) if (texto(b[k])) p.set(k, texto(b[k]));
+  for (const k of ["texto", "produto", "tipo", "status"] as const) if (texto(b[k])) p.set(k, texto(b[k]));
   if (b.de) p.set("de", String(new Date(`${b.de}T00:00:00`).getTime()));
   if (b.ate) p.set("ate", String(new Date(`${b.ate}T23:59:59.999`).getTime()));
   return p.toString();
@@ -78,6 +107,7 @@ export type ValoresAjustes = {
   limitePorHora: number;
   tempoLimiteSegundos: number;
   retencaoDias: number;
+  backupCopias: number;
 };
 export type InfoProvedor = { nome: NomeProvedor; rotulo: string; disponivel: boolean; motivo: string | null; modeloPadrao: string };
 export type Alteracao = { quando: number; quem: string; chave: string; de: unknown; para: unknown };
@@ -133,7 +163,16 @@ export const api = {
     const q = paramsHistorico(busca);
     return chamar<{ itens: ResumoIssue[]; podeVerTodos: boolean; produtos: string[] }>("GET", `/api/historico${q ? `?${q}` : ""}`);
   },
-  issue: (id: number) => chamar<{ item: IssueGuardada; versoes: Versao[] }>("GET", `/api/historico/${id}`),
+  issue: (id: number) => chamar<{ item: IssueGuardada; versoes: Versao[]; mudancasStatus: MudancaStatus[] }>("GET", `/api/historico/${id}`),
+  mudarStatus: (id: number, status: StatusIssue) =>
+    chamar<{ status: StatusIssue; mudancasStatus: MudancaStatus[] }>("PATCH", `/api/historico/${id}/status`, { status }),
+  links: (id: number) => chamar<{ links: LinkCompartilhado[] }>("GET", `/api/historico/${id}/links`),
+  criarLink: (id: number, dias: number) =>
+    postar(`/api/historico/${id}/links`, { dias }).then((r) => lerJson<{ url: string; link: LinkCompartilhado }>(r)),
+  revogarLink: (id: number, link: number) => chamar<{ ok: true }>("DELETE", `/api/historico/${id}/links/${link}`),
+  publico: (token: string) => fetch(`/api/publico/${encodeURIComponent(token)}`).then((r) => lerJson<{ issue: IssuePublica }>(r)),
+  backups: () => chamar<{ disponivel: boolean; copias: number; backups: InfoBackup[] }>("GET", "/api/admin/backups"),
+  fazerBackup: () => postar("/api/admin/backups", {}).then((r) => lerJson<{ backup: InfoBackup }>(r)),
   apagarIssue: (id: number) => chamar<{ ok: true }>("DELETE", `/api/historico/${id}`),
   versao: (id: number, numero: number) => chamar<{ versao: Versao & { markdown: string } }>("GET", `/api/historico/${id}/versoes/${numero}`),
 

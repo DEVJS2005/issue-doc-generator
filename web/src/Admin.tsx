@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { api, ErroApi, type EstadoAdmin, type UsuarioAdmin, type ValoresAjustes } from "./api";
+import { api, ErroApi, type EstadoAdmin, type InfoBackup, type UsuarioAdmin, type ValoresAjustes } from "./api";
 import { useDialogo } from "./Dialogo";
 import { ERRO_NOME, PADRAO_NOME, useValidacao } from "./Formulario";
 import { dataHora } from "./Historico";
@@ -20,6 +20,7 @@ const ROTULO_CHAVE: Record<string, string> = {
   limitePorHora: "Limite por hora",
   tempoLimiteSegundos: "Tempo limite (s)",
   retencaoDias: "Retenção (dias)",
+  backupCopias: "Backups guardados",
 };
 
 function valorTexto(v: unknown) {
@@ -238,6 +239,11 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
             <input {...v.campo("retencaoDias")} type="number" min={1} max={3650} value={form.retencaoDias} onChange={(e) => mudar("retencaoDias", Number(e.target.value))} />
             {v.erro("retencaoDias")}
           </label>
+          <label>
+            Backups do banco guardados
+            <input {...v.campo("backupCopias")} type="number" min={1} max={90} value={form.backupCopias} onChange={(e) => mudar("backupCopias", Number(e.target.value))} />
+            {v.erro("backupCopias")}
+          </label>
         </div>
         <div className="acoes">
           <button type="submit" disabled={salvando}>
@@ -245,6 +251,8 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
           </button>
         </div>
       </form>
+
+      <Backups aoFalhar={falhou} />
 
       <section className="cartao">
         <h2>Usuários</h2>
@@ -322,6 +330,76 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
         )}
       </section>
     </>
+  );
+}
+
+function tamanho(bytes: number) {
+  return bytes >= 1_048_576 ? `${(bytes / 1_048_576).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB` : `${Math.ceil(bytes / 1024)} KB`;
+}
+
+/** Backup do banco: um por dia, sozinho; aqui dá para fazer um agora e baixar qualquer um. */
+function Backups({ aoFalhar }: { aoFalhar: (e: unknown) => void }) {
+  const [estado, setEstado] = useState<{ disponivel: boolean; copias: number; backups: InfoBackup[] } | null>(null);
+  const [fazendo, setFazendo] = useState(false);
+
+  const carregar = useCallback(() => {
+    api.backups().then(setEstado).catch(aoFalhar);
+  }, [aoFalhar]);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
+
+  async function fazer() {
+    setFazendo(true);
+    try {
+      await api.fazerBackup();
+      carregar();
+    } catch (e) {
+      aoFalhar(e);
+    } finally {
+      setFazendo(false);
+    }
+  }
+
+  if (!estado) return null;
+  return (
+    <section className="cartao">
+      <div className="barra">
+        <h2>Backup do banco</h2>
+        {estado.disponivel && (
+          <button type="button" className="secundario" onClick={fazer} disabled={fazendo}>
+            {fazendo ? "Fazendo backup…" : "Fazer backup agora"}
+          </button>
+        )}
+      </div>
+      {!estado.disponivel ? (
+        <p className="legenda">O banco está em memória (modo de teste): não há backup.</p>
+      ) : (
+        <>
+          <p className="legenda">
+            Um backup por dia, feito sozinho, na pasta <code>backups</code> ao lado do banco. Ficam os {estado.copias} mais novos. O arquivo
+            tem os usuários (senhas só como hash) e o histórico: guarde-o com cuidado.
+          </p>
+          {estado.backups.length === 0 ? (
+            <p className="legenda">Nenhum backup ainda.</p>
+          ) : (
+            <ul className="lista-backups">
+              {estado.backups.map((b) => (
+                <li key={b.nome}>
+                  <span>
+                    {dataHora(b.criadoEm)} · {tamanho(b.bytes)}
+                  </span>
+                  <a href={`/api/admin/backups/${encodeURIComponent(b.nome)}`} download>
+                    Baixar
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 

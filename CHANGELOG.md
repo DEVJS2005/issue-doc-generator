@@ -8,6 +8,19 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 ### Adicionado
 
+- **Status da issue:** Rascunho, Revisada ou Aprovada, com quem mudou e quando, e filtro por status
+  no histórico. Refinar uma issue Revisada ou Aprovada a devolve para Rascunho.
+- **Casos de teste em CSV** no formato de importação do TestRail, do Xray (Jira) ou do Zephyr Scale.
+  Células que começam com `=`, `+`, `-` ou `@` ganham um apóstrofo, para a planilha não as
+  executar como fórmula.
+- **Link de compartilhamento** só de leitura, para quem não tem login, com validade de 1, 7 ou 30
+  dias e revogação. O banco guarda só o hash do token.
+- **Backup automático do banco:** um por dia, na pasta `backups` ao lado do banco (no Docker,
+  dentro do volume), guardando as cópias mais novas (7 por padrão, ajustável na Administração), com
+  "Fazer backup agora" e download na Administração.
+- **Issue em português, inglês ou espanhol:** o idioma é escolhido no formulário; o Markdown sai
+  com os títulos no mesmo idioma.
+
 - **Baixar PDF** da issue (gerada, refinada ou aberta do histórico), pela impressão do navegador:
   sai só a issue, com as seções formatadas, os destaques e um cabeçalho com produto, tipo, autor,
   data e versão.

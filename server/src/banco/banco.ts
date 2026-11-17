@@ -20,6 +20,33 @@ export const MIGRACAO_NOME = `
   CREATE UNIQUE INDEX usuarios_por_nome ON usuarios (nome COLLATE NOCASE);
 `;
 
+/**
+ * Migração 3: status da issue (Rascunho → Revisada → Aprovada) com o registro de quem mudou, e
+ * links de compartilhamento só de leitura (o token fica só como hash).
+ */
+export const MIGRACAO_STATUS_E_LINKS = `
+  ALTER TABLE issues ADD COLUMN status TEXT NOT NULL DEFAULT 'rascunho';
+  CREATE TABLE issue_status (
+    id INTEGER PRIMARY KEY,
+    issue_id INTEGER NOT NULL REFERENCES issues (id) ON DELETE CASCADE,
+    de TEXT NOT NULL,
+    para TEXT NOT NULL,
+    quem TEXT NOT NULL,
+    quando INTEGER NOT NULL
+  );
+  CREATE INDEX issue_status_por_issue ON issue_status (issue_id, id);
+  CREATE TABLE links (
+    id INTEGER PRIMARY KEY,
+    issue_id INTEGER NOT NULL REFERENCES issues (id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    criado_por TEXT NOT NULL,
+    criado_em INTEGER NOT NULL,
+    expira_em INTEGER NOT NULL,
+    revogado_em INTEGER
+  );
+  CREATE INDEX links_por_issue ON links (issue_id);
+`;
+
 // Um arquivo SQLite (node:sqlite, sem dependência nativa) guarda a configuração da IA, os usuários
 // e o histórico de issues. Cada item da lista é uma migração; a versão aplicada fica em
 // PRAGMA user_version. Nunca edite uma migração já publicada: acrescente outra no fim.
@@ -76,6 +103,7 @@ const MIGRACOES: string[] = [
   );
   `,
   MIGRACAO_NOME,
+  MIGRACAO_STATUS_E_LINKS,
 ];
 
 export type Banco = DatabaseSync;

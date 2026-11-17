@@ -220,7 +220,7 @@ describe("histórico de issues", () => {
     expect(todas.itens[0]).toMatchObject({ id, usuario: "comum@exemplo.dev", titulo: "Limitar cupons por pedido", produto: "Loja", versoes: 1 });
 
     const item = (await a.inject({ method: "GET", url: `/api/historico/${id}`, headers: { cookie: comum } })).json();
-    expect(item.item.entrada).toEqual(ENTRADA);
+    expect(item.item.entrada).toEqual({ ...ENTRADA, idioma: "pt-BR" });
     expect(item.item.markdown).toContain("# Limitar cupons por pedido");
   });
 
