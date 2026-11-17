@@ -1,6 +1,6 @@
 # Instalação com a imagem pronta do ghcr.io: docker compose pull && docker compose up -d
 # Lê os segredos do .env (copie o .env.example). O banco fica no volume "dados".
-# VERSAO_IMAGEM fixa uma versão (ex.: 1.1.0); sem ela, usa a última publicada (latest).
+# VERSAO_IMAGEM fixa uma versão (ex.: 1.2.0); sem ela, usa a última publicada (latest).
 # Para construir a partir do código: docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 services:
   app:
