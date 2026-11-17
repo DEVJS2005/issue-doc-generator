@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
@@ -82,7 +82,7 @@ jobs:
       USUARIO_CI: ci@exemplo.dev
       SENHA_CI: senha-de-ci
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: docker build
         run: docker build -t issue-doc-generator:ci .
