@@ -140,7 +140,7 @@ export async function responderComGeracao(
     try {
       const ref = o.refinamento;
       if (ref?.historicoId) {
-        o.historico.salvarRefinamento(ref.historicoId, ref.ajuste, r.issue, r.markdown, r.modelo);
+        o.historico.salvarRefinamento(ref.historicoId, ref.ajuste, r.issue, r.markdown, r.modelo, quem);
         historicoId = ref.historicoId;
       } else {
         historicoId = o.historico.salvarNova(quem, o.entrada, r.issue, r.markdown, r.modelo);
