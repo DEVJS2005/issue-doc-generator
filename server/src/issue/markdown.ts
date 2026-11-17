@@ -13,9 +13,12 @@ const ROTULO_CASO: Record<TipoCaso, string> = {
 
 const NAO_SE_APLICA = "_Não se aplica._";
 
-/** Deixa um texto seguro para uma célula de tabela GFM (pipes e quebras de linha). */
+/**
+ * Deixa um texto seguro para uma célula de tabela GFM (barras invertidas, pipes e quebras de linha).
+ * A barra vem primeiro: sem isso, "a\|b" viraria "a\\|b", e o "|" voltaria a dividir a coluna.
+ */
 export function celula(texto: string): string {
-  const limpo = texto.trim().replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
+  const limpo = texto.trim().replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
   return limpo || "—";
 }
 
