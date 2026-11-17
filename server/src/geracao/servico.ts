@@ -5,6 +5,7 @@ import { validarIssue, type Issue } from "../issue/schema.js";
 import { ErroGeracao } from "../ia/erros.js";
 import { extrairJson, secaoAtual } from "../ia/json.js";
 import type { NomeProvedor, Provedor, Uso } from "../ia/tipos.js";
+import type { Idioma } from "../prompt/entrada.js";
 import { promptSistema } from "../prompt/montar.js";
 
 export type EventoProgresso = {
@@ -35,7 +36,7 @@ const INTERVALO_PROGRESSO_MS = 250;
 export async function gerarIssue(
   provedor: Provedor,
   usuario: string,
-  opcoes: { signal: AbortSignal; aoProgresso: (e: EventoProgresso) => void; sistema?: string },
+  opcoes: { signal: AbortSignal; aoProgresso: (e: EventoProgresso) => void; sistema?: string; idioma?: Idioma },
 ): Promise<ResultadoGeracao> {
   const inicio = Date.now();
   let parcial = "";
@@ -81,7 +82,7 @@ export async function gerarIssue(
   const issue = validacao.data;
   return {
     issue,
-    markdown: montarMarkdown(issue),
+    markdown: montarMarkdown(issue, opcoes.idioma),
     avisos: verificarCoerencia(issue),
     uso: resposta.uso,
     provedor: provedor.nome,
