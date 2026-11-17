@@ -98,4 +98,23 @@ describe("useValidacao", () => {
     for (const ok of ["ana", "ana.souza", "qa-2", "a1", "x_y"]) expect(regra.test(ok), ok).toBe(true);
     for (const ruim of ["a", "Ana", ".ana", "ana souza", "ana@x", "a".repeat(41)]) expect(regra.test(ruim), ruim).toBe(false);
   });
+
+  it("campo obrigatório pode explicar o que falta com data-vazio", async () => {
+    function Modelo() {
+      const v = useValidacao();
+      return (
+        <form noValidate onSubmit={(e) => (e.preventDefault(), v.validar(e.currentTarget))}>
+          <label>
+            Modelo
+            <input {...v.campo("modelo")} required data-vazio="Escolha o modelo." />
+            {v.erro("modelo")}
+          </label>
+          <button type="submit">Salvar</button>
+        </form>
+      );
+    }
+    render(<Modelo />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Salvar" }));
+    expect(screen.getByRole("textbox", { name: "Modelo" })).toHaveAccessibleDescription("Escolha o modelo.");
+  });
 });
