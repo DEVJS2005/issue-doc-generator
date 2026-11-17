@@ -1081,3 +1081,110 @@ button.perigo:hover:not(:disabled) {
     animation: none;
   }
 }
+
+/* Busca no histórico */
+.busca {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  align-items: flex-end;
+  margin: 8px 0 16px;
+}
+
+.busca label {
+  flex: 1 1 130px;
+  min-width: 0;
+}
+
+.busca .busca-texto {
+  flex: 2 1 240px;
+}
+
+.busca > button {
+  flex: 0 0 auto;
+  margin-bottom: 8px;
+}
+
+/* Só aparece no PDF (impressão) */
+.so-impressao {
+  display: none;
+}
+
+/* PDF da issue: "Baixar PDF" abre a impressão do navegador; sai só a issue, com o cabeçalho. */
+@media print {
+  @page {
+    margin: 16mm;
+  }
+
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .topo,
+  .abas,
+  .rodape,
+  .nao-imprimir,
+  .dialogo {
+    display: none !important;
+  }
+
+  .pagina,
+  main {
+    padding: 0;
+    margin: 0;
+    max-width: none;
+  }
+
+  .cartao {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    background: transparent;
+  }
+
+  .so-impressao {
+    display: block;
+  }
+
+  .metadados-pdf {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 20px;
+    margin: 0 0 14px;
+    padding: 0 0 10px;
+    border-bottom: 1px solid #999;
+    font-size: 0.85rem;
+  }
+
+  .metadados-pdf div {
+    display: flex;
+    gap: 6px;
+  }
+
+  .metadados-pdf dt {
+    font-weight: 600;
+  }
+
+  .metadados-pdf dd {
+    margin: 0;
+  }
+
+  mark.lacuna,
+  .issue table,
+  .issue th {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .issue h2,
+  .issue h3,
+  .issue tr {
+    break-inside: avoid;
+    break-after: avoid-page;
+  }
+}

@@ -6,6 +6,22 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 ## [Não lançado]
 
+### Adicionado
+
+- **Baixar PDF** da issue (gerada, refinada ou aberta do histórico), pela impressão do navegador:
+  sai só a issue, com as seções formatadas, os destaques e um cabeçalho com produto, tipo, autor,
+  data e versão.
+- **Rascunho automático:** descrição, tipo, produto e contexto ficam guardados no navegador,
+  por pessoa, enquanto ela digita. Voltam depois de recarregar a página ou de a sessão expirar, e
+  somem quando a issue é gerada.
+- **Usar como base:** no Histórico, abre uma issue nova com a descrição, o tipo, o produto e o
+  contexto de outra.
+- **Busca no histórico:** texto livre (título, produto, descrição e texto da issue) e filtros por
+  produto, tipo, autor (admin) e período.
+- Instalação com a **imagem pronta do ghcr.io**: o `docker-compose.yml` baixa a imagem
+  (`VERSAO_IMAGEM` fixa uma versão), e o guia não pede mais clone nem build no servidor. O build a
+  partir do código continua possível com `docker-compose.build.yml`.
+
 ### Alterado
 
 - **Licença:** o código passou de MIT para **GNU AGPL-3.0-or-later**. As versões até a 1.1.0
