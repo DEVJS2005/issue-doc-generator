@@ -17,12 +17,18 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 - Rodapé fixo "Construído por JSBATIS", com link para o GitHub.
 - `docker-compose.yml` e o guia [docs/INSTALACAO-DOCKER.md](docs/INSTALACAO-DOCKER.md), com a
   instalação no servidor do zero.
+- Testes unitários da tela (Vitest, Testing Library) e ESLint.
+- No CI: checagem do título do PR, lint e `npm audit`. Workflows novos: CodeQL, Dependabot e
+  publicação da imagem no ghcr.io com Release nas tags.
 
 ### Alterado
 
 - Visual repaginado: fontes IBM Plex servidas pela própria aplicação, cores em OKLCH, ícones e um
   favicon novos.
 - O histórico mostra o nome de usuário do autor. O filtro do admin aceita nome ou e-mail.
+- Confirmações e pedidos de texto (apagar issue, trocar senha, trocar nome) usam um diálogo do
+  próprio sistema, no lugar das caixas do navegador. Os formulários mostram o erro embaixo do
+  campo, em vez do balão do navegador.
 
 ## [1.0.0] - 2026-11-16
 

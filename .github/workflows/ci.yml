@@ -13,6 +13,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  titulo:
+    name: Título do PR no padrão Conventional Commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Confere o título (vira a mensagem do squash na main)
+        env:
+          # Por variável de ambiente, nunca interpolado no script: o título vem do autor do PR.
+          TITULO: ${{ github.event.pull_request.title }}
+        run: |
+          padrao='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .{3,}$'
+          if printf '%s' "$TITULO" | grep -Eq "$padrao"; then
+            echo "ok: $TITULO"
+          else
+            echo "::error::Título fora do padrão. Use, por exemplo: 'feat: login por usuário' ou 'fix(admin): ...'."
+            echo "Recebido: $TITULO"
+            exit 1
+          fi
+
   testes:
     name: Typecheck, testes e ponta a ponta
     runs-on: ubuntu-latest
@@ -27,11 +47,17 @@ jobs:
 
       - run: npm ci
 
+      - name: Lint (ESLint, zero avisos)
+        run: npm run lint
+
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Testes do servidor (Vitest)
+      - name: Testes unitários do servidor e da tela (Vitest)
         run: npm test
+
+      - name: Dependências de produção sem vulnerabilidade alta
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Navegador do Playwright
         run: npx playwright install --with-deps chromium
