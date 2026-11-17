@@ -39,4 +39,11 @@ describe("rodapé", () => {
     expect(link).toHaveAttribute("target", "_blank");
     expect(link.getAttribute("rel")).toContain("noopener");
   });
+
+  it("aponta para o código-fonte, como pede a AGPL (seção 13)", () => {
+    render(<Rodape />);
+    const fonte = screen.getByRole("link", { name: "Código-fonte (AGPLv3)" });
+    expect(fonte).toHaveAttribute("href", "https://github.com/DEVJS2005/issue-doc-generator");
+    expect(fonte.getAttribute("rel")).toContain("license");
+  });
 });

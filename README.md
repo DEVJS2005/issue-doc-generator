@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/DEVJS2005/issue-doc-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/DEVJS2005/issue-doc-generator/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/DEVJS2005/issue-doc-generator)](https://github.com/DEVJS2005/issue-doc-generator/releases)
-[![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
+[![Licença AGPL-3.0-or-later](https://img.shields.io/badge/licen%C3%A7a-AGPL--3.0--or--later-blue.svg)](LICENSE)
 ![Node 22.13+](https://img.shields.io/badge/node-%3E%3D22.13-339933?logo=node.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
@@ -14,6 +14,10 @@ As técnicas de teste e de revisão seguem o **ISTQB® CTFL v4.0.1**, por meio d
 [istqb-ai-ready](https://github.com/DEVJS2005/istqb-ai-ready) (submódulo em `docs/istqb-ai-ready`).
 A IA entrega um **rascunho**: o que ela não souber afirmar fica marcado como `[a preencher]` e vira
 uma dúvida para o PO. Uma pessoa revisa antes de virar card.
+
+> **Licença:** o código é **AGPL-3.0-or-later**. A base ISTQB que vai no prompt
+> (`server/prompts/istqb-base.md`) é **CC BY-NC 4.0**, o que proíbe o uso comercial dela. Detalhes
+> em [Licença e atribuição](#licença-e-atribuição).
 
 Próximos passos, pendências conhecidas e checklist para o DevOps: [docs/ROADMAP.md](docs/ROADMAP.md).
 Mudanças por versão: [CHANGELOG.md](CHANGELOG.md).
@@ -371,7 +375,26 @@ não salvar outro valor. `USUARIOS_PERMITIDOS` é importado uma vez, se o banco 
 
 ## Licença e atribuição
 
-- Código: MIT (veja [LICENSE](LICENSE)).
+O projeto tem duas licenças, uma para cada parte:
+
+| Parte | Licença | Na prática |
+|---|---|---|
+| Código (servidor, tela, testes, Docker) | **GNU AGPL-3.0-or-later** ([LICENSE](LICENSE)) | Pode usar, estudar, mudar e redistribuir. Quem roda uma versão **modificada** como serviço na rede precisa oferecer o código-fonte dessa versão a quem usa (seção 13). |
+| Base ISTQB do prompt (`server/prompts/istqb-base.md`) e o submódulo `docs/istqb-ai-ready` | **CC BY-NC 4.0** (conteúdo) | Exige atribuição e **proíbe uso comercial**. |
+
+**Uso comercial:** como está, o projeto não pode ser usado comercialmente, porque o prompt
+carrega conteúdo CC BY-NC. Para uso comercial, troque o `server/prompts/istqb-base.md` por uma
+base própria ou licenciada para isso. O código continua valendo pela AGPL.
+
+**Seção 13 da AGPL:** o rodapé da tela tem um link para o código-fonte. Se você publicar uma
+versão modificada, troque esse link (`REPOSITORIO` em `web/src/Interface.tsx`) pelo endereço do
+seu código.
+
+**Versões anteriores:** as versões até a 1.1.0 foram publicadas sob a licença MIT e continuam MIT
+para quem as recebeu. A AGPL vale daqui para frente.
+
+Atribuição da base ISTQB:
+
 - A base `docs/istqb-ai-ready` é um projeto independente: código MIT e conteúdo
   **CC BY-NC 4.0** (uso não comercial). Ela é derivada do **ISTQB® Certified Tester Foundation
   Level Syllabus v4.0.1**, © 2024 International Software Testing Qualifications Board (ISTQB®).
