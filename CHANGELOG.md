@@ -4,6 +4,26 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e as versões seguem o
 [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.1.0] - 2026-11-16
+
+### Adicionado
+
+- **Login por nome de usuário.** O e-mail continua aceito. Os usuários que já existiam ganham um
+  nome automático, tirado da parte do e-mail antes do "@". O nome pode ser trocado na
+  Administração.
+- **Modo claro e modo escuro.** O tema segue o sistema por padrão e pode ser trocado no topo da
+  tela. A escolha fica salva no navegador.
+- Tela de entrada com uma apresentação da ferramenta.
+- Rodapé fixo "Construído por JSBATIS", com link para o GitHub.
+- `docker-compose.yml` e o guia [docs/INSTALACAO-DOCKER.md](docs/INSTALACAO-DOCKER.md), com a
+  instalação no servidor do zero.
+
+### Alterado
+
+- Visual repaginado: fontes IBM Plex servidas pela própria aplicação, cores em OKLCH, ícones e um
+  favicon novos.
+- O histórico mostra o nome de usuário do autor. O filtro do admin aceita nome ou e-mail.
+
 ## [1.0.0] - 2026-11-16
 
 Primeira versão estável.
@@ -43,4 +63,5 @@ Primeira versão estável.
   imagem Docker.
 - JavaScript da tela dividido sob demanda (de 579 KB para 237 KB iniciais).
 
+[1.1.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.1.0
 [1.0.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.0.0

@@ -2,6 +2,24 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+/**
+ * Migração 2: nome de usuário para o login (o e-mail continua sendo a identidade e o que o SSO
+ * usa). Quem já existe recebe a parte do e-mail antes do @; repetido ganha "-2", "-3"…
+ */
+export const MIGRACAO_NOME = `
+  ALTER TABLE usuarios ADD COLUMN nome TEXT;
+  UPDATE usuarios SET nome = lower(substr(email, 1, instr(email, '@') - 1));
+  UPDATE usuarios SET nome = nome || '-' || (
+    SELECT COUNT(*) + 1 FROM usuarios AS antes
+    WHERE lower(substr(antes.email, 1, instr(antes.email, '@') - 1)) = usuarios.nome AND antes.id < usuarios.id
+  )
+  WHERE EXISTS (
+    SELECT 1 FROM usuarios AS antes
+    WHERE lower(substr(antes.email, 1, instr(antes.email, '@') - 1)) = usuarios.nome AND antes.id < usuarios.id
+  );
+  CREATE UNIQUE INDEX usuarios_por_nome ON usuarios (nome COLLATE NOCASE);
+`;
+
 // Um arquivo SQLite (node:sqlite, sem dependência nativa) guarda a configuração da IA, os usuários
 // e o histórico de issues. Cada item da lista é uma migração; a versão aplicada fica em
 // PRAGMA user_version. Nunca edite uma migração já publicada: acrescente outra no fim.
@@ -57,6 +75,7 @@ const MIGRACOES: string[] = [
     modelo TEXT NOT NULL
   );
   `,
+  MIGRACAO_NOME,
 ];
 
 export type Banco = DatabaseSync;

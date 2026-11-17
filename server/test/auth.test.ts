@@ -47,7 +47,7 @@ describe("login", () => {
     const a = await app();
     const r = await a.inject({ method: "POST", url: "/api/login", payload: { email: "QA@Exemplo.dev", senha: SENHA_TESTE } });
     expect(r.statusCode).toBe(200);
-    expect(r.json()).toEqual({ usuario: { email: EMAIL_TESTE, admin: true } });
+    expect(r.json()).toEqual({ usuario: { email: EMAIL_TESTE, nome: "qa", admin: true } });
     const cookie = String(r.headers["set-cookie"]);
     expect(cookie).toContain("HttpOnly");
     expect(cookie).toContain("SameSite=Strict");
@@ -62,7 +62,7 @@ describe("login", () => {
     ]) {
       const r = await a.inject({ method: "POST", url: "/api/login", payload });
       expect(r.statusCode).toBe(401);
-      expect(r.json().erro.mensagem).toBe("E-mail ou senha incorretos.");
+      expect(r.json().erro.mensagem).toBe("Usuário ou senha incorretos.");
     }
   });
 
@@ -78,7 +78,7 @@ describe("login", () => {
   it("informa a sessão e sai", async () => {
     const a = await app();
     const cookie = await entrar(a);
-    expect((await a.inject({ method: "GET", url: "/api/sessao", headers: { cookie } })).json()).toEqual({ usuario: { email: EMAIL_TESTE, admin: true } });
+    expect((await a.inject({ method: "GET", url: "/api/sessao", headers: { cookie } })).json()).toEqual({ usuario: { email: EMAIL_TESTE, nome: "qa", admin: true } });
     const saida = await a.inject({ method: "POST", url: "/api/sair", headers: { cookie } });
     expect(String(saida.headers["set-cookie"])).toContain("Max-Age=0");
     expect((await a.inject({ method: "GET", url: "/api/sessao" })).statusCode).toBe(401);
@@ -123,9 +123,9 @@ describe("usuários do formato antigo (USUARIOS_PERMITIDOS)", () => {
   it("são importados uma vez no banco vazio, com o primeiro como admin", async () => {
     const a = await app({ USUARIOS_PERMITIDOS: `${USUARIO_TESTE},ana@exemplo.dev:outra-senha` });
     const cookie = await entrar(a);
-    expect((await a.inject({ method: "GET", url: "/api/sessao", headers: { cookie } })).json().usuario).toEqual({ email: EMAIL_TESTE, admin: true });
+    expect((await a.inject({ method: "GET", url: "/api/sessao", headers: { cookie } })).json().usuario).toEqual({ email: EMAIL_TESTE, nome: "qa", admin: true });
     const ana = await entrar(a, "ana@exemplo.dev", "outra-senha");
-    expect((await a.inject({ method: "GET", url: "/api/sessao", headers: { cookie: ana } })).json().usuario).toEqual({ email: "ana@exemplo.dev", admin: false });
+    expect((await a.inject({ method: "GET", url: "/api/sessao", headers: { cookie: ana } })).json().usuario).toEqual({ email: "ana@exemplo.dev", nome: "ana", admin: false });
   });
 });
 

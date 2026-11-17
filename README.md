@@ -27,7 +27,7 @@ Mudanças por versão: [CHANGELOG.md](CHANGELOG.md).
   compatíveis com a OpenAI (Ollama, LM Studio, OpenRouter, Groq), com saída JSON validada por schema.
 - **Refinar** em linguagem natural, com destaque do que mudou e **comparação de versões**.
 - **Histórico** por usuário, **administração** sem reiniciar o servidor e modelo reserva automático.
-- **Login** por e-mail e senha ou **SSO** (OpenID Connect: Entra ID, Google Workspace, Keycloak, Okta).
+- **Login** por nome de usuário (ou e-mail) e senha, ou **SSO** (OpenID Connect: Entra ID, Google Workspace, Keycloak, Okta).
 - **Pronto para produção:** imagem Docker única, SQLite, logs JSON sem dados pessoais (LGPD), CI com
   Vitest e Playwright.
 
@@ -42,7 +42,7 @@ Brazilian Portuguese.
 
 ## Como usar
 
-1. Entre com seu e-mail e senha.
+1. Entre com seu nome de usuário (ou e-mail) e senha.
 2. Escreva a **descrição** (até 4.000 caracteres), escolha o **tipo**, informe o **nome do
    produto** (a tela lembra o último usado) e, se tiver,
    cole o **contexto** (regras conhecidas, telas, links, protótipo em texto; até 8.000).
@@ -142,13 +142,15 @@ instale o navegador com `npx playwright install chromium`.
 ## Subir com Docker
 
 ```bash
-docker build -t issue-doc-generator .
-docker run --env-file .env -p 3000:3000 -v issue-doc-generator-dados:/app/data issue-doc-generator
+cp .env.example .env   # preencha uma chave de IA e o SEGREDO_SESSAO
+docker compose up -d --build
+docker compose logs app | grep configurar   # link do primeiro admin
 ```
 
-A tela fica em `http://localhost:3000`. O volume em `/app/data` guarda o banco (usuários,
-configuração, histórico). Sem ele, os dados somem quando o container é recriado. Para pegar o
-link do primeiro admin: `docker logs <container> | grep configurar`.
+A tela fica em `http://localhost:3000`. O volume `issue-doc-generator-dados` guarda o banco, com
+usuários, configuração e histórico. O passo a passo completo, do zero, está em
+**[docs/INSTALACAO-DOCKER.md](docs/INSTALACAO-DOCKER.md)**. Ele cobre o proxy com HTTPS e
+streaming, a atualização, o backup e os problemas comuns.
 
 ## Subir num servidor
 
@@ -182,7 +184,7 @@ de login ficam na memória do processo (reiniciar zera as contagens).
 - **Senhas:** guardadas só como hash scrypt com sal. Mínimo de 8 caracteres.
 - **Primeiro admin:** link de uso único no log (veja "Rodar local"). Nunca fica sem administrador
   ativo: o servidor recusa tirar o último.
-- **Login** por e-mail e senha (`server/src/auth/autenticador.ts`) e, opcionalmente, por **SSO**
+- **Login** por nome de usuário (ou e-mail) e senha (`server/src/auth/autenticador.ts`) e, opcionalmente, por **SSO**
   (veja abaixo). O perfil de admin vem sempre do banco.
 - **Sessão:** cookie `HttpOnly` e `SameSite=Strict` assinado com HMAC (`SEGREDO_SESSAO`), válido
   por `SESSAO_HORAS`. O usuário é relido do banco a cada pedido: desativar alguém ou tirar o

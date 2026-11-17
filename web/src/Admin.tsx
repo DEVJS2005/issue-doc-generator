@@ -90,7 +90,7 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
     }
   }
 
-  async function alterarUsuario(u: UsuarioAdmin, mudancas: { admin?: boolean; ativo?: boolean; senha?: string }, sucesso: string) {
+  async function alterarUsuario(u: UsuarioAdmin, mudancas: { nome?: string; admin?: boolean; ativo?: boolean; senha?: string }, sucesso: string) {
     setMensagem(null);
     try {
       const { usuario } = await api.alterarUsuario(u.id, mudancas);
@@ -102,8 +102,13 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
   }
 
   function trocarSenha(u: UsuarioAdmin) {
-    const senha = window.prompt(`Nova senha para ${u.email} (mínimo 8 caracteres):`);
-    if (senha) void alterarUsuario(u, { senha }, `Senha de ${u.email} trocada.`);
+    const senha = window.prompt(`Nova senha para ${u.nome} (mínimo 8 caracteres):`);
+    if (senha) void alterarUsuario(u, { senha }, `Senha de ${u.nome} trocada.`);
+  }
+
+  function trocarNome(u: UsuarioAdmin) {
+    const nome = window.prompt(`Novo nome de usuário para ${u.email} (letras minúsculas, números, ponto, hífen ou sublinhado):`, u.nome);
+    if (nome && nome !== u.nome) void alterarUsuario(u, { nome }, `Nome de usuário trocado para ${nome.trim().toLowerCase()}.`);
   }
 
   return (
@@ -215,8 +220,8 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
         <h2>Usuários</h2>
         <NovoUsuario
           aoCriar={(u) => {
-            setUsuarios((lista) => [...lista, u].sort((a, b) => a.email.localeCompare(b.email)));
-            setMensagem({ tipo: "ok", texto: `Usuário ${u.email} criado.` });
+            setUsuarios((lista) => [...lista, u].sort((a, b) => a.nome.localeCompare(b.nome)));
+            setMensagem({ tipo: "ok", texto: `Usuário ${u.nome} criado.` });
           }}
           aoFalhar={falhou}
         />
@@ -224,6 +229,7 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
           <table className="tabela">
             <thead>
               <tr>
+                <th>Usuário</th>
                 <th>E-mail</th>
                 <th>Perfil</th>
                 <th>Situação</th>
@@ -236,25 +242,29 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
               {usuarios.map((u) => (
                 <tr key={u.id} className={u.ativo ? "" : "inativo"}>
                   <td>
-                    {u.email}
+                    {u.nome}
                     {u.email === usuarioAtual && <span className="legenda"> (você)</span>}
                   </td>
+                  <td className="secundaria">{u.email}</td>
                   <td>{u.admin ? "Administrador" : "Usuário"}</td>
                   <td>{u.ativo ? "Ativo" : "Desativado"}</td>
                   <td className="acoes-linha">
                     <button
                       type="button"
                       className="botao-texto"
-                      onClick={() => alterarUsuario(u, { admin: !u.admin }, u.admin ? `${u.email} deixou de ser administrador.` : `${u.email} agora é administrador.`)}
+                      onClick={() => alterarUsuario(u, { admin: !u.admin }, u.admin ? `${u.nome} deixou de ser administrador.` : `${u.nome} agora é administrador.`)}
                     >
                       {u.admin ? "Tirar admin" : "Tornar admin"}
                     </button>
                     <button
                       type="button"
                       className="botao-texto"
-                      onClick={() => alterarUsuario(u, { ativo: !u.ativo }, u.ativo ? `${u.email} desativado.` : `${u.email} reativado.`)}
+                      onClick={() => alterarUsuario(u, { ativo: !u.ativo }, u.ativo ? `${u.nome} desativado.` : `${u.nome} reativado.`)}
                     >
                       {u.ativo ? "Desativar" : "Reativar"}
+                    </button>
+                    <button type="button" className="botao-texto" onClick={() => trocarNome(u)}>
+                      Trocar nome
                     </button>
                     <button type="button" className="botao-texto" onClick={() => trocarSenha(u)}>
                       Trocar senha
@@ -286,6 +296,7 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
 }
 
 function NovoUsuario({ aoCriar, aoFalhar }: { aoCriar: (u: UsuarioAdmin) => void; aoFalhar: (e: unknown) => void }) {
+  const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [admin, setAdmin] = useState(false);
@@ -293,7 +304,8 @@ function NovoUsuario({ aoCriar, aoFalhar }: { aoCriar: (u: UsuarioAdmin) => void
   async function criar(e: FormEvent) {
     e.preventDefault();
     try {
-      aoCriar((await api.criarUsuario(email, senha, admin)).usuario);
+      aoCriar((await api.criarUsuario(nome, email, senha, admin)).usuario);
+      setNome("");
       setEmail("");
       setSenha("");
       setAdmin(false);
@@ -304,6 +316,17 @@ function NovoUsuario({ aoCriar, aoFalhar }: { aoCriar: (u: UsuarioAdmin) => void
 
   return (
     <form className="novo-usuario" onSubmit={criar}>
+      <label>
+        Nome de usuário
+        <input
+          name="novoNome"
+          value={nome}
+          onChange={(e) => setNome(e.target.value.toLowerCase())}
+          placeholder="Vazio = parte do e-mail"
+          pattern="[a-z0-9][a-z0-9._\-]{1,39}"
+          title="De 2 a 40 caracteres: letras minúsculas, números, ponto, hífen ou sublinhado."
+        />
+      </label>
       <label>
         E-mail
         <input name="novoEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />

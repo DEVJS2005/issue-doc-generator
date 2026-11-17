@@ -67,8 +67,8 @@ export function Historico({
             </label>
             {todos && (
               <input
-                aria-label="Filtrar por e-mail"
-                placeholder="Filtrar por e-mail"
+                aria-label="Filtrar por usuário"
+                placeholder="Filtrar por usuário ou e-mail"
                 value={filtro}
                 onChange={(e) => setFiltro(e.target.value)}
               />
@@ -105,7 +105,7 @@ export function Historico({
                   <td>{i.titulo}</td>
                   <td>{i.produto}</td>
                   <td>{i.tipo}</td>
-                  {todos && <td>{i.usuario}</td>}
+                  {todos && <td title={i.usuario}>{i.autor ?? i.usuario}</td>}
                   <td>{dataHora(i.atualizadaEm)}</td>
                   <td>{i.versoes}</td>
                   <td className="acoes-linha">

@@ -13,13 +13,19 @@ declare module "fastify" {
   }
 }
 
-const CorpoLogin = z.object({
-  email: z.string().trim().min(1, "Informe o e-mail.").max(200),
-  senha: z.string().min(1, "Informe a senha.").max(200),
-});
+// `usuario` é o nome de usuário ou o e-mail; `email` continua aceito por compatibilidade.
+const CorpoLogin = z
+  .object({
+    usuario: z.string().trim().max(200).optional(),
+    email: z.string().trim().max(200).optional(),
+    senha: z.string().min(1, "Informe a senha.").max(200),
+  })
+  .transform((c) => ({ login: c.usuario || c.email || "", senha: c.senha }))
+  .refine((c) => c.login.length > 0, { message: "Informe o usuário ou o e-mail." });
 
 const CorpoConfigurar = z.object({
   codigo: z.string().min(1).max(200),
+  nome: z.string().trim().max(40).optional(),
   email: z.string().trim().min(1, "Informe o e-mail.").max(200),
   senha: z.string().max(200),
 });
@@ -53,7 +59,7 @@ export function usuarioDaRequisicao(request: FastifyRequest, o: OpcoesAuth): Usu
   const sessao = o.sessoes.ler(lerCookie(request.headers.cookie, COOKIE_SESSAO));
   if (!sessao) return null;
   const u = o.usuarios.buscar(sessao.email);
-  return u && u.ativo ? { email: u.email, admin: u.admin } : null;
+  return u && u.ativo ? { email: u.email, nome: u.nome, admin: u.admin } : null;
 }
 
 export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
@@ -82,10 +88,10 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
     }
     const corpo = CorpoLogin.safeParse(request.body);
     if (!corpo.success) return reply.code(400).send(erro("entrada_invalida", corpo.error.issues[0]?.message ?? "Entrada inválida."));
-    const usuario = await o.autenticador.autenticar(corpo.data.email, corpo.data.senha);
+    const usuario = await o.autenticador.autenticar(corpo.data.login, corpo.data.senha);
     if (!usuario) {
-      request.log.info({ evento: "login_falhou" }, "login: e-mail ou senha incorretos");
-      return reply.code(401).send(erro("credenciais_invalidas", "E-mail ou senha incorretos.", true));
+      request.log.info({ evento: "login_falhou" }, "login: usuário ou senha incorretos");
+      return reply.code(401).send(erro("credenciais_invalidas", "Usuário ou senha incorretos.", true));
     }
     tentativas.limpar(request.ip);
     request.log.info({ evento: "login", usuario: usuario.email }, "login: ok");
@@ -126,10 +132,10 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
       return reply.code(403).send(erro("codigo_invalido", "Código de configuração inválido. Use o link que aparece no log do servidor."));
     }
     try {
-      const u = o.usuarios.criar(corpo.data.email, corpo.data.senha, true);
+      const u = o.usuarios.criar(corpo.data.email, corpo.data.senha, true, { nome: corpo.data.nome });
       o.codigoConfiguracao.atual = null;
       request.log.info({ evento: "primeiro_admin", usuario: u.email }, "configuração inicial: primeiro admin criado");
-      return entrar(request, reply, { email: u.email, admin: true });
+      return entrar(request, reply, { email: u.email, nome: u.nome, admin: true });
     } catch (e) {
       if (e instanceof ErroValidacao) return reply.code(400).send(erro(e.codigo, e.message));
       throw e;

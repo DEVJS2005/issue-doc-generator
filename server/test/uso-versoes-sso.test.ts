@@ -104,6 +104,7 @@ describe("login único (SSO)", () => {
     const sessao = cookies.find((c) => c.startsWith("idg_sessao="))!.split(";")[0];
     expect((await a.inject({ method: "GET", url: "/api/sessao", headers: { cookie: sessao } })).json().usuario).toEqual({
       email: "comum@exemplo.dev",
+      nome: "comum",
       admin: false,
     });
   });
@@ -129,7 +130,7 @@ describe("login único (SSO)", () => {
     expect(volta.headers.location).toBe("/");
     const admin = await entrar(a);
     const lista = (await a.inject({ method: "GET", url: "/api/admin/usuarios", headers: { cookie: admin } })).json().usuarios;
-    expect(lista.find((u: { email: string }) => u.email === "nova@empresa.dev")).toMatchObject({ admin: false, ativo: true });
+    expect(lista.find((u: { email: string }) => u.email === "nova@empresa.dev")).toMatchObject({ nome: "nova", admin: false, ativo: true });
   });
 
   it("usuário desativado não entra pelo SSO", async () => {

@@ -9,19 +9,21 @@ import type { NomeProvedor } from "../ia/tipos.js";
 
 function falhou(reply: FastifyReply, e: unknown) {
   if (e instanceof ErroValidacao) {
-    const status = e.codigo === "nao_encontrado" ? 404 : e.codigo === "email_em_uso" ? 409 : 400;
+    const status = e.codigo === "nao_encontrado" ? 404 : e.codigo === "email_em_uso" || e.codigo === "nome_em_uso" ? 409 : 400;
     return reply.code(status).send({ erro: { codigo: e.codigo, mensagem: e.message, podeTentarDeNovo: false } });
   }
   throw e;
 }
 
 const CorpoNovoUsuario = z.object({
+  nome: z.string().max(40).optional(),
   email: z.string().max(200),
   senha: z.string().max(200),
   admin: z.boolean().default(false),
 });
 
 const CorpoAlterarUsuario = z.object({
+  nome: z.string().max(40).optional(),
   admin: z.boolean().optional(),
   ativo: z.boolean().optional(),
   senha: z.string().max(200).optional(),
@@ -65,7 +67,7 @@ export function registrarAdmin(app: FastifyInstance, o: { ajustes: Ajustes; usua
     const corpo = CorpoNovoUsuario.safeParse(request.body);
     if (!corpo.success) return falhou(reply, new ErroValidacao("Dados do usuário inválidos."));
     try {
-      const usuario = o.usuarios.criar(corpo.data.email, corpo.data.senha, corpo.data.admin);
+      const usuario = o.usuarios.criar(corpo.data.email, corpo.data.senha, corpo.data.admin, { nome: corpo.data.nome });
       request.log.info({ evento: "usuario_criado", por: request.usuario!.email, usuario: usuario.email, admin: usuario.admin }, "administração: usuário criado");
       return reply.code(201).send({ usuario });
     } catch (e) {

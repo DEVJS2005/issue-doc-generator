@@ -129,7 +129,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   const opcoesGeracao = { config, ajustes, historico };
   registrarRotaGerar(app, opcoesGeracao);
   registrarRotaRefinar(app, opcoesGeracao);
-  registrarHistorico(app, { historico });
+  registrarHistorico(app, { historico, usuarios });
   registrarAdmin(app, { ajustes, usuarios });
 
   // Em produção o servidor também entrega o build do web/.
