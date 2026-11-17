@@ -13,6 +13,7 @@ import { Backups } from "./banco/backup.js";
 import { abrirBanco } from "./banco/banco.js";
 import { RepositorioConfiguracao } from "./banco/configuracao.js";
 import { RepositorioHistorico } from "./banco/historico.js";
+import { RepositorioLinks } from "./banco/links.js";
 import { RepositorioUsuarios } from "./banco/usuarios.js";
 import type { Config } from "./config.js";
 import { criarProvedor } from "./ia/index.js";
@@ -22,6 +23,7 @@ import { registrarAdmin } from "./rotas/admin.js";
 import { registrarAuth } from "./rotas/auth.js";
 import { LIMITE_CONTEXTO, LIMITE_DESCRICAO, registrarRotaGerar } from "./rotas/gerar.js";
 import { registrarHistorico } from "./rotas/historico.js";
+import { registrarLinks } from "./rotas/links.js";
 import { LIMITE_AJUSTE, registrarRotaRefinar } from "./rotas/refinar.js";
 
 const pastaWebPadrao = fileURLToPath(new URL("../../web/dist", import.meta.url));
@@ -139,6 +141,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   registrarRotaGerar(app, opcoesGeracao);
   registrarRotaRefinar(app, opcoesGeracao);
   registrarHistorico(app, { historico, usuarios });
+  registrarLinks(app, { historico, links: new RepositorioLinks(banco), usuarios });
   registrarAdmin(app, { ajustes, usuarios, backups });
 
   // Em produção o servidor também entrega o build do web/.
