@@ -46,10 +46,17 @@ export type IssuePublica = {
 };
 export type InfoBackup = { nome: string; bytes: number; criadoEm: number };
 export type Progresso = { fase: "analisando" | "escrevendo"; caracteres: number; secao: string | null };
+export type Qualidade = {
+  nota: number;
+  nivel: "pronta" | "quase" | "revisar";
+  grupos: { id: string; titulo: string; nota: number; itens: { texto: string; ok: boolean; sugestao: string | null }[] }[];
+};
 export type Resultado = {
   issue: unknown;
   markdown: string;
   avisos: { codigo: string; mensagem: string }[];
+  /** Nota INVEST/ISTQB; ausente em respostas de versões antigas do servidor. */
+  qualidade?: Qualidade | null;
   alteracoes: string[] | null;
   modelo: string;
   usouFallback: boolean;
@@ -71,7 +78,13 @@ export type ResumoIssue = {
   versoes: number;
   modelo: string;
 };
-export type IssueGuardada = ResumoIssue & { entrada: Entrada; issue: unknown; markdown: string };
+export type IssueGuardada = ResumoIssue & {
+  entrada: Entrada;
+  issue: unknown;
+  markdown: string;
+  avisos?: Resultado["avisos"];
+  qualidade?: Qualidade | null;
+};
 
 /** Busca no histórico. Datas no formato do <input type="date"> (AAAA-MM-DD), no fuso de quem busca. */
 export type BuscaHistorico = {

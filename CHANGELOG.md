@@ -4,6 +4,16 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e as versões seguem o
 [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [Não lançado]
+
+### Adicionado
+
+- **Nota de qualidade** da issue (0 a 100): checagens INVEST e ISTQB em 5 grupos (valor, escopo,
+  critérios, casos de teste e revisão), com o nível ("Pronta para o time", "Quase pronta" ou
+  "Precisa de revisão") e a sugestão de cada ponto que falta. É calculada no servidor, sem chamar a
+  IA de novo. Aparece ao gerar, ao refinar e ao abrir do histórico, e fica fora do PDF.
+- Ao abrir uma issue do histórico, os avisos de coerência agora também aparecem.
+
 ## [1.2.0] - 2026-11-17
 
 ### Adicionado
@@ -117,6 +127,7 @@ Primeira versão estável.
   imagem Docker.
 - JavaScript da tela dividido sob demanda (de 579 KB para 237 KB iniciais).
 
+[Não lançado]: https://github.com/DEVJS2005/issue-doc-generator/compare/v1.2.0...HEAD
 [1.2.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.2.0
 [1.1.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.1.0
 [1.0.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.0.0
