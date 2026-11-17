@@ -76,10 +76,13 @@ export class Backups {
     return novo;
   }
 
-  /** Caminho de um backup pelo nome exato; null para qualquer outro nome (nada de caminhos). */
+  /**
+   * Caminho de um backup pelo nome exato; null para qualquer outro nome. O caminho é montado com o
+   * nome lido da própria pasta, nunca com o texto recebido: não há como apontar para fora dela.
+   */
   caminho(nome: string): string | null {
     if (!this.disponivel || quandoDe(nome) === null) return null;
-    const arquivo = path.join(this.pasta, nome);
-    return existsSync(arquivo) ? arquivo : null;
+    const encontrado = this.listar().find((b) => b.nome === nome);
+    return encontrado ? path.join(this.pasta, encontrado.nome) : null;
   }
 }

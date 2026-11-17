@@ -90,6 +90,18 @@ describe("rotas de backup", () => {
     expect(existsSync(arquivo)).toBe(true);
   });
 
+  it("as rotas de backup têm limite de pedidos por minuto", async () => {
+    const a = await montarApp(carregarConfig({ USUARIOS_PERMITIDOS: USUARIO_TESTE }));
+    const admin = await entrar(a);
+    const listar = () => a.inject({ method: "GET", url: "/api/admin/backups", headers: { cookie: admin } });
+    for (let i = 0; i < 20; i++) expect((await listar()).statusCode).toBe(200);
+    const bloqueado = await listar();
+    expect(bloqueado.statusCode).toBe(429);
+    expect(bloqueado.json().erro.codigo).toBe("muitas_tentativas");
+    // As outras rotas da administração não entram nesse limite.
+    expect((await a.inject({ method: "GET", url: "/api/admin/ajustes", headers: { cookie: admin } })).statusCode).toBe(200);
+  });
+
   it("com banco em memória, fazer backup responde 409 com o motivo", async () => {
     const a = await montarApp(carregarConfig({ USUARIOS_PERMITIDOS: USUARIO_TESTE }));
     const admin = await entrar(a);

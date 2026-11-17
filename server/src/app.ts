@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
+import rateLimit from "@fastify/rate-limit";
 import { Ajustes } from "./ajustes/ajustes.js";
 import { criarAutenticadorBanco, lerUsuariosDoEnv, type Autenticador } from "./auth/autenticador.js";
 import { criarProvedorOidc, type ProvedorSso } from "./auth/oidc.js";
@@ -142,6 +143,14 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   registrarRotaRefinar(app, opcoesGeracao);
   registrarHistorico(app, { historico, usuarios });
   registrarLinks(app, { historico, links: new RepositorioLinks(banco), usuarios });
+  // Limite de pedidos só nas rotas que pedem (config.rateLimit), com o erro no formato da API.
+  await app.register(rateLimit, {
+    global: false,
+    errorResponseBuilder: () => ({
+      statusCode: 429,
+      erro: { codigo: "muitas_tentativas", mensagem: "Muitas requisições seguidas. Aguarde um minuto e tente de novo.", podeTentarDeNovo: true },
+    }),
+  });
   registrarAdmin(app, { ajustes, usuarios, backups });
 
   // Em produção o servidor também entrega o build do web/.

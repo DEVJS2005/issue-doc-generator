@@ -35,14 +35,17 @@ const PROVEDORES = ["anthropic", "openai", "openai_compativel", "gemini"] as con
 
 /** /api/admin/*: o hook de auth já garante login e perfil de admin. */
 export function registrarAdmin(app: FastifyInstance, o: { ajustes: Ajustes; usuarios: RepositorioUsuarios; backups: Backups }) {
-  // Backups do banco: lista, "Fazer backup agora" e download. Só o admin chega aqui.
-  app.get("/api/admin/backups", async () => ({
+  // Backups do banco: lista, "Fazer backup agora" e download. Só o admin chega aqui, e com limite
+  // de pedidos, porque cada um lê ou grava no disco.
+  const limite = { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } };
+
+  app.get("/api/admin/backups", limite, async () => ({
     disponivel: o.backups.disponivel,
     copias: o.ajustes.valores().backupCopias,
     backups: o.backups.listar(),
   }));
 
-  app.post("/api/admin/backups", async (request, reply) => {
+  app.post("/api/admin/backups", limite, async (request, reply) => {
     if (!o.backups.disponivel) {
       return reply
         .code(409)
@@ -54,7 +57,7 @@ export function registrarAdmin(app: FastifyInstance, o: { ajustes: Ajustes; usua
     return reply.code(201).send({ backup });
   });
 
-  app.get("/api/admin/backups/:nome", async (request, reply) => {
+  app.get("/api/admin/backups/:nome", limite, async (request, reply) => {
     const nome = (request.params as { nome: string }).nome;
     const arquivo = o.backups.caminho(nome);
     if (!arquivo) return reply.code(404).send({ erro: { codigo: "nao_encontrado", mensagem: "Backup não encontrado.", podeTentarDeNovo: false } });
