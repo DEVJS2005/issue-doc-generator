@@ -12,7 +12,7 @@ export class ErroApi extends Error {
   }
 }
 
-export type Usuario = { email: string; admin: boolean };
+export type Usuario = { email: string; nome: string; admin: boolean };
 export type Opcoes = {
   tipos: string[];
   limites: { descricao: number; contexto: number; ajuste: number };
@@ -33,6 +33,8 @@ export type Resultado = {
 export type ResumoIssue = {
   id: number;
   usuario: string;
+  /** Nome de usuário do autor (só na listagem). */
+  autor?: string;
   titulo: string;
   tipo: string;
   produto: string;
@@ -57,7 +59,7 @@ export type ValoresAjustes = {
 export type InfoProvedor = { nome: NomeProvedor; rotulo: string; disponivel: boolean; motivo: string | null; modeloPadrao: string };
 export type Alteracao = { quando: number; quem: string; chave: string; de: unknown; para: unknown };
 export type EstadoAdmin = { valores: ValoresAjustes; provedores: InfoProvedor[]; alteracoes: Alteracao[] };
-export type UsuarioAdmin = { id: number; email: string; admin: boolean; ativo: boolean; criadoEm: number; atualizadoEm: number };
+export type UsuarioAdmin = { id: number; nome: string; email: string; admin: boolean; ativo: boolean; criadoEm: number; atualizadoEm: number };
 
 const ERRO_GENERICO: ErroTela = { codigo: "desconhecido", mensagem: "Algo deu errado. Tente de novo.", podeTentarDeNovo: true };
 
@@ -97,9 +99,10 @@ export async function lerSessao(): Promise<{ usuario: Usuario | null; precisaCon
 }
 
 export const api = {
-  entrar: (email: string, senha: string) => postar("/api/login", { email, senha }).then((r) => lerJson<{ usuario: Usuario }>(r)),
-  configurar: (codigo: string, email: string, senha: string) =>
-    postar("/api/configurar", { codigo, email, senha }).then((r) => lerJson<{ usuario: Usuario }>(r)),
+  /** `usuario` é o nome de usuário ou o e-mail. */
+  entrar: (usuario: string, senha: string) => postar("/api/login", { usuario, senha }).then((r) => lerJson<{ usuario: Usuario }>(r)),
+  configurar: (codigo: string, nome: string, email: string, senha: string) =>
+    postar("/api/configurar", { codigo, nome, email, senha }).then((r) => lerJson<{ usuario: Usuario }>(r)),
   sair: () => postar("/api/sair", {}).then((r) => lerJson<{ ok: true }>(r)),
   opcoes: () => fetch("/api/opcoes").then((r) => lerJson<Opcoes>(r)),
 
@@ -116,9 +119,9 @@ export const api = {
   salvarAjustes: (valores: Partial<ValoresAjustes>) => chamar<EstadoAdmin>("PUT", "/api/admin/ajustes", valores),
   modelos: (provedor: NomeProvedor) => chamar<{ modelos: string[] }>("GET", `/api/admin/modelos?provedor=${provedor}`),
   usuarios: () => chamar<{ usuarios: UsuarioAdmin[] }>("GET", "/api/admin/usuarios"),
-  criarUsuario: (email: string, senha: string, admin: boolean) =>
-    postar("/api/admin/usuarios", { email, senha, admin }).then((r) => lerJson<{ usuario: UsuarioAdmin }>(r)),
-  alterarUsuario: (id: number, mudancas: { admin?: boolean; ativo?: boolean; senha?: string }) =>
+  criarUsuario: (nome: string, email: string, senha: string, admin: boolean) =>
+    postar("/api/admin/usuarios", { nome, email, senha, admin }).then((r) => lerJson<{ usuario: UsuarioAdmin }>(r)),
+  alterarUsuario: (id: number, mudancas: { nome?: string; admin?: boolean; ativo?: boolean; senha?: string }) =>
     chamar<{ usuario: UsuarioAdmin }>("PATCH", `/api/admin/usuarios/${id}`, mudancas),
 };
 

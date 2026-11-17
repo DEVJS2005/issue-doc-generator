@@ -7,6 +7,7 @@ import type { Provedor, RespostaIA } from "../src/ia/tipos.js";
 import { issueExemplo } from "./fixtures/issue.js";
 import { entrar, USUARIO_TESTE } from "./fixtures/login.js";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- cada evento SSE tem um formato; o teste confere campo a campo
 type EventoSse = { evento: string; dados: any };
 
 function lerSse(corpo: string): EventoSse[] {

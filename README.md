@@ -27,7 +27,7 @@ Mudanças por versão: [CHANGELOG.md](CHANGELOG.md).
   compatíveis com a OpenAI (Ollama, LM Studio, OpenRouter, Groq), com saída JSON validada por schema.
 - **Refinar** em linguagem natural, com destaque do que mudou e **comparação de versões**.
 - **Histórico** por usuário, **administração** sem reiniciar o servidor e modelo reserva automático.
-- **Login** por e-mail e senha ou **SSO** (OpenID Connect: Entra ID, Google Workspace, Keycloak, Okta).
+- **Login** por nome de usuário (ou e-mail) e senha, ou **SSO** (OpenID Connect: Entra ID, Google Workspace, Keycloak, Okta).
 - **Pronto para produção:** imagem Docker única, SQLite, logs JSON sem dados pessoais (LGPD), CI com
   Vitest e Playwright.
 
@@ -42,7 +42,7 @@ Brazilian Portuguese.
 
 ## Como usar
 
-1. Entre com seu e-mail e senha.
+1. Entre com seu nome de usuário (ou e-mail) e senha.
 2. Escreva a **descrição** (até 4.000 caracteres), escolha o **tipo**, informe o **nome do
    produto** (a tela lembra o último usado) e, se tiver,
    cole o **contexto** (regras conhecidas, telas, links, protótipo em texto; até 8.000).
@@ -123,11 +123,28 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 
 | Comando | O que roda |
 |---|---|
-| `npm test` | Vitest do servidor: schema, Markdown, prompt, exemplos, rotas, login, 1º admin, administração, usuários, modelo reserva, histórico, retenção, limite, custo |
-| `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, administração e usuário sem acesso à administração |
+| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, 1º admin, administração, usuários, modelo reserva, histórico, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema e rodapé) |
+| `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, administração, diálogos e validação dos campos |
 | `npm run typecheck` | TypeScript do servidor e da tela |
+| `npm run lint` | ESLint (TypeScript e regras dos hooks do React), sem tolerar avisos |
 
-O CI (`.github/workflows/ci.yml`) roda tudo isso a cada PR e push na `main`. No Docker, ele:
+### Proteções no GitHub
+
+- **CI** (`.github/workflows/ci.yml`), a cada PR e push na `main`: título do PR no padrão
+  Conventional Commits (por exemplo, `feat: ...` ou `fix(admin): ...`), lint, typecheck, testes
+  unitários, `npm audit` das dependências de produção, ponta a ponta e o teste da imagem Docker.
+- **CodeQL** (`.github/workflows/codeql.yml`): análise de segurança em cada PR e uma vez por
+  semana.
+- **Dependabot** (`.github/dependabot.yml`): PRs semanais de atualização de npm, Actions e Docker,
+  que passam pelo mesmo CI.
+- **Publicar** (`.github/workflows/publicar.yml`): depois que o CI passa na `main`, publica
+  `ghcr.io/devjs2005/issue-doc-generator:main`. Uma tag `vX.Y.Z` publica `:X.Y.Z` e `:latest` e
+  cria o Release com o trecho do CHANGELOG. A tag só é aceita se bater com o `package.json` e
+  tiver uma seção no CHANGELOG.
+- **Regra da `main`:** só entra por PR, com os checks acima verdes e a branch atualizada; push
+  direto e force push são bloqueados.
+
+No Docker, o CI:
 
 - faz o `docker build`;
 - sobe o container só com variáveis de ambiente;
@@ -142,13 +159,15 @@ instale o navegador com `npx playwright install chromium`.
 ## Subir com Docker
 
 ```bash
-docker build -t issue-doc-generator .
-docker run --env-file .env -p 3000:3000 -v issue-doc-generator-dados:/app/data issue-doc-generator
+cp .env.example .env   # preencha uma chave de IA e o SEGREDO_SESSAO
+docker compose up -d --build
+docker compose logs app | grep configurar   # link do primeiro admin
 ```
 
-A tela fica em `http://localhost:3000`. O volume em `/app/data` guarda o banco (usuários,
-configuração, histórico). Sem ele, os dados somem quando o container é recriado. Para pegar o
-link do primeiro admin: `docker logs <container> | grep configurar`.
+A tela fica em `http://localhost:3000`. O volume `issue-doc-generator-dados` guarda o banco, com
+usuários, configuração e histórico. O passo a passo completo, do zero, está em
+**[docs/INSTALACAO-DOCKER.md](docs/INSTALACAO-DOCKER.md)**. Ele cobre o proxy com HTTPS e
+streaming, a atualização, o backup e os problemas comuns.
 
 ## Subir num servidor
 
@@ -182,7 +201,7 @@ de login ficam na memória do processo (reiniciar zera as contagens).
 - **Senhas:** guardadas só como hash scrypt com sal. Mínimo de 8 caracteres.
 - **Primeiro admin:** link de uso único no log (veja "Rodar local"). Nunca fica sem administrador
   ativo: o servidor recusa tirar o último.
-- **Login** por e-mail e senha (`server/src/auth/autenticador.ts`) e, opcionalmente, por **SSO**
+- **Login** por nome de usuário (ou e-mail) e senha (`server/src/auth/autenticador.ts`) e, opcionalmente, por **SSO**
   (veja abaixo). O perfil de admin vem sempre do banco.
 - **Sessão:** cookie `HttpOnly` e `SameSite=Strict` assinado com HMAC (`SEGREDO_SESSAO`), válido
   por `SESSAO_HORAS`. O usuário é relido do banco a cada pedido: desativar alguém ou tirar o

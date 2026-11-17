@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { api, ErroApi, type EstadoAdmin, type UsuarioAdmin, type ValoresAjustes } from "./api";
+import { useDialogo } from "./Dialogo";
+import { ERRO_NOME, PADRAO_NOME, useValidacao } from "./Formulario";
 import { dataHora } from "./Historico";
 
 const ESFORCOS: { valor: ValoresAjustes["esforco"]; rotulo: string }[] = [
@@ -32,6 +34,8 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
   const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([]);
   const [mensagem, setMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const dialogo = useDialogo();
+  const v = useValidacao();
 
   const falhou = useCallback(
     (e: unknown) => {
@@ -74,8 +78,9 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
     }
   }
 
-  async function salvar(e: FormEvent) {
+  async function salvar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!v.validar(e.currentTarget)) return;
     setSalvando(true);
     setMensagem(null);
     try {
@@ -90,7 +95,7 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
     }
   }
 
-  async function alterarUsuario(u: UsuarioAdmin, mudancas: { admin?: boolean; ativo?: boolean; senha?: string }, sucesso: string) {
+  async function alterarUsuario(u: UsuarioAdmin, mudancas: { nome?: string; admin?: boolean; ativo?: boolean; senha?: string }, sucesso: string) {
     setMensagem(null);
     try {
       const { usuario } = await api.alterarUsuario(u.id, mudancas);
@@ -101,9 +106,30 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
     }
   }
 
-  function trocarSenha(u: UsuarioAdmin) {
-    const senha = window.prompt(`Nova senha para ${u.email} (mínimo 8 caracteres):`);
-    if (senha) void alterarUsuario(u, { senha }, `Senha de ${u.email} trocada.`);
+  async function trocarSenha(u: UsuarioAdmin) {
+    const senha = await dialogo.pedirTexto({
+      titulo: `Trocar a senha de ${u.nome}`,
+      mensagem: "A pessoa usa a senha nova no próximo login. As sessões abertas continuam valendo.",
+      rotulo: "Nova senha (mínimo 8 caracteres)",
+      senha: true,
+      minimo: 8,
+      acao: "Trocar senha",
+    });
+    if (senha) void alterarUsuario(u, { senha }, `Senha de ${u.nome} trocada.`);
+  }
+
+  async function trocarNome(u: UsuarioAdmin) {
+    const nome = await dialogo.pedirTexto({
+      titulo: "Trocar o nome de usuário",
+      mensagem: `Conta ${u.email}. A pessoa passa a entrar com o nome novo (o e-mail continua valendo).`,
+      rotulo: "Nome de usuário",
+      valor: u.nome,
+      padrao: PADRAO_NOME,
+      erroPadrao: ERRO_NOME,
+      normalizar: (v) => v.trim().toLowerCase(),
+      acao: "Salvar nome",
+    });
+    if (nome && nome !== u.nome) void alterarUsuario(u, { nome }, `Nome de usuário trocado para ${nome}.`);
   }
 
   return (
@@ -114,7 +140,7 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
         </p>
       )}
 
-      <form className="cartao" onSubmit={salvar}>
+      <form className="cartao" onSubmit={salvar} noValidate>
         <h2>Inteligência artificial</h2>
         <p className="legenda">As chaves de API ficam no .env do servidor. Aqui você escolhe qual provedor e qual modelo usar.</p>
         <div className="linha">
@@ -186,22 +212,25 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
         <div className="linha">
           <label>
             Gerações por pessoa por hora
-            <input name="limitePorHora" type="number" min={1} max={1000} value={form.limitePorHora} onChange={(e) => mudar("limitePorHora", Number(e.target.value))} />
+            <input {...v.campo("limitePorHora")} type="number" min={1} max={1000} value={form.limitePorHora} onChange={(e) => mudar("limitePorHora", Number(e.target.value))} />
+            {v.erro("limitePorHora")}
           </label>
           <label>
             Tempo limite por geração (segundos)
             <input
-              name="tempoLimiteSegundos"
+              {...v.campo("tempoLimiteSegundos")}
               type="number"
               min={30}
               max={1800}
               value={form.tempoLimiteSegundos}
               onChange={(e) => mudar("tempoLimiteSegundos", Number(e.target.value))}
             />
+            {v.erro("tempoLimiteSegundos")}
           </label>
           <label>
             Guardar o histórico por (dias)
-            <input name="retencaoDias" type="number" min={1} max={3650} value={form.retencaoDias} onChange={(e) => mudar("retencaoDias", Number(e.target.value))} />
+            <input {...v.campo("retencaoDias")} type="number" min={1} max={3650} value={form.retencaoDias} onChange={(e) => mudar("retencaoDias", Number(e.target.value))} />
+            {v.erro("retencaoDias")}
           </label>
         </div>
         <div className="acoes">
@@ -215,8 +244,8 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
         <h2>Usuários</h2>
         <NovoUsuario
           aoCriar={(u) => {
-            setUsuarios((lista) => [...lista, u].sort((a, b) => a.email.localeCompare(b.email)));
-            setMensagem({ tipo: "ok", texto: `Usuário ${u.email} criado.` });
+            setUsuarios((lista) => [...lista, u].sort((a, b) => a.nome.localeCompare(b.nome)));
+            setMensagem({ tipo: "ok", texto: `Usuário ${u.nome} criado.` });
           }}
           aoFalhar={falhou}
         />
@@ -224,6 +253,7 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
           <table className="tabela">
             <thead>
               <tr>
+                <th>Usuário</th>
                 <th>E-mail</th>
                 <th>Perfil</th>
                 <th>Situação</th>
@@ -236,25 +266,29 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
               {usuarios.map((u) => (
                 <tr key={u.id} className={u.ativo ? "" : "inativo"}>
                   <td>
-                    {u.email}
+                    {u.nome}
                     {u.email === usuarioAtual && <span className="legenda"> (você)</span>}
                   </td>
+                  <td className="secundaria">{u.email}</td>
                   <td>{u.admin ? "Administrador" : "Usuário"}</td>
                   <td>{u.ativo ? "Ativo" : "Desativado"}</td>
                   <td className="acoes-linha">
                     <button
                       type="button"
                       className="botao-texto"
-                      onClick={() => alterarUsuario(u, { admin: !u.admin }, u.admin ? `${u.email} deixou de ser administrador.` : `${u.email} agora é administrador.`)}
+                      onClick={() => alterarUsuario(u, { admin: !u.admin }, u.admin ? `${u.nome} deixou de ser administrador.` : `${u.nome} agora é administrador.`)}
                     >
                       {u.admin ? "Tirar admin" : "Tornar admin"}
                     </button>
                     <button
                       type="button"
                       className="botao-texto"
-                      onClick={() => alterarUsuario(u, { ativo: !u.ativo }, u.ativo ? `${u.email} desativado.` : `${u.email} reativado.`)}
+                      onClick={() => alterarUsuario(u, { ativo: !u.ativo }, u.ativo ? `${u.nome} desativado.` : `${u.nome} reativado.`)}
                     >
                       {u.ativo ? "Desativar" : "Reativar"}
+                    </button>
+                    <button type="button" className="botao-texto" onClick={() => trocarNome(u)}>
+                      Trocar nome
                     </button>
                     <button type="button" className="botao-texto" onClick={() => trocarSenha(u)}>
                       Trocar senha
@@ -286,14 +320,18 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
 }
 
 function NovoUsuario({ aoCriar, aoFalhar }: { aoCriar: (u: UsuarioAdmin) => void; aoFalhar: (e: unknown) => void }) {
+  const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [admin, setAdmin] = useState(false);
+  const v = useValidacao();
 
-  async function criar(e: FormEvent) {
+  async function criar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!v.validar(e.currentTarget)) return;
     try {
-      aoCriar((await api.criarUsuario(email, senha, admin)).usuario);
+      aoCriar((await api.criarUsuario(nome, email, senha, admin)).usuario);
+      setNome("");
       setEmail("");
       setSenha("");
       setAdmin(false);
@@ -303,14 +341,28 @@ function NovoUsuario({ aoCriar, aoFalhar }: { aoCriar: (u: UsuarioAdmin) => void
   }
 
   return (
-    <form className="novo-usuario" onSubmit={criar}>
+    <form className="novo-usuario" onSubmit={criar} noValidate>
+      <label>
+        Nome de usuário
+        <input
+          {...v.campo("novoNome")}
+          value={nome}
+          onChange={(e) => setNome(e.target.value.toLowerCase())}
+          placeholder="Vazio = parte do e-mail"
+          pattern={PADRAO_NOME}
+          data-erro={ERRO_NOME}
+        />
+        {v.erro("novoNome")}
+      </label>
       <label>
         E-mail
-        <input name="novoEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input {...v.campo("novoEmail")} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        {v.erro("novoEmail")}
       </label>
       <label>
         Senha inicial
-        <input name="novaSenha" type="password" autoComplete="new-password" minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} required />
+        <input {...v.campo("novaSenha")} type="password" autoComplete="new-password" minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} required />
+        {v.erro("novaSenha")}
       </label>
       <label className="opcao">
         <input type="checkbox" checked={admin} onChange={(e) => setAdmin(e.target.checked)} />

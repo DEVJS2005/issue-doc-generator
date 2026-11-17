@@ -3,7 +3,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { montarApp } from "../src/app.js";
-import { abrirBanco } from "../src/banco/banco.js";
+import { DatabaseSync } from "node:sqlite";
+import { abrirBanco, MIGRACAO_NOME } from "../src/banco/banco.js";
 import { RepositorioHistorico } from "../src/banco/historico.js";
 import { carregarConfig, type Config } from "../src/config.js";
 import type { Provedor } from "../src/ia/tipos.js";
@@ -53,7 +54,7 @@ describe("configuração inicial (banco sem usuários)", () => {
 
     const ok = await a.inject({ method: "POST", url: "/api/configurar", payload: { codigo: CODIGO, email: "Admin@Exemplo.dev", senha: "senha-forte-1" } });
     expect(ok.statusCode).toBe(200);
-    expect(ok.json()).toEqual({ usuario: { email: "admin@exemplo.dev", admin: true } });
+    expect(ok.json()).toEqual({ usuario: { email: "admin@exemplo.dev", nome: "admin", admin: true } });
     expect(String(ok.headers["set-cookie"])).toContain("HttpOnly");
 
     const denovo = await a.inject({ method: "POST", url: "/api/configurar", payload: { codigo: CODIGO, email: "outro@exemplo.dev", senha: "senha-forte-2" } });
@@ -261,5 +262,51 @@ describe("histórico de issues", () => {
     expect(h.expurgar(180, agora)).toBe(1);
     expect(h.obter(velha)).toBeNull();
     expect(h.obter(nova)).not.toBeNull();
+  });
+});
+
+describe("nome de usuário", () => {
+  it("entra pelo nome (sem diferenciar maiúsculas) ou pelo e-mail", async () => {
+    const a = await app();
+    for (const usuario of ["qa", "QA", EMAIL_TESTE]) {
+      const r = await a.inject({ method: "POST", url: "/api/login", payload: { usuario, senha: SENHA_TESTE } });
+      expect(r.statusCode, usuario).toBe(200);
+      expect(r.json().usuario).toEqual({ email: EMAIL_TESTE, nome: "qa", admin: true });
+    }
+    expect((await a.inject({ method: "POST", url: "/api/login", payload: { usuario: "qa", senha: "errada" } })).json().erro.mensagem).toBe("Usuário ou senha incorretos.");
+  });
+
+  it("cria com nome, recusa nome repetido ou inválido e troca o nome", async () => {
+    const a = await app();
+    const cookie = await entrar(a);
+    const criar = (payload: object) => a.inject({ method: "POST", url: "/api/admin/usuarios", headers: { cookie }, payload });
+    const bia = await criar({ nome: "bia.lima", email: "bia@exemplo.dev", senha: "senha-da-bia" });
+    expect(bia.json().usuario).toMatchObject({ nome: "bia.lima", email: "bia@exemplo.dev" });
+    expect((await criar({ nome: "Bia.Lima", email: "outra@exemplo.dev", senha: "senha-outra" })).statusCode).toBe(409);
+    expect((await criar({ nome: "tem espaço", email: "x@exemplo.dev", senha: "senha-valida" })).json().erro.mensagem).toMatch(/nome de usuário deve ter/);
+    expect((await criar({ email: "qa@outro.dev", senha: "senha-valida" })).json().usuario.nome).toBe("qa-2");
+
+    const id = bia.json().usuario.id;
+    const r = await a.inject({ method: "PATCH", url: "/api/admin/usuarios/" + id, headers: { cookie }, payload: { nome: "beatriz" } });
+    expect(r.json().usuario.nome).toBe("beatriz");
+    expect((await a.inject({ method: "POST", url: "/api/login", payload: { usuario: "beatriz", senha: "senha-da-bia" } })).statusCode).toBe(200);
+  });
+
+  it("a migração dá um nome a quem já existia, sem repetir", () => {
+    const db = new DatabaseSync(":memory:");
+    db.exec("CREATE TABLE usuarios (id INTEGER PRIMARY KEY, email TEXT NOT NULL UNIQUE COLLATE NOCASE, senha_hash TEXT NOT NULL, admin INTEGER NOT NULL DEFAULT 0, ativo INTEGER NOT NULL DEFAULT 1, criado_em INTEGER NOT NULL, atualizado_em INTEGER NOT NULL)");
+    db.exec("INSERT INTO usuarios (email, senha_hash, criado_em, atualizado_em) VALUES ('ana@a.dev', 'x', 0, 0), ('Ana@b.dev', 'x', 0, 0), ('joao@a.dev', 'x', 0, 0)");
+    db.exec(MIGRACAO_NOME);
+    expect(db.prepare("SELECT nome FROM usuarios ORDER BY id").all().map((l) => (l as { nome: string }).nome)).toEqual(["ana", "ana-2", "joao"]);
+  });
+
+  it("o histórico mostra o nome do autor e o admin filtra pelo nome", async () => {
+    const a = await app({ USUARIOS_PERMITIDOS: USUARIO_TESTE + ",comum@exemplo.dev:senha-comum" });
+    const comum = await entrar(a, "comum@exemplo.dev", "senha-comum");
+    await a.inject({ method: "POST", url: "/api/gerar", headers: { cookie: comum }, payload: ENTRADA });
+    const admin = await entrar(a);
+    const r = (await a.inject({ method: "GET", url: "/api/historico?todos=1&usuario=comum", headers: { cookie: admin } })).json();
+    expect(r.itens).toHaveLength(1);
+    expect(r.itens[0]).toMatchObject({ usuario: "comum@exemplo.dev", autor: "comum" });
   });
 });

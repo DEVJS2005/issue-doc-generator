@@ -1,0 +1,21 @@
+# Instalação com um comando: docker compose up -d --build
+# Lê os segredos do .env (copie o .env.example). O banco fica no volume "dados".
+services:
+  app:
+    build: .
+    image: issue-doc-generator:latest
+    container_name: issue-doc-generator
+    env_file: .env
+    environment:
+      # Dentro do container o banco fica sempre no volume e a porta é sempre 3000.
+      ARQUIVO_BANCO: /app/data/issue-doc-generator.db
+      PORTA: "3000"
+    ports:
+      - "${PORTA_HOST:-3000}:3000"
+    volumes:
+      - dados:/app/data
+    restart: unless-stopped
+
+volumes:
+  dados:
+    name: issue-doc-generator-dados

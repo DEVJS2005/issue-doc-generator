@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ErroApi, type IssueGuardada, type ResumoIssue } from "./api";
+import { useDialogo } from "./Dialogo";
 
 export function dataHora(ms: number) {
   return new Date(ms).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
@@ -17,6 +18,7 @@ export function Historico({
 }) {
   const [itens, setItens] = useState<ResumoIssue[] | null>(null);
   const [todos, setTodos] = useState(false);
+  const dialogo = useDialogo();
   const [filtro, setFiltro] = useState("");
   const [erro, setErro] = useState<string | null>(null);
 
@@ -46,7 +48,17 @@ export function Historico({
   }
 
   async function apagar(item: ResumoIssue) {
-    if (!window.confirm(`Apagar a issue "${item.titulo}"? Não dá para desfazer.`)) return;
+    const ok = await dialogo.confirmar({
+      titulo: "Apagar esta issue?",
+      mensagem: (
+        <>
+          <strong>{item.titulo}</strong> e todas as versões dela saem do histórico. Não dá para desfazer.
+        </>
+      ),
+      acao: "Apagar",
+      perigo: true,
+    });
+    if (!ok) return;
     try {
       await api.apagarIssue(item.id);
       carregar();
@@ -67,8 +79,8 @@ export function Historico({
             </label>
             {todos && (
               <input
-                aria-label="Filtrar por e-mail"
-                placeholder="Filtrar por e-mail"
+                aria-label="Filtrar por usuário"
+                placeholder="Filtrar por usuário ou e-mail"
                 value={filtro}
                 onChange={(e) => setFiltro(e.target.value)}
               />
@@ -105,7 +117,7 @@ export function Historico({
                   <td>{i.titulo}</td>
                   <td>{i.produto}</td>
                   <td>{i.tipo}</td>
-                  {todos && <td>{i.usuario}</td>}
+                  {todos && <td title={i.usuario}>{i.autor ?? i.usuario}</td>}
                   <td>{dataHora(i.atualizadaEm)}</td>
                   <td>{i.versoes}</td>
                   <td className="acoes-linha">

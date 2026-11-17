@@ -15,6 +15,10 @@ import {
 
 // Carregados sob demanda: o renderizador de Markdown (o maior pedaço do JavaScript) só baixa
 // quando há uma issue para mostrar; Histórico e Administração, quando a aba é aberta.
+import { IconeAlerta, IconeSeta, Logo, Rodape, SeletorTema } from "./Interface";
+
+import { ERRO_NOME, PADRAO_NOME, useValidacao } from "./Formulario";
+
 const Markdown = lazy(() => import("./Markdown").then((m) => ({ default: m.Markdown })));
 const Historico = lazy(() => import("./Historico").then((m) => ({ default: m.Historico })));
 const Admin = lazy(() => import("./Admin").then((m) => ({ default: m.Admin })));
@@ -79,21 +83,25 @@ export function App() {
   return (
     <div className="pagina">
       <header className="topo">
-        <div>
-          <h1>Issue Doc Generator</h1>
-          <p className="subtitulo">Da descrição curta à issue testável, com técnicas do ISTQB CTFL v4.0.1.</p>
-        </div>
-        {usuario && (
-          <div className="conta">
-            <span>
-              {usuario.email}
-              {usuario.admin ? " · admin" : ""}
-            </span>
-            <button type="button" className="botao-texto" onClick={sair}>
-              Sair
-            </button>
+        <div className="marca">
+          <Logo />
+          <div>
+            <h1>Issue Doc Generator</h1>
+            <p className="subtitulo">Da descrição curta à issue testável, com técnicas do ISTQB CTFL v4.0.1.</p>
           </div>
-        )}
+        </div>
+        <div className="lado">
+          {usuario && (
+            <div className="conta">
+              <strong title={usuario.email}>{usuario.nome}</strong>
+              {usuario.admin && <span className="selo">admin</span>}
+              <button type="button" className="botao-texto" onClick={sair}>
+                Sair
+              </button>
+            </div>
+          )}
+          <SeletorTema />
+        </div>
       </header>
       {usuario && (
         <nav className="abas" aria-label="Seções">
@@ -112,15 +120,20 @@ export function App() {
       )}
       <main>
         {usuario === undefined && <p className="carregando">Carregando…</p>}
-        {usuario === null && precisaConfigurar && codigo && <Configurar codigo={codigo} aoEntrar={entrou} />}
-        {usuario === null && precisaConfigurar && !codigo && (
-          <section className="cartao login">
-            <h2>Configuração inicial</h2>
-            <p>Ainda não há nenhum administrador. Abra o link de configuração que aparece no log do servidor ao iniciar.</p>
-          </section>
-        )}
-        {usuario === null && !precisaConfigurar && (
-          <Login aoEntrar={entrou} rotuloSso={rotuloSso} erroSso={ERROS_SSO[new URLSearchParams(window.location.search).get("sso") ?? ""] ?? null} />
+        {usuario === null && (
+          <div className="entrada">
+            <Apresentacao />
+            {precisaConfigurar && codigo && <Configurar codigo={codigo} aoEntrar={entrou} />}
+            {precisaConfigurar && !codigo && (
+              <section className="cartao login">
+                <h2>Configuração inicial</h2>
+                <p className="legenda">Ainda não há nenhum administrador. Abra o link de configuração que aparece no log do servidor ao iniciar.</p>
+              </section>
+            )}
+            {!precisaConfigurar && (
+              <Login aoEntrar={entrou} rotuloSso={rotuloSso} erroSso={ERROS_SSO[new URLSearchParams(window.location.search).get("sso") ?? ""] ?? null} />
+            )}
+          </div>
         )}
         {usuario && (
           // O Gerador fica montado ao trocar de aba, para não perder uma geração em andamento.
@@ -133,42 +146,87 @@ export function App() {
           {usuario?.admin && pagina === "admin" && <Admin usuarioAtual={usuario.email} aoSessaoExpirar={expirou} />}
         </Suspense>
       </main>
+      <Rodape />
     </div>
   );
 }
 
+const ETAPAS = ["Problema", "Solução", "Requisito técnico", "Critérios de aceite", "Casos de teste", "Revisão"];
+
+/** Lado esquerdo da tela de entrada: o que a ferramenta entrega, em uma frase e uma sequência. */
+function Apresentacao() {
+  return (
+    <section className="apresentacao">
+      <h2>Da descrição curta à issue pronta para testar.</h2>
+      <p>
+        Descreva o que está errado ou o que vocês querem. A IA monta a issue completa, marca o que não dá para afirmar como
+        [a preencher] e lista as dúvidas para o PO.
+      </p>
+      <ol className="sequencia" aria-label="Seções da issue gerada">
+        {ETAPAS.map((etapa, i) => (
+          <li key={etapa}>
+            <span>{etapa}</span>
+            {i < ETAPAS.length - 1 && <IconeSeta />}
+          </li>
+        ))}
+      </ol>
+      <p className="base-istqb">Critérios, casos e revisão seguem as técnicas do ISTQB CTFL v4.0.1.</p>
+    </section>
+  );
+}
+
 function Configurar({ codigo, aoEntrar }: { codigo: string; aoEntrar: (u: Usuario) => void }) {
+  const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmacao, setConfirmacao] = useState("");
   const [erro, setErro] = useState<string | null>(null);
+  const v = useValidacao();
 
-  async function enviar(e: FormEvent) {
+  async function enviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (senha !== confirmacao) return setErro("As senhas não são iguais.");
+    if (!v.validar(e.currentTarget)) return;
+    if (senha !== confirmacao) return v.definir("confirmacao", "As senhas não são iguais.");
     setErro(null);
     try {
-      aoEntrar((await api.configurar(codigo, email, senha)).usuario);
+      aoEntrar((await api.configurar(codigo, nome, email, senha)).usuario);
     } catch (err) {
       setErro(err instanceof ErroApi ? err.message : "Não foi possível concluir. Tente de novo.");
     }
   }
 
   return (
-    <form className="cartao login" onSubmit={enviar}>
+    <form className="cartao login" onSubmit={enviar} noValidate>
       <h2>Criar o primeiro administrador</h2>
       <p className="legenda">Depois, os demais usuários são criados na aba Administração.</p>
       <label>
+        Nome de usuário
+        <input
+          {...v.campo("nome")}
+          autoComplete="username"
+          value={nome}
+          onChange={(e) => setNome(e.target.value.toLowerCase())}
+          placeholder="Ex.: ana.souza"
+          pattern={PADRAO_NOME}
+          data-erro={ERRO_NOME}
+          required
+        />
+        {v.erro("nome")}
+      </label>
+      <label>
         E-mail
-        <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input {...v.campo("email")} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        {v.erro("email")}
       </label>
       <label>
         Senha (mínimo 8 caracteres)
-        <input type="password" autoComplete="new-password" minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} required />
+        <input {...v.campo("senha")} type="password" autoComplete="new-password" minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} required />
+        {v.erro("senha")}
       </label>
       <label>
         Confirme a senha
-        <input type="password" autoComplete="new-password" value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} required />
+        <input {...v.campo("confirmacao")} type="password" autoComplete="new-password" value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} required />
+        {v.erro("confirmacao")}
       </label>
       {erro && (
         <p className="erro" role="alert">
@@ -185,9 +243,11 @@ function Login({ aoEntrar, rotuloSso, erroSso }: { aoEntrar: (u: Usuario) => voi
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(erroSso);
   const [enviando, setEnviando] = useState(false);
+  const v = useValidacao();
 
-  async function enviar(e: FormEvent) {
+  async function enviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!v.validar(e.currentTarget)) return;
     setEnviando(true);
     setErro(null);
     try {
@@ -200,15 +260,17 @@ function Login({ aoEntrar, rotuloSso, erroSso }: { aoEntrar: (u: Usuario) => voi
   }
 
   return (
-    <form className="cartao login" onSubmit={enviar}>
+    <form className="cartao login" onSubmit={enviar} noValidate>
       <h2>Entrar</h2>
       <label>
-        E-mail
-        <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        Usuário ou e-mail
+        <input {...v.campo("usuario")} autoComplete="username" autoCapitalize="none" spellCheck={false} value={email} onChange={(e) => setEmail(e.target.value)} required />
+        {v.erro("usuario")}
       </label>
       <label>
         Senha
-        <input type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
+        <input {...v.campo("senha")} type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
+        {v.erro("senha")}
       </label>
       {erro && (
         <p className="erro" role="alert">
@@ -345,9 +407,10 @@ function Gerador({ aberta, aoNova, aoSessaoExpirar }: { aberta: IssueGuardada | 
     <>
       <form className="cartao" onSubmit={gerar} aria-busy={ocupado}>
         <h2>O que está errado ou o que queremos</h2>
-        <p className="aviso-dados" role="note">
-          {AVISO_DADOS}
-        </p>
+        <div className="aviso-dados" role="note">
+          <IconeAlerta />
+          <span>{AVISO_DADOS}</span>
+        </div>
         <Campo rotulo="Descrição" atual={descricao.length} limite={opcoes.limites.descricao}>
           <textarea
             name="descricao"
@@ -399,6 +462,7 @@ function Gerador({ aberta, aoNova, aoSessaoExpirar }: { aberta: IssueGuardada | 
 
       {execucao && (
         <section className="cartao progresso" aria-live="polite">
+          <div className="trilho" aria-hidden="true" />
           <p>
             <strong>{execucao.tipo === "gerar" ? "Gerando a issue" : "Refinando a issue"}</strong>
             {" · "}
