@@ -11,7 +11,11 @@ import {
   type Progresso,
   type Resultado,
   type Usuario,
+  IDIOMAS,
+  type Idioma,
 } from "./api";
+import { AcoesIssue } from "./AcoesIssue";
+import { FORMATOS_CSV, gerarCsv, type FormatoCsv, type IssueCsv } from "./csv";
 
 // Carregados sob demanda: o renderizador de Markdown (o maior pedaço do JavaScript) só baixa
 // quando há uma issue para mostrar; Histórico e Administração, quando a aba é aberta.
@@ -25,6 +29,7 @@ const Markdown = lazy(() => import("./Markdown").then((m) => ({ default: m.Markd
 const Historico = lazy(() => import("./Historico").then((m) => ({ default: m.Historico })));
 const Admin = lazy(() => import("./Admin").then((m) => ({ default: m.Admin })));
 const Versoes = lazy(() => import("./Versoes").then((m) => ({ default: m.Versoes })));
+const Compartilhado = lazy(() => import("./Compartilhado").then((m) => ({ default: m.Compartilhado })));
 const Carregando = () => <p className="carregando">Carregando…</p>;
 
 const ERROS_SSO: Record<string, string> = {
@@ -41,7 +46,38 @@ const SEGUNDOS_AINDA_GERANDO = 60;
 
 type Pagina = "gerar" | "historico" | "admin";
 
+/** /compartilhado/<token> abre a issue só para leitura, sem login; o resto é o app normal. */
 export function App() {
+  const token = window.location.pathname.match(/^\/compartilhado\/([A-Za-z0-9_-]{16,100})$/)?.[1];
+  return token ? <PaginaCompartilhada token={token} /> : <Principal />;
+}
+
+function PaginaCompartilhada({ token }: { token: string }) {
+  return (
+    <div className="pagina">
+      <header className="topo">
+        <div className="marca">
+          <Logo />
+          <div>
+            <h1>Issue Doc Generator</h1>
+            <p className="subtitulo">Da descrição curta à issue testável, com técnicas do ISTQB CTFL v4.0.1.</p>
+          </div>
+        </div>
+        <div className="lado">
+          <SeletorTema />
+        </div>
+      </header>
+      <main>
+        <Suspense fallback={<Carregando />}>
+          <Compartilhado token={token} />
+        </Suspense>
+      </main>
+      <Rodape />
+    </div>
+  );
+}
+
+function Principal() {
   const [usuario, setUsuario] = useState<Usuario | null | undefined>(undefined);
   const [precisaConfigurar, setPrecisaConfigurar] = useState(false);
   const [rotuloSso, setRotuloSso] = useState<string | null>(null);
@@ -327,6 +363,8 @@ function Gerador({
   const [tipo, setTipo] = useState(inicial?.tipo ?? "");
   const [produto, setProduto] = useState(() => inicial?.produto || lerUltimoProduto());
   const [contexto, setContexto] = useState(inicial?.contexto ?? "");
+  const [idioma, setIdioma] = useState<Idioma>(inicial?.idioma ?? "pt-BR");
+  const [formatoCsv, setFormatoCsv] = useState<FormatoCsv>("testrail");
   // Cabeçalho do PDF: quem gerou, quando e qual versão está na tela.
   const [meta, setMeta] = useState(() => ({
     autor: aberta?.autor ?? (aberta ? aberta.usuario : pessoa),
@@ -336,8 +374,8 @@ function Gerador({
 
   // Rascunho automático das issues novas (não da que foi aberta do histórico).
   useEffect(() => {
-    if (!aberta) salvarRascunho(pessoa, { descricao, tipo, produto, contexto });
-  }, [aberta, pessoa, descricao, tipo, produto, contexto]);
+    if (!aberta) salvarRascunho(pessoa, { descricao, tipo, produto, contexto, idioma });
+  }, [aberta, pessoa, descricao, tipo, produto, contexto, idioma]);
 
   const [execucao, setExecucao] = useState<Execucao | null>(null);
   const [agora, setAgora] = useState(Date.now());
@@ -399,7 +437,7 @@ function Gerador({
 
   function gerar(e: FormEvent) {
     e.preventDefault();
-    const entrada: Entrada = { descricao, tipo, produto: nomeProduto, contexto };
+    const entrada: Entrada = { descricao, tipo, produto: nomeProduto, contexto, idioma };
     salvarUltimoProduto(nomeProduto);
     void executar("gerar", "/api/gerar", entrada, (r) => {
       setResultado(r);
@@ -434,6 +472,18 @@ function Gerador({
     const a = document.createElement("a");
     a.href = url;
     a.download = `${nomeArquivo(resultado.markdown)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /** Casos de teste em CSV, no formato de importação escolhido (TestRail, Xray ou Zephyr Scale). */
+  function baixarCsv() {
+    if (!resultado) return;
+    const csv = gerarCsv(resultado.issue as IssueCsv, formatoCsv);
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${nomeArquivo(resultado.markdown)}-casos-${formatoCsv}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -481,6 +531,16 @@ function Gerador({
               placeholder="Ex.: Loja Exemplo"
               required
             />
+          </label>
+          <label>
+            Idioma da issue
+            <select name="idioma" value={idioma} onChange={(e) => setIdioma(e.target.value as Idioma)}>
+              {IDIOMAS.map((i) => (
+                <option key={i.valor} value={i.valor}>
+                  {i.rotulo}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
         <Campo rotulo="Contexto (opcional)" atual={contexto.length} limite={opcoes.limites.contexto}>
@@ -541,6 +601,18 @@ function Gerador({
               <button type="button" className="secundario" onClick={() => baixarPdf(resultado.markdown)}>
                 Baixar PDF
               </button>
+              <span className="grupo-csv">
+                <select aria-label="Formato do CSV" value={formatoCsv} onChange={(e) => setFormatoCsv(e.target.value as FormatoCsv)}>
+                  {FORMATOS_CSV.map((f) => (
+                    <option key={f.valor} value={f.valor}>
+                      {f.rotulo}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className="secundario" onClick={baixarCsv}>
+                  Baixar CSV
+                </button>
+              </span>
               <button type="button" className="botao-texto" onClick={aoNova} disabled={ocupado}>
                 Nova issue
               </button>
@@ -550,6 +622,7 @@ function Gerador({
             Revise antes de virar card. <mark className="lacuna">[a preencher]</mark> marca o que a IA não pôde afirmar.
             {resultado.historicoId !== null && " Guardada no histórico."}
           </p>
+          {resultado.historicoId !== null && <AcoesIssue historicoId={resultado.historicoId} atualizacao={resultado.markdown} aoSessaoExpirar={aoSessaoExpirar} />}
           {resultado.usouFallback && (
             <p className="alteracoes nao-imprimir">O modelo principal estava indisponível: esta versão foi gerada pelo modelo reserva ({resultado.modelo}).</p>
           )}

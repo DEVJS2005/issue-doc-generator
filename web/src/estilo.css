@@ -1188,3 +1188,103 @@ button.perigo:hover:not(:disabled) {
     break-after: avoid-page;
   }
 }
+
+/* Status, links e CSV da issue */
+.grupo-csv {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.grupo-csv select {
+  width: auto;
+}
+
+.acoes-issue {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px 24px;
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--superficie-2);
+}
+
+.acoes-issue p {
+  margin: 6px 0 0;
+}
+
+.status-issue select {
+  width: auto;
+  min-width: 160px;
+}
+
+.linha-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.linha-acoes label {
+  flex: 0 1 auto;
+}
+
+.linha-acoes input[readonly] {
+  flex: 1 1 260px;
+  font-family: var(--fonte-mono);
+  font-size: 0.85rem;
+}
+
+.compartilhar .linha-acoes + .linha-acoes {
+  margin-top: 8px;
+}
+
+.lista-links,
+.lista-status,
+.lista-backups {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 0.92rem;
+}
+
+.lista-links li,
+.lista-backups li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--borda);
+}
+
+.lista-status li {
+  padding: 2px 0;
+}
+
+.selo-status {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--superficie-2);
+  color: var(--suave);
+  white-space: nowrap;
+}
+
+.selo-status.revisada {
+  background: var(--acento-suave);
+  color: var(--acento);
+}
+
+.selo-status.aprovada {
+  background: var(--sucesso-fundo);
+  color: var(--sucesso-texto, var(--texto));
+}
+
+.compartilhado-meta {
+  margin: 0 0 12px;
+}
