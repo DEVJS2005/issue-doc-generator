@@ -4,6 +4,19 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e as versões seguem o
 [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [Não lançado]
+
+### Adicionado
+
+- **Auditoria** na Administração: quem fez o quê (logins, inclusive os recusados, gerações,
+  refinamentos, status, links, issues apagadas, ajustes, usuários e backups), com data, IP e
+  filtros. Sem senhas, tokens nem texto de issue. Segue a retenção do histórico.
+
+### Corrigido
+
+- No celular, a aba Administração tinha rolagem horizontal na página inteira: os textos só para
+  leitor de tela das tabelas escapavam da área de rolagem.
+
 ## [1.2.0] - 2026-11-17
 
 ### Adicionado
@@ -117,6 +130,7 @@ Primeira versão estável.
   imagem Docker.
 - JavaScript da tela dividido sob demanda (de 579 KB para 237 KB iniciais).
 
+[Não lançado]: https://github.com/DEVJS2005/issue-doc-generator/compare/v1.2.0...HEAD
 [1.2.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.2.0
 [1.1.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.1.0
 [1.0.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.0.0

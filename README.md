@@ -225,6 +225,11 @@ de login ficam na memória do processo (reiniciar zera as contagens).
   apagadas sozinhas (na subida e a cada 6 horas). Como o histórico guarda a descrição, vale o aviso
   da tela: nada de dados pessoais reais.
 - Login: até 10 tentativas por IP a cada 15 minutos.
+- **Auditoria** (Administração → Auditoria): quem fez o quê, com data, IP e filtros por pessoa, ação
+  e período. Registra logins (inclusive os recusados), gerações, refinamentos, mudança de status,
+  links criados e revogados, issues apagadas, ajustes, usuários criados e alterados e backups feitos
+  e baixados. Não guarda senhas, tokens, chaves nem o texto das issues. Segue a mesma retenção do
+  histórico (`server/src/auditoria.ts`).
 - O log de cada chamada registra usuário, data, provedor, modelo, tokens (entrada, saída, cache
   lido e gravado), custo estimado e duração.
 
