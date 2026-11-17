@@ -172,6 +172,13 @@ As migrações do banco rodam sozinhas ao subir, e o volume `dados` é mantido.
 
 ## Backup e restauração
 
+O servidor faz sozinho um backup por dia, na pasta `backups` dentro do volume, e guarda as cópias
+mais novas (7 por padrão; o número muda na Administração). Na Administração dá para fazer um backup
+na hora e baixar qualquer um. O arquivo tem os usuários (senhas só como hash) e o histórico:
+guarde-o com cuidado.
+
+Para uma cópia manual do arquivo inteiro:
+
 O banco é um arquivo dentro do volume `issue-doc-generator-dados`. A aplicação fica parada por
 alguns segundos durante a cópia, para o arquivo ficar consistente.
 

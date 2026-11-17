@@ -59,10 +59,15 @@ Brazilian Portuguese.
 5. **Refinar**: escreva um ajuste ("troque o status X por Y", "inclua o limite de 2.500") e a IA
    devolve a issue inteira atualizada. A tela diz quais partes mudaram, para você conferir que só
    mudou o que foi pedido.
-6. **Copiar Markdown** ou **Baixar .md** entregam exatamente o texto mostrado.
+6. **Copiar Markdown**, **Baixar .md** e **Baixar PDF** entregam exatamente o texto mostrado.
+   **Baixar CSV** exporta os casos de teste no formato do TestRail, do Xray ou do Zephyr Scale.
+   A issue pode ser escrita em português, inglês ou espanhol (campo **Idioma da issue**).
 7. **Histórico**: toda issue gerada fica guardada, com cada refinamento como uma nova versão.
    Cada pessoa vê, reabre (para continuar refinando) e apaga as suas; o admin vê as de todos.
    **Comparar versões**, abaixo da issue, mostra linha a linha o que cada refinamento mudou.
+   Cada issue tem um **status** (Rascunho, Revisada, Aprovada), com quem mudou e quando, e pode
+   ganhar um **link de leitura** para quem não tem login, com validade de 1, 7 ou 30 dias e
+   opção de revogar.
 8. **Administração** (só admins):
    - provedor, modelo, modelo reserva e esforço; o botão **Buscar modelos da chave** lista os
      modelos que a chave pode usar;
