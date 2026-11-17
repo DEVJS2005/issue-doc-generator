@@ -64,13 +64,13 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
   const provedorInfo = estado.provedores.find((p) => p.nome === form.provedor);
   const mudar = <K extends keyof ValoresAjustes>(chave: K, valor: ValoresAjustes[K]) => setForm({ ...form, [chave]: valor });
 
-  async function buscarModelos() {
+  async function buscarModelos(provedor = form!.provedor) {
     setBuscandoModelos(true);
     setMensagem(null);
     try {
-      const r = await api.modelos(form!.provedor);
+      const r = await api.modelos(provedor);
       setModelos(r.modelos);
-      setMensagem({ tipo: "ok", texto: `${r.modelos.length} modelos encontrados na chave. Escolha na lista dos campos de modelo.` });
+      setMensagem({ tipo: "ok", texto: `${r.modelos.length} modelos encontrados na chave. Escolha no campo Modelo (as opções aparecem ao clicar nele).` });
     } catch (e) {
       falhou(e);
     } finally {
@@ -154,6 +154,9 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
                 const info = estado.provedores.find((p) => p.nome === nome);
                 setModelos([]);
                 setForm({ ...form, provedor: nome, modelo: info?.modeloPadrao ?? "", modeloReserva: "" });
+                v.limpar("modelo");
+                // Sem modelo padrão: já traz a lista da chave para as sugestões do campo.
+                if (info?.disponivel && !info.modeloPadrao) void buscarModelos(nome);
               }}
             >
               {estado.provedores.map((p) => (
@@ -179,12 +182,15 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
           <label>
             Modelo
             <input
-              name="modelo"
+              {...v.campo("modelo")}
               list="lista-modelos"
               value={form.modelo}
               placeholder={provedorInfo?.modeloPadrao || "Nome exato do modelo"}
+              required
+              data-vazio="Escolha o modelo: digite o nome exato ou use “Buscar modelos da chave”."
               onChange={(e) => mudar("modelo", e.target.value)}
             />
+            {v.erro("modelo")}
           </label>
           <label>
             Modelo reserva (opcional)
@@ -203,7 +209,7 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
           ))}
         </datalist>
         <div className="acoes">
-          <button type="button" className="secundario" onClick={buscarModelos} disabled={buscandoModelos || !provedorInfo?.disponivel}>
+          <button type="button" className="secundario" onClick={() => buscarModelos()} disabled={buscandoModelos || !provedorInfo?.disponivel}>
             {buscandoModelos ? "Buscando…" : "Buscar modelos da chave"}
           </button>
         </div>

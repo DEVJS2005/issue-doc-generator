@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import type { Config } from "../config.js";
 import { ErroGeracao, normalizarErro } from "./erros.js";
+import { VERSAO_API_GEMINI } from "./gemini.js";
 import type { NomeProvedor } from "./tipos.js";
 
 const LIMITE = 300;
@@ -39,7 +40,7 @@ export async function listarModelos(c: Config, provedor: NomeProvedor): Promise<
       }
       case "gemini": {
         if (!c.geminiApiKey) throw new ErroGeracao("nao_configurado");
-        const ai = new GoogleGenAI({ apiKey: c.geminiApiKey });
+        const ai = new GoogleGenAI({ apiKey: c.geminiApiKey, apiVersion: VERSAO_API_GEMINI });
         for await (const m of await ai.models.list()) {
           if (m.name && (m.supportedActions ?? []).includes("generateContent")) ids.push(m.name.replace(/^models\//, ""));
           if (ids.length >= LIMITE) break;

@@ -11,7 +11,7 @@ type Campo = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 /** Mensagem do próprio sistema para um campo inválido, ou null se está ok. */
 function mensagem(el: Campo): string | null {
   const valor = el.value;
-  if (el.required && !valor.trim()) return "Preencha este campo.";
+  if (el.required && !valor.trim()) return el.dataset.vazio || "Preencha este campo.";
   if (!valor || el instanceof HTMLSelectElement) return null;
   if (el.minLength > 0 && valor.length < el.minLength) return `Use pelo menos ${el.minLength} caracteres.`;
   if (el instanceof HTMLInputElement) {
