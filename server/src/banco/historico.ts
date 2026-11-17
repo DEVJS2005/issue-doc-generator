@@ -15,6 +15,26 @@ export type ResumoIssue = {
 };
 
 export type IssueGuardada = ResumoIssue & { entrada: Entrada; issue: Issue; markdown: string };
+
+/** Filtros da busca no histórico. Todos opcionais e combinados com "e". */
+export type FiltroHistorico = {
+  /** E-mail de quem gerou; sem ele, de todos (só para admin). */
+  usuario?: string;
+  /** Texto livre: título, produto, descrição e texto da issue, sem diferenciar maiúsculas. */
+  texto?: string;
+  /** Nome do produto, sem diferenciar maiúsculas. */
+  produto?: string;
+  tipo?: string;
+  /** Período pela última atualização, em ms desde 1970 (inclusive). */
+  de?: number;
+  ate?: number;
+  limite?: number;
+};
+
+/** Escapa % e _ para o LIKE procurar o texto ao pé da letra. */
+function paraLike(texto: string) {
+  return `%${texto.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+}
 export type Versao = { numero: number; quando: number; ajuste: string | null; modelo: string };
 
 type Linha = {
@@ -79,12 +99,49 @@ export class RepositorioHistorico {
   }
 
   /** Mais recentes primeiro. Sem `usuario`, lista de todos (só para admin). */
-  listar(filtro: { usuario?: string; limite?: number } = {}): ResumoIssue[] {
+  listar(filtro: FiltroHistorico = {}): ResumoIssue[] {
     const limite = Math.min(filtro.limite ?? 100, 500);
-    const linhas = filtro.usuario
-      ? this.db.prepare(`SELECT ${RESUMO} FROM issues WHERE usuario = ? ORDER BY atualizada_em DESC LIMIT ?`).all(filtro.usuario, limite)
-      : this.db.prepare(`SELECT ${RESUMO} FROM issues ORDER BY atualizada_em DESC LIMIT ?`).all(limite);
+    const condicoes: string[] = [];
+    const valores: (string | number)[] = [];
+    if (filtro.usuario) {
+      condicoes.push("usuario = ?");
+      valores.push(filtro.usuario);
+    }
+    const texto = filtro.texto?.trim();
+    if (texto) {
+      condicoes.push(
+        "(titulo LIKE ? ESCAPE '\\' OR produto LIKE ? ESCAPE '\\' OR markdown LIKE ? ESCAPE '\\' OR entrada_json LIKE ? ESCAPE '\\')",
+      );
+      const like = paraLike(texto);
+      valores.push(like, like, like, like);
+    }
+    if (filtro.produto?.trim()) {
+      condicoes.push("produto = ? COLLATE NOCASE");
+      valores.push(filtro.produto.trim());
+    }
+    if (filtro.tipo?.trim()) {
+      condicoes.push("tipo = ?");
+      valores.push(filtro.tipo.trim());
+    }
+    if (filtro.de !== undefined) {
+      condicoes.push("atualizada_em >= ?");
+      valores.push(filtro.de);
+    }
+    if (filtro.ate !== undefined) {
+      condicoes.push("atualizada_em <= ?");
+      valores.push(filtro.ate);
+    }
+    const onde = condicoes.length ? `WHERE ${condicoes.join(" AND ")}` : "";
+    const linhas = this.db.prepare(`SELECT ${RESUMO} FROM issues ${onde} ORDER BY atualizada_em DESC LIMIT ?`).all(...valores, limite);
     return (linhas as Linha[]).map(paraResumo);
+  }
+
+  /** Produtos já usados (de uma pessoa, ou de todos), em ordem alfabética, para o filtro da tela. */
+  produtos(usuario?: string): string[] {
+    const linhas = usuario
+      ? this.db.prepare("SELECT DISTINCT produto FROM issues WHERE usuario = ? ORDER BY produto COLLATE NOCASE").all(usuario)
+      : this.db.prepare("SELECT DISTINCT produto FROM issues ORDER BY produto COLLATE NOCASE").all();
+    return (linhas as { produto: string }[]).map((l) => l.produto);
   }
 
   obter(id: number): IssueGuardada | null {
