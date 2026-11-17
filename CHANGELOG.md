@@ -4,7 +4,7 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e as versões seguem o
 [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
-## [Não lançado]
+## [1.2.0] - 2026-11-17
 
 ### Adicionado
 
@@ -20,7 +20,6 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
   "Fazer backup agora" e download na Administração.
 - **Issue em português, inglês ou espanhol:** o idioma é escolhido no formulário; o Markdown sai
   com os títulos no mesmo idioma.
-
 - **Baixar PDF** da issue (gerada, refinada ou aberta do histórico), pela impressão do navegador:
   sai só a issue, com as seções formatadas, os destaques e um cabeçalho com produto, tipo, autor,
   data e versão.
@@ -34,6 +33,17 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 - Instalação com a **imagem pronta do ghcr.io**: o `docker-compose.yml` baixa a imagem
   (`VERSAO_IMAGEM` fixa uma versão), e o guia não pede mais clone nem build no servidor. O build a
   partir do código continua possível com `docker-compose.build.yml`.
+
+### Corrigido
+
+- **Gemini:** a geração falhava com "configuração inválida" porque o SDK `@google/genai` 3.x
+  passou a usar a API `v1` por padrão, e essa versão não aceita instrução de sistema. A versão
+  agora vai fixa em `v1beta`. O Gemini 2.x recebe orçamento de raciocínio (`thinkingBudget`), já
+  que só o 3 em diante aceita `thinkingLevel`. Ambos encontrados no teste de instalação limpa.
+- Na Administração, o campo Modelo é obrigatório e avisa embaixo dele quando está vazio. Ao
+  trocar para um provedor sem modelo padrão, a lista de modelos da chave já é buscada.
+- Barra invertida nas células de tabela do Markdown da issue: agora sai escapada, sem quebrar a
+  tabela.
 
 ### Alterado
 
@@ -58,15 +68,6 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 - Testes unitários da tela (Vitest, Testing Library) e ESLint.
 - No CI: checagem do título do PR, lint e `npm audit`. Workflows novos: CodeQL, Dependabot e
   publicação da imagem no ghcr.io com Release nas tags.
-
-### Corrigido
-
-- **Gemini:** a geração falhava com "configuração inválida" porque o SDK `@google/genai` 3.x
-  passou a usar a API `v1` por padrão, e essa versão não aceita instrução de sistema. A versão
-  agora vai fixa em `v1beta`. O Gemini 2.x recebe orçamento de raciocínio (`thinkingBudget`), já
-  que só o 3 em diante aceita `thinkingLevel`. Ambos encontrados no teste de instalação limpa.
-- Na Administração, o campo Modelo é obrigatório e avisa embaixo dele quando está vazio. Ao
-  trocar para um provedor sem modelo padrão, a lista de modelos da chave já é buscada.
 
 ### Alterado
 
@@ -116,6 +117,6 @@ Primeira versão estável.
   imagem Docker.
 - JavaScript da tela dividido sob demanda (de 579 KB para 237 KB iniciais).
 
-[Não lançado]: https://github.com/DEVJS2005/issue-doc-generator/compare/v1.1.0...HEAD
+[1.2.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.2.0
 [1.1.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.1.0
 [1.0.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.0.0

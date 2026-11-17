@@ -1,7 +1,7 @@
 {
   "name": "issue-doc-generator",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Gera issues completas e testáveis a partir de uma descrição curta, seguindo o ISTQB CTFL v4.0.1.",
   "license": "AGPL-3.0-or-later",
   "type": "module",
