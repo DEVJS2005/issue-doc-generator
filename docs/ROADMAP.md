@@ -79,13 +79,13 @@ Sugestão de ordem: primeiro o que dá mais retorno com menos esforço. Ao todo 
 
 ### Lote 2: fluxo do time e saída (~12 h)
 
-| # | Item | Estimativa |
+| # | Item | Estado / estimativa |
 |---|---|---|
-| 18 | **Status da issue:** Rascunho → Revisada → Aprovada, com quem mudou e quando, e filtro por status no histórico. | ~3 h |
-| 19 | **Casos de teste em CSV:** exportar no formato de importação do TestRail, Xray ou Zephyr. | ~2 h |
-| 20 | **Link de compartilhamento:** link só de leitura para quem não tem login, com validade configurável e opção de revogar. | ~3 h |
-| 21 | **Backup automático do banco:** backup diário do SQLite no volume, com retenção e botão "Baixar backup" na Administração. | ~2 h |
-| 22 | **Issue em outro idioma:** escolher português, inglês ou espanhol na geração. | ~2 h |
+| 18 | **Status da issue:** Rascunho → Revisada → Aprovada, com quem mudou e quando, e filtro por status no histórico. | ✅ Refinar uma issue Revisada ou Aprovada a devolve para Rascunho. |
+| 19 | **Casos de teste em CSV:** exportar no formato de importação do TestRail, Xray ou Zephyr. | ✅ Os três, escolhidos ao baixar. |
+| 20 | **Link de compartilhamento:** link só de leitura para quem não tem login, com validade configurável e opção de revogar. | ✅ Validade de 1, 7 ou 30 dias; o banco guarda só o hash do token. |
+| 21 | **Backup automático do banco:** backup diário do SQLite no volume, com retenção e botão "Baixar backup" na Administração. | ✅ Pasta `backups` ao lado do banco; 7 cópias por padrão. |
+| 22 | **Issue em outro idioma:** escolher português, inglês ou espanhol na geração. | ✅ Também os títulos do Markdown. |
 
 ### Lote 3: qualidade, governança e integrações (~21 h)
 

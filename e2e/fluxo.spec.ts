@@ -317,3 +317,71 @@ test("busca no histórico filtra por produto e por texto", async ({ page }) => {
   await expect(page.getByLabel("Buscar")).toHaveValue("");
   await expect(linhas.first()).toBeVisible();
 });
+
+test("status da issue: muda para Revisada, mostra quem mudou e filtra no histórico", async ({ page }) => {
+  await entrar(page);
+  await gerar(page, "Status: limitar cupons a 3 por pedido.");
+  await expect(page.getByText("Guardada no histórico.")).toBeVisible();
+  const status = page.getByLabel("Status da issue");
+  await expect(status).toHaveValue("rascunho");
+  await status.selectOption("revisada");
+  await expect(page.getByText(/Revisada por qa em/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Histórico", exact: true }).click();
+  await page.getByLabel("Filtrar por status").selectOption("revisada");
+  const linhas = page.getByRole("row", { name: /Limitar cupons por pedido/ });
+  // O filtro espera uma pausa antes de buscar: espera a lista sem nenhuma em Rascunho.
+  await expect(page.locator("tbody .selo-status", { hasText: "Rascunho" })).toHaveCount(0);
+  await expect(linhas.first()).toContainText("Revisada");
+});
+
+test("casos de teste em CSV no formato do Xray", async ({ page }) => {
+  await entrar(page);
+  await gerar(page, "CSV: limitar cupons a 3 por pedido.");
+  await expect(page.getByRole("heading", { name: "Rascunho da issue" })).toBeVisible();
+  await page.getByLabel("Formato do CSV").selectOption("xray");
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Baixar CSV" }).click();
+  const arquivo = await download;
+  expect(arquivo.suggestedFilename()).toBe("limitar-cupons-por-pedido-casos-xray.csv");
+  const csv = await readFile(await arquivo.path(), "utf8");
+  expect(csv.split("\r\n")[0]).toBe('\uFEFF"Issue ID","Summary","Test Type","Description","Action","Data","Result","Labels"');
+  expect(csv).toContain('"Manual"');
+});
+
+test("link de compartilhamento abre a issue sem login até ser revogado", async ({ page, browser }) => {
+  await entrar(page);
+  await gerar(page, "Link: limitar cupons a 3 por pedido.");
+  await expect(page.getByText("Guardada no histórico.")).toBeVisible();
+  await page.getByLabel("Validade do link").selectOption("1");
+  await page.getByRole("button", { name: "Criar link de leitura" }).click();
+  const link = await page.getByLabel("Link de compartilhamento").inputValue();
+  expect(link).toMatch(/\/compartilhado\/[A-Za-z0-9_-]{32,}$/);
+
+  const anonimo = await (await browser.newContext()).newPage();
+  await anonimo.goto(link);
+  await expect(anonimo.locator(".issue h1", { hasText: "Limitar cupons por pedido" })).toBeVisible();
+  await expect(anonimo.getByText(/Issue compartilhada só para leitura/)).toBeVisible();
+  await expect(anonimo.getByRole("button", { name: "Entrar" })).toHaveCount(0);
+
+  await page.getByRole("list", { name: "Links ativos" }).getByRole("button", { name: "Revogar" }).first().click();
+  await page.getByRole("dialog", { name: "Revogar este link?" }).getByRole("button", { name: "Revogar" }).click();
+  await anonimo.reload();
+  await expect(anonimo.getByRole("heading", { name: "Link indisponível" })).toBeVisible();
+});
+
+test("issue em inglês: o Markdown sai com os títulos em inglês", async ({ page }) => {
+  await entrar(page);
+  await page.getByLabel("Idioma da issue").selectOption("en");
+  await gerar(page, "Idioma: limitar cupons a 3 por pedido.");
+  await expect(page.locator(".issue h2", { hasText: "Acceptance Criteria" })).toBeVisible();
+  await expect(page.locator(".issue h2", { hasText: "Test cases" })).toBeVisible();
+});
+
+test("administração mostra a seção de backup e o campo de cópias", async ({ page }) => {
+  await entrar(page);
+  await page.getByRole("button", { name: "Administração" }).click();
+  await expect(page.getByRole("heading", { name: "Backup do banco" })).toBeVisible();
+  await expect(page.getByText("O banco está em memória (modo de teste): não há backup.")).toBeVisible();
+  await expect(page.getByLabel("Backups do banco guardados")).toHaveValue("7");
+});

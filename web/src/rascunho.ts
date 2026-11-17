@@ -18,6 +18,7 @@ export function lerRascunho(pessoa: string): Entrada | null {
       tipo: String(r.tipo ?? ""),
       produto: String(r.produto ?? ""),
       contexto: String(r.contexto ?? ""),
+      ...(r.idioma === "en" || r.idioma === "es" || r.idioma === "pt-BR" ? { idioma: r.idioma } : {}),
     };
     return temTexto(entrada) ? entrada : null;
   } catch {
