@@ -94,6 +94,9 @@ describe("montagem do Markdown", () => {
 
   it("escapa pipes e quebras de linha nas tabelas", () => {
     expect(celula("a | b\nc")).toBe("a \\| b<br>c");
+    // Barra invertida também é escapada: sem isso, "a\|b" viraria "a\\|b", e o "|" dividiria a coluna.
+    expect(celula("a\\|b")).toBe("a\\\\\\|b");
+    expect(celula("C:\\pasta")).toBe("C:\\\\pasta");
     expect(md).toContain("Até 20 caracteres \\| só letras e números");
   });
 
