@@ -24,7 +24,7 @@ export function criarProvedorAnthropic(o: OpcoesAnthropic): Provedor {
   return {
     nome: "anthropic",
     modelo: o.modelo,
-    async gerar({ sistema, usuario }, { signal, aoProgresso }) {
+    async gerar({ sistema, usuario, imagens = [] }, { signal, aoProgresso }) {
       try {
         const stream = cliente.beta.messages.stream(
           {
@@ -32,7 +32,17 @@ export function criarProvedorAnthropic(o: OpcoesAnthropic): Provedor {
             max_tokens: o.maxTokens,
             // Bloco de sistema fixo e com cache: a partir da 2ª chamada vem de cache_read_input_tokens.
             system: [{ type: "text", text: sistema, cache_control: { type: "ephemeral" } }],
-            messages: [{ role: "user", content: usuario }],
+            messages: [
+              {
+                role: "user",
+                content: imagens.length
+                  ? [
+                      ...imagens.map((i) => ({ type: "image" as const, source: { type: "base64" as const, media_type: i.tipo, data: i.dados } })),
+                      { type: "text" as const, text: usuario },
+                    ]
+                  : usuario,
+              },
+            ],
             output_config: { effort: o.esforco, format: formato },
             ...(o.fallbackRecusa ? { betas: [BETA_FALLBACK], fallbacks: "default" as const } : {}),
           },

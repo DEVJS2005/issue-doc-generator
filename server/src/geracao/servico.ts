@@ -1,3 +1,4 @@
+import type { ImagemAnexa } from "../ia/imagens.js";
 import { z } from "zod";
 import { verificarCoerencia, type Aviso } from "../issue/coerencia.js";
 import { montarMarkdown } from "../issue/markdown.js";
@@ -36,7 +37,7 @@ const INTERVALO_PROGRESSO_MS = 250;
 export async function gerarIssue(
   provedor: Provedor,
   usuario: string,
-  opcoes: { signal: AbortSignal; aoProgresso: (e: EventoProgresso) => void; sistema?: string; idioma?: Idioma },
+  opcoes: { signal: AbortSignal; aoProgresso: (e: EventoProgresso) => void; sistema?: string; idioma?: Idioma; imagens?: ImagemAnexa[] },
 ): Promise<ResultadoGeracao> {
   const inicio = Date.now();
   let parcial = "";
@@ -47,7 +48,7 @@ export async function gerarIssue(
   opcoes.aoProgresso({ fase: "analisando", caracteres: 0, secao: null });
 
   const resposta = await provedor.gerar(
-    { sistema: opcoes.sistema ?? promptSistema(), usuario },
+    { sistema: opcoes.sistema ?? promptSistema(), usuario, imagens: opcoes.imagens },
     {
       signal: opcoes.signal,
       aoProgresso: (p) => {

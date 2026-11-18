@@ -1,3 +1,5 @@
+import type { ImagemAnexa } from "./imagens.js";
+
 // Contrato comum a todos os provedores de IA. Cada provedor só sabe pedir e devolver texto:
 // a validação do JSON, o Markdown e os avisos ficam numa camada única (gerar.ts).
 
@@ -20,6 +22,8 @@ export type PedidoIA = {
   sistema: string;
   /** Mensagem do usuário: a entrada formatada (e, no refinamento, a issue atual e o ajuste). */
   usuario: string;
+  /** Prints anexados à descrição (só na geração; não vão para o histórico). */
+  imagens?: ImagemAnexa[];
 };
 
 export type RespostaIA = {

@@ -385,3 +385,15 @@ test("administração mostra a seção de backup e o campo de cópias", async ({
   await expect(page.getByText("O banco está em memória (modo de teste): não há backup.")).toBeVisible();
   await expect(page.getByLabel("Backups do banco guardados")).toHaveValue("7");
 });
+
+test("anexa um print e gera a issue; o print não fica para a próxima", async ({ page }) => {
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+  await entrar(page);
+  await page.getByLabel("Escolher imagens").setInputFiles({ name: "tela.png", mimeType: "image/png", buffer: png });
+  await expect(page.getByRole("img", { name: "Prévia de tela.png" })).toBeVisible();
+  const pedido = page.waitForRequest((r) => r.url().endsWith("/api/gerar"));
+  await gerar(page, "Print: o botão de cupom some.");
+  expect((await pedido).postDataJSON().imagens).toEqual([{ tipo: "image/png", dados: png.toString("base64") }]);
+  await expect(page.locator(".issue h3", { hasText: "Dúvidas para o PO" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Prévia de tela.png" })).toHaveCount(0);
+});

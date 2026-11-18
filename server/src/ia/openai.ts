@@ -26,7 +26,7 @@ export function criarProvedorOpenAI(o: OpcoesOpenAI): Provedor {
   return {
     nome: compativel ? "openai_compativel" : "openai",
     modelo: o.modelo,
-    async gerar({ sistema, usuario }, { signal, aoProgresso }) {
+    async gerar({ sistema, usuario, imagens = [] }, { signal, aoProgresso }) {
       try {
         const stream = await cliente.chat.completions.create(
           {
@@ -35,7 +35,15 @@ export function criarProvedorOpenAI(o: OpcoesOpenAI): Provedor {
             ...(compativel ? { max_tokens: o.maxTokens } : { max_completion_tokens: o.maxTokens }),
             messages: [
               { role: "system", content: sistema },
-              { role: "user", content: usuario },
+              {
+                role: "user",
+                content: imagens.length
+                  ? [
+                      ...imagens.map((i) => ({ type: "image_url" as const, image_url: { url: `data:${i.tipo};base64,${i.dados}` } })),
+                      { type: "text" as const, text: usuario },
+                    ]
+                  : usuario,
+              },
             ],
             response_format: { type: "json_schema", json_schema: { name: "issue", schema, strict: true } },
             stream: true,

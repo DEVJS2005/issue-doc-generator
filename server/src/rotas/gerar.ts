@@ -1,3 +1,4 @@
+import { ImagensSchema, LIMITE_CORPO_COM_IMAGENS, type ImagemAnexa } from "../ia/imagens.js";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
 import type { Ajustes } from "../ajustes/ajustes.js";
@@ -79,6 +80,8 @@ export async function responderComGeracao(
     entrada: Entrada;
     /** No refinamento: a issue antes do ajuste (para listar o que mudou), o ajuste e a issue do histórico. */
     refinamento?: { issueAnterior: Issue; ajuste: string; historicoId: number | null };
+    /** Prints anexados (só na geração; vão para a IA e não para o histórico). */
+    imagens?: ImagemAnexa[];
   },
 ) {
   const provedor = o.ajustes.provedor();
@@ -117,6 +120,7 @@ export async function responderComGeracao(
   try {
     const r: ResultadoGeracao = await gerarIssue(provedor, o.usuario, {
       idioma: o.entrada.idioma,
+      imagens: o.imagens,
       signal: controle.signal,
       aoProgresso: (p) => sse.enviar("progresso", p),
     });
@@ -183,14 +187,22 @@ export async function responderComGeracao(
 }
 
 export function registrarRotaGerar(app: FastifyInstance, o: OpcoesRotaGerar) {
-  app.post("/api/gerar", async (request, reply) => {
+  // Com prints anexados o corpo passa de 1 MB (o padrão do Fastify): limite maior só nesta rota.
+  app.post("/api/gerar", { bodyLimit: LIMITE_CORPO_COM_IMAGENS }, async (request, reply) => {
     const corpo = CorpoGerar.safeParse(request.body);
+    const anexos = ImagensSchema.safeParse((request.body as { imagens?: unknown } | null)?.imagens);
+    if (corpo.success && !anexos.success) {
+      return reply.code(400).send({
+        erro: { codigo: "entrada_invalida", mensagem: anexos.error.issues[0]?.message ?? "Imagem inválida.", podeTentarDeNovo: false },
+      });
+    }
     if (!corpo.success) {
       return reply.code(400).send({
         erro: { codigo: "entrada_invalida", mensagem: corpo.error.issues[0]?.message ?? "Entrada inválida.", podeTentarDeNovo: false },
       });
     }
     const entrada = corpo.data;
+    const imagens = anexos.success ? anexos.data : [];
     // LGPD: o texto da descrição só vai para o log se REGISTRAR_DESCRICAO=true. (No histórico ele
     // fica, porque é a própria issue; a retenção da administração apaga as antigas.)
     const logExtra: Record<string, unknown> = {
@@ -198,8 +210,9 @@ export function registrarRotaGerar(app: FastifyInstance, o: OpcoesRotaGerar) {
       produto: entrada.produto,
       caracteresDescricao: entrada.descricao.length,
       caracteresContexto: entrada.contexto.length,
+      imagens: imagens.length,
       ...(o.config.registrarDescricao ? { descricao: entrada.descricao, contexto: entrada.contexto } : {}),
     };
-    await responderComGeracao(app, reply, { ...o, usuario: formatarEntrada(entrada), tipoPedido: "gerar", logExtra, entrada });
+    await responderComGeracao(app, reply, { ...o, usuario: formatarEntrada(entrada, imagens.length), tipoPedido: "gerar", logExtra, entrada, imagens });
   });
 }

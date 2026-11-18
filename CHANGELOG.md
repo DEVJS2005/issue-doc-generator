@@ -12,6 +12,16 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
   `npm run teste:ia-real --workspace server`. Provedores sem chave são pulados.
 - Dependabot agrupa as atualizações das Actions num PR só por semana.
 
+## [Não lançado]
+
+### Adicionado
+
+- **Anexar print ou imagem** à descrição (até 3, PNG, JPEG, WebP ou GIF), pelo botão "Anexar print"
+  ou colando com Ctrl+V. A IA lê o que aparece na imagem (textos de tela, campos, mensagens de erro).
+  Funciona nos 4 provedores. As imagens vão só para a IA nesta geração e não ficam no histórico, no
+  rascunho nem no log. Prints grandes são reduzidos no navegador (até 1600 px), e o servidor confere
+  se o conteúdo é mesmo do formato declarado.
+
 ## [1.2.0] - 2026-11-17
 
 ### Adicionado
@@ -125,6 +135,7 @@ Primeira versão estável.
   imagem Docker.
 - JavaScript da tela dividido sob demanda (de 579 KB para 237 KB iniciais).
 
+[Não lançado]: https://github.com/DEVJS2005/issue-doc-generator/compare/v1.2.0...HEAD
 [Não lançado]: https://github.com/DEVJS2005/issue-doc-generator/compare/v1.2.0...HEAD
 [1.2.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.2.0
 [1.1.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.1.0
