@@ -13,6 +13,11 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
   (e-mail e token de API) e no Data Center (token de acesso pessoal), com as credenciais só no
   servidor (`JIRA_URL`, `JIRA_EMAIL` e `JIRA_TOKEN`). Cada issue vira uma só no Jira, e o link fica
   guardado.
+- **Anexar print ou imagem** à descrição (até 3, PNG, JPEG, WebP ou GIF), pelo botão "Anexar print"
+  ou colando com Ctrl+V. A IA lê o que aparece na imagem (textos de tela, campos, mensagens de erro).
+  Funciona nos 4 provedores. As imagens vão só para a IA nesta geração e não ficam no histórico, no
+  rascunho nem no log. Prints grandes são reduzidos no navegador (até 1600 px), e o servidor confere
+  se o conteúdo é mesmo do formato declarado.
 - **Nota de qualidade** da issue (0 a 100): checagens INVEST e ISTQB em 5 grupos (valor, escopo,
   critérios, casos de teste e revisão), com o nível ("Pronta para o time", "Quase pronta" ou
   "Precisa de revisão") e a sugestão de cada ponto que falta. É calculada no servidor, sem chamar a

@@ -50,7 +50,9 @@ Brazilian Portuguese.
 2. Escreva a **descrição** (até 4.000 caracteres), escolha o **tipo**, informe o **nome do
    produto** (a tela lembra o último usado) e, se tiver,
    cole o **contexto** (regras conhecidas, telas, links, protótipo em texto; até 8.000).
-   Não cole dados pessoais reais: o texto vai para um provedor de IA.
+   Se ajudar, **anexe até 3 prints** (botão **Anexar print** ou Ctrl+V na descrição): a IA lê
+   textos de tela, campos e mensagens de erro da imagem. As imagens vão só para a IA e não ficam
+   no histórico. Não cole dados pessoais reais, nem em prints: tudo vai para um provedor de IA.
 3. Clique em **Gerar issue**. A tela mostra o que a IA está escrevendo; passados 60 s aparece
    "ainda gerando…", e **Cancelar** interrompe a qualquer momento.
 4. Revise o rascunho. Cada `[a preencher]` aparece destacado em amarelo, e a seção **Dúvidas para

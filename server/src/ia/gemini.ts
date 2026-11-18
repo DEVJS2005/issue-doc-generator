@@ -51,11 +51,13 @@ export function criarProvedorGemini(o: OpcoesGemini): Provedor {
   return {
     nome: "gemini",
     modelo: o.modelo,
-    async gerar({ sistema, usuario }, { signal, aoProgresso }) {
+    async gerar({ sistema, usuario, imagens = [] }, { signal, aoProgresso }) {
       try {
         const stream = await ai.models.generateContentStream({
           model: o.modelo,
-          contents: usuario,
+          contents: imagens.length
+            ? [{ role: "user", parts: [...imagens.map((i) => ({ inlineData: { mimeType: i.tipo, data: i.dados } })), { text: usuario }] }]
+            : usuario,
           config: {
             systemInstruction: sistema,
             responseMimeType: "application/json",
