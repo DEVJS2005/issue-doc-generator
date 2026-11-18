@@ -60,8 +60,8 @@ docker compose up -d
 ```
 
 O `pull` baixa a última versão publicada (`latest`). Para fixar uma versão, use
-`VERSAO_IMAGEM`, por exemplo `VERSAO_IMAGEM=1.2.0 docker compose up -d` (ou ponha
-`VERSAO_IMAGEM=1.2.0` no `.env`). As versões estão na página de Releases do repositório.
+`VERSAO_IMAGEM`, por exemplo `VERSAO_IMAGEM=1.3.0 docker compose up -d` (ou ponha
+`VERSAO_IMAGEM=1.3.0` no `.env`). As versões estão na página de Releases do repositório.
 
 Confira:
 
