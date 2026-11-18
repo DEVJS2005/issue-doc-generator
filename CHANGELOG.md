@@ -13,6 +13,9 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
   "Precisa de revisão") e a sugestão de cada ponto que falta. É calculada no servidor, sem chamar a
   IA de novo. Aparece ao gerar, ao refinar e ao abrir do histórico, e fica fora do PDF.
 - Ao abrir uma issue do histórico, os avisos de coerência agora também aparecem.
+- Teste semanal com IA real no GitHub Actions (`ia-real.yml`) e o script
+  `npm run teste:ia-real --workspace server`. Provedores sem chave são pulados.
+- Dependabot agrupa as atualizações das Actions num PR só por semana.
 
 ## [1.2.0] - 2026-11-17
 

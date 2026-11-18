@@ -1,0 +1,36 @@
+# Teste com IA real: uma vez por semana (e quando você quiser, pelo botão "Run workflow").
+# Gera uma issue curta em cada provedor com chave nos secrets do repositório e valida o resultado.
+# Fica fora dos PRs para não gastar tokens a cada push. Provedores sem chave são pulados.
+# Secrets usados (cadastre só os que quiser testar): ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY.
+name: IA real
+
+on:
+  schedule:
+    - cron: "23 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provedores:
+    name: Gera uma issue em cada provedor com chave
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Gera e valida
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NODE_ENV: test
+        run: npm run teste:ia-real --workspace server
