@@ -1,13 +1,12 @@
 # Roadmap
 
-Atualizado em 17/11/2026. As estimativas são de tempo de implementação com testes, sem contar a
+Atualizado em 17/11/2026, à noite. As estimativas são de tempo de implementação com testes, sem contar a
 revisão.
 
 ## Onde estamos
 
-Último release: **v1.1.0** (MIT), publicado em 17/11 a partir do merge do PR #8. Depois dele, a
-`main` recebeu, ainda sem release: as correções do Gemini (#17), a licença AGPL (#19), o lote 1
-(#20) e uma correção de tabelas no Markdown (#21). O lote 2 está no PR #22, em revisão.
+Último release: **v1.3.0** (AGPL-3.0-or-later), com todos os itens do roadmap até o 30. Não há PR
+aberto. O que falta são validações com serviços reais (veja "Pendências conhecidas").
 
 - Geração e Refinar com streaming, cache de prompt, erros amigáveis e 4 provedores
   (Claude, OpenAI, compatível com OpenAI, Gemini).
@@ -26,8 +25,10 @@ revisão.
   - publicação da imagem no ghcr.io;
   - `main` protegida (só por PR, com os checks verdes).
 - Licença do código: AGPL-3.0-or-later. A base ISTQB do prompt é CC BY-NC 4.0.
-- Testes na `main`: Vitest no servidor e na tela, mais Playwright de ponta a ponta (com IA falsa).
-  Com o PR #22: 157 no servidor, 28 na tela e 23 de ponta a ponta.
+- Lote 1 e lote 2 (PDF, rascunho, busca, status, CSV, link de leitura, backup, idioma), nota de
+  qualidade INVEST/ISTQB, prints anexados lidos pela IA, auditoria e criação da issue no Jira.
+- Testes: 189 no servidor e 35 na tela (Vitest), 26 de ponta a ponta (Playwright, com IA e Jira
+  falsos) e um teste semanal com IA real no GitHub Actions.
 
 Testado com IA real (Gemini `gemini-3.8-flash`): geração de 3 linhas, exemplo de Marcas (5/5
 problemas apontados), Refinar (mudou só o pedido) e cache de prompt (2ª chamada leu 20.931 tokens).
@@ -36,11 +37,11 @@ problemas apontados), Refinar (mudou só o pedido) e cache de prompt (2ª chamad
 
 | Pendência | Situação |
 |---|---|
-| **A imagem `latest` do ghcr.io é a v1.1.0, com o Gemini quebrado** | O guia usa `latest` por padrão, e a v1.1.0 saiu antes das correções do Gemini (#17). Quem instalar hoje com o Gemini não consegue gerar issues. Resolve com o item 27 (release v1.2.0). |
-| Os testes não pegam mudança no SDK do provedor | Os testes usam IA falsa. Os 2 bugs do Gemini só apareceram na instalação limpa. Resolve com o item 29. |
 | Consumo e custo | Não há tela no app: ver no painel do provedor. Com a Claude, a estimativa é de ~US$ 0,20 na 1ª chamada e ~US$ 0,10 depois. |
 | Uma instância só | O banco é um arquivo SQLite local e o limite por hora fica em memória. Decisão: SQLite, uma instância. |
 | SSO com o provedor real | Testado com um provedor simulado. Falta um login de teste com o provedor da empresa. |
+| Jira com um servidor real | Testado com um Jira simulado. Falta criar uma issue num Jira de homologação (`JIRA_URL`, `JIRA_EMAIL`, `JIRA_TOKEN`). |
+| Teste semanal com IA real sem chave | O workflow `ia-real.yml` pula provedores sem chave. Cadastre `GEMINI_API_KEY` (ou outra) em Settings → Secrets and variables → Actions. |
 | Aviso do `node:sqlite` | O Node imprime `ExperimentalWarning` ao subir. É só um aviso. |
 
 ## Itens
@@ -102,10 +103,10 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 
 | # | Item | Estimativa |
 |---|---|---|
-| 27 | **Release v1.2.0.** Revisar e mesclar o PR #22 (lote 2), subir a versão nos `package.json`, trocar "Não lançado" por `[1.2.0]` no CHANGELOG e criar a tag `v1.2.0`. O CD publica a imagem e o `latest` deixa de ter o Gemini quebrado. É o primeiro release em AGPL. Na revisão do #22, decidir se o download do backup (que traz os hashes das senhas e o histórico inteiro) fica liberado para qualquer admin. | ~1 h |
+| 27 | **Release v1.2.0.** Revisar e mesclar o PR #22 (lote 2), subir a versão nos `package.json`, trocar "Não lançado" por `[1.2.0]` no CHANGELOG e criar a tag `v1.2.0`. O CD publica a imagem e o `latest` deixa de ter o Gemini quebrado. É o primeiro release em AGPL. Na revisão do #22, decidir se o download do backup (que traz os hashes das senhas e o histórico inteiro) fica liberado para qualquer admin. | ✅ Tag `v1.2.0` em 17/11. |
 | 28 | **Instalação limpa de novo, pela imagem do ghcr.io.** Repetir o teste de 16/11 seguindo o guia atual (`docker compose pull`, sem build), já com a v1.2.0, e com geração real. Conferir também o link de compartilhamento e o backup dentro do container. | ✅ 17/11: v1.2.0 pública no ghcr.io (sem login), container saudável em 34 s, geração real com o Gemini, link de leitura, backup no volume e dados mantidos após reiniciar. |
-| 29 | **Teste com IA real no CI.** Workflow semanal (e manual) que gera uma issue curta em cada provedor com chave guardada nos *secrets* do GitHub. Se o SDK ou a API mudar, o CI avisa antes do usuário. Fica fora dos PRs, para não gastar tokens a cada push. | ~2 h |
-| 30 | **Menos PRs do Dependabot.** Agrupar as atualizações das Actions num PR só por semana (`groups` no `dependabot.yml`). Hoje vieram 8 PRs separados. | ~15 min |
+| 29 | **Teste com IA real no CI.** Workflow semanal (e manual) que gera uma issue curta em cada provedor com chave guardada nos *secrets* do GitHub. Se o SDK ou a API mudar, o CI avisa antes do usuário. Fica fora dos PRs, para não gastar tokens a cada push. | ✅ PR #27. Falta cadastrar a chave nos *secrets*. |
+| 30 | **Menos PRs do Dependabot.** Agrupar as atualizações das Actions num PR só por semana (`groups` no `dependabot.yml`). Hoje vieram 8 PRs separados. | ✅ PR #27. |
 
 Ficaram de fora nesta rodada:
 - cenários em Gherkin;
@@ -166,3 +167,10 @@ Passo a passo completo em [INSTALACAO-DOCKER.md](INSTALACAO-DOCKER.md). Em resum
   - o PDF sai pela impressão do navegador, sem biblioteca nova;
   - a instalação para o DevOps passa a usar a imagem pronta do ghcr.io;
   - na revisão do fim do dia, entram os itens 27 a 30.
+- **17/11, à noite:**
+  - lote 3 entregue: auditoria (#28), nota de qualidade (#29), prints anexados (#30) e Jira (#31);
+  - a nota de qualidade é calculada no servidor, sem chamar a IA de novo;
+  - as imagens anexadas vão só para a IA e não ficam no histórico;
+  - Jira pela API v2 (Cloud e Data Center); GitHub Issues e Azure DevOps ficam para quando o time
+    pedir;
+  - release v1.3.0.
