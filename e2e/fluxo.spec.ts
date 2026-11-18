@@ -385,3 +385,32 @@ test("administração mostra a seção de backup e o campo de cópias", async ({
   await expect(page.getByText("O banco está em memória (modo de teste): não há backup.")).toBeVisible();
   await expect(page.getByLabel("Backups do banco guardados")).toHaveValue("7");
 });
+
+test("auditoria mostra quem entrou e o login recusado, com filtro por ação", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Usuário ou e-mail").fill("qa");
+  await page.getByLabel("Senha").fill("senha-errada-x");
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page.getByRole("alert")).toHaveText("Usuário ou senha incorretos.");
+
+  await entrar(page);
+  await page.getByRole("button", { name: "Administração" }).click();
+  const auditoria = page.locator("section", { has: page.getByRole("heading", { name: "Auditoria" }) });
+  await expect(auditoria.getByRole("cell", { name: "Login recusado" }).first()).toBeVisible();
+  await expect(auditoria.getByRole("cell", { name: /tentou como “qa”/ }).first()).toBeVisible();
+  await expect(auditoria).not.toContainText("senha-errada-x");
+
+  await auditoria.getByLabel("Ação").selectOption({ label: "Entrou" });
+  await expect(auditoria.getByRole("cell", { name: "Login recusado" })).toHaveCount(0);
+  await expect(auditoria.getByRole("cell", { name: "Entrou" }).first()).toBeVisible();
+});
+
+test("no celular, nenhuma aba ganha rolagem horizontal", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await entrar(page);
+  for (const aba of ["Gerar", "Histórico", "Administração"]) {
+    await page.getByRole("button", { name: aba, exact: true }).click();
+    await page.waitForLoadState("networkidle");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth), aba).toBeLessThanOrEqual(390);
+  }
+});

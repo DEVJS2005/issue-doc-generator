@@ -47,6 +47,21 @@ export const MIGRACAO_STATUS_E_LINKS = `
   CREATE INDEX links_por_issue ON links (issue_id);
 `;
 
+/** Migração 4: registro de auditoria (quem fez o quê, sem senhas, tokens nem texto de issue). */
+export const MIGRACAO_AUDITORIA = `
+  CREATE TABLE auditoria (
+    id INTEGER PRIMARY KEY,
+    quando INTEGER NOT NULL,
+    quem TEXT NOT NULL,
+    acao TEXT NOT NULL,
+    alvo TEXT,
+    detalhe TEXT,
+    ip TEXT
+  );
+  CREATE INDEX auditoria_por_data ON auditoria (quando);
+  CREATE INDEX auditoria_por_acao ON auditoria (acao, id);
+`;
+
 // Um arquivo SQLite (node:sqlite, sem dependência nativa) guarda a configuração da IA, os usuários
 // e o histórico de issues. Cada item da lista é uma migração; a versão aplicada fica em
 // PRAGMA user_version. Nunca edite uma migração já publicada: acrescente outra no fim.
@@ -104,6 +119,7 @@ const MIGRACOES: string[] = [
   `,
   MIGRACAO_NOME,
   MIGRACAO_STATUS_E_LINKS,
+  MIGRACAO_AUDITORIA,
 ];
 
 export type Banco = DatabaseSync;

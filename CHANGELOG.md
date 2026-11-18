@@ -8,9 +8,17 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 ### Adicionado
 
+- **Auditoria** na Administração: quem fez o quê (logins, inclusive os recusados, gerações,
+  refinamentos, status, links, issues apagadas, ajustes, usuários e backups), com data, IP e
+  filtros. Sem senhas, tokens nem texto de issue. Segue a retenção do histórico.
 - Teste semanal com IA real no GitHub Actions (`ia-real.yml`) e o script
   `npm run teste:ia-real --workspace server`. Provedores sem chave são pulados.
 - Dependabot agrupa as atualizações das Actions num PR só por semana.
+
+### Corrigido
+
+- No celular, a aba Administração tinha rolagem horizontal na página inteira: os textos só para
+  leitor de tela das tabelas escapavam da área de rolagem.
 
 ## [1.2.0] - 2026-11-17
 

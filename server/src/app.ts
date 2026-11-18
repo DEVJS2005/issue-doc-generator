@@ -10,6 +10,8 @@ import { criarAutenticadorBanco, lerUsuariosDoEnv, type Autenticador } from "./a
 import { criarProvedorOidc, type ProvedorSso } from "./auth/oidc.js";
 import { registrarSso } from "./rotas/sso.js";
 import { criarSessoes } from "./auth/sessao.js";
+import { registrarAuditoria } from "./auditoria.js";
+import { RepositorioAuditoria } from "./banco/auditoria.js";
 import { Backups } from "./banco/backup.js";
 import { abrirBanco } from "./banco/banco.js";
 import { RepositorioConfiguracao } from "./banco/configuracao.js";
@@ -53,6 +55,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   const banco = abrirBanco(config.arquivoBanco);
   const usuarios = new RepositorioUsuarios(banco);
   const historico = new RepositorioHistorico(banco);
+  const auditoria = new RepositorioAuditoria(banco);
   const fixo = opcoes.provedor;
   const fabrica = opcoes.fabricaProvedor ?? (fixo !== undefined ? () => fixo : criarProvedor);
   const ajustes = new Ajustes(config, new RepositorioConfiguracao(banco), fabrica, (m) => app.log.warn(m));
@@ -95,6 +98,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   const expurgar = () => {
     const apagadas = historico.expurgar(ajustes.valores().retencaoDias);
     if (apagadas) app.log.info({ evento: "expurgo", apagadas }, `histórico: ${apagadas} issue(s) antiga(s) apagada(s)`);
+    auditoria.expurgar(ajustes.valores().retencaoDias);
     try {
       const feito = backups.diario(ajustes.valores().backupCopias);
       if (feito) app.log.info({ evento: "backup", nome: feito.nome, bytes: feito.bytes }, `backup: ${feito.nome}`);
@@ -117,6 +121,8 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
 
   const sso = opcoes.sso !== undefined ? opcoes.sso : config.oidc ? criarProvedorOidc(config.oidc) : null;
   if (sso) app.log.info(`Login único (OIDC) ligado: ${config.oidc?.emissor ?? "provedor de teste"}`);
+
+  registrarAuditoria(app, auditoria);
 
   // Login primeiro: o hook dele bloqueia (401/403) as rotas protegidas.
   registrarAuth(app, {
@@ -151,7 +157,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
       erro: { codigo: "muitas_tentativas", mensagem: "Muitas requisições seguidas. Aguarde um minuto e tente de novo.", podeTentarDeNovo: true },
     }),
   });
-  registrarAdmin(app, { ajustes, usuarios, backups });
+  registrarAdmin(app, { ajustes, usuarios, backups, auditoria });
 
   // Em produção o servidor também entrega o build do web/.
   const pastaWeb = opcoes.pastaWeb ?? pastaWebPadrao;
