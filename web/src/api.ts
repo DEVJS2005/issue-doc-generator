@@ -45,6 +45,31 @@ export type IssuePublica = {
   markdown: string;
 };
 export type InfoBackup = { nome: string; bytes: number; criadoEm: number };
+export type AcaoAuditoria =
+  | "login"
+  | "login_falhou"
+  | "primeiro_admin"
+  | "gerar"
+  | "refinar"
+  | "status"
+  | "apagar_issue"
+  | "criar_link"
+  | "revogar_link"
+  | "ajustes"
+  | "criar_usuario"
+  | "alterar_usuario"
+  | "backup"
+  | "baixar_backup";
+export type EventoAuditoria = {
+  id: number;
+  quando: number;
+  quem: string;
+  acao: AcaoAuditoria;
+  alvo: string | null;
+  detalhe: Record<string, unknown> | null;
+  ip: string | null;
+};
+export type FiltroAuditoria = { quem?: string; acao?: AcaoAuditoria; de?: number; ate?: number; antesDe?: number };
 export type Progresso = { fase: "analisando" | "escrevendo"; caracteres: number; secao: string | null };
 export type Qualidade = {
   nota: number;
@@ -185,6 +210,11 @@ export const api = {
   revogarLink: (id: number, link: number) => chamar<{ ok: true }>("DELETE", `/api/historico/${id}/links/${link}`),
   publico: (token: string) => fetch(`/api/publico/${encodeURIComponent(token)}`).then((r) => lerJson<{ issue: IssuePublica }>(r)),
   backups: () => chamar<{ disponivel: boolean; copias: number; backups: InfoBackup[] }>("GET", "/api/admin/backups"),
+  auditoria: (f: FiltroAuditoria) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(f)) if (v !== undefined && v !== "") p.set(k, String(v));
+    return chamar<{ eventos: EventoAuditoria[]; proximo: number | null }>("GET", `/api/admin/auditoria${p.size ? `?${p}` : ""}`);
+  },
   fazerBackup: () => postar("/api/admin/backups", {}).then((r) => lerJson<{ backup: InfoBackup }>(r)),
   apagarIssue: (id: number) => chamar<{ ok: true }>("DELETE", `/api/historico/${id}`),
   versao: (id: number, numero: number) => chamar<{ versao: Versao & { markdown: string } }>("GET", `/api/historico/${id}/versoes/${numero}`),

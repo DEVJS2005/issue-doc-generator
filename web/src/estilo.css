@@ -867,6 +867,9 @@ mark.lacuna {
 
 .tabela-rolagem {
   overflow-x: auto;
+  /* Segura os textos só para leitor de tela (.sr, absolutos) dentro da rolagem; sem isso eles
+     escapavam e a página inteira ganhava rolagem horizontal no celular. */
+  position: relative;
 }
 
 .tabela {
