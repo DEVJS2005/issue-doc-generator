@@ -11,6 +11,9 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 - **Auditoria** na Administração: quem fez o quê (logins, inclusive os recusados, gerações,
   refinamentos, status, links, issues apagadas, ajustes, usuários e backups), com data, IP e
   filtros. Sem senhas, tokens nem texto de issue. Segue a retenção do histórico.
+- Teste semanal com IA real no GitHub Actions (`ia-real.yml`) e o script
+  `npm run teste:ia-real --workspace server`. Provedores sem chave são pulados.
+- Dependabot agrupa as atualizações das Actions num PR só por semana.
 
 ### Corrigido
 
