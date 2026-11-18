@@ -22,6 +22,11 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
   {
+    // Script clássico servido como está (tema antes da primeira pintura).
+    files: ["web/public/**/*.js"],
+    languageOptions: { globals: globals.browser, sourceType: "script" },
+  },
+  {
     files: ["web/**/*.{ts,tsx}"],
     languageOptions: { globals: globals.browser },
     plugins: { "react-hooks": reactHooks },

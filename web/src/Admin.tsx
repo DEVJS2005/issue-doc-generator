@@ -111,7 +111,7 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
   async function trocarSenha(u: UsuarioAdmin) {
     const senha = await dialogo.pedirTexto({
       titulo: `Trocar a senha de ${u.nome}`,
-      mensagem: "A pessoa usa a senha nova no próximo login. As sessões abertas continuam valendo.",
+      mensagem: "A pessoa usa a senha nova no próximo login. As sessões abertas dela são encerradas na hora.",
       rotulo: "Nova senha (mínimo 8 caracteres)",
       senha: true,
       minimo: 8,

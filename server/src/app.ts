@@ -11,6 +11,7 @@ import { criarProvedorOidc, type ProvedorSso } from "./auth/oidc.js";
 import { registrarSso } from "./rotas/sso.js";
 import { criarSessoes } from "./auth/sessao.js";
 import { registrarAuditoria } from "./auditoria.js";
+import { registrarCabecalhos, registrarErros } from "./seguranca.js";
 import { RepositorioAuditoria } from "./banco/auditoria.js";
 import { Backups } from "./banco/backup.js";
 import { abrirBanco } from "./banco/banco.js";
@@ -56,6 +57,8 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     logger: { level: process.env.NODE_ENV === "test" ? "silent" : "info" },
     trustProxy: config.confiarProxy,
   });
+  registrarCabecalhos(app);
+  registrarErros(app);
 
   const banco = abrirBanco(config.arquivoBanco);
   const usuarios = new RepositorioUsuarios(banco);
@@ -153,7 +156,6 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   registrarRotaGerar(app, opcoesGeracao);
   registrarRotaRefinar(app, opcoesGeracao);
   registrarHistorico(app, { historico, usuarios });
-  registrarLinks(app, { historico, links: new RepositorioLinks(banco), usuarios });
   // Limite de pedidos só nas rotas que pedem (config.rateLimit), com o erro no formato da API.
   await app.register(rateLimit, {
     global: false,
@@ -162,6 +164,8 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
       erro: { codigo: "muitas_tentativas", mensagem: "Muitas requisições seguidas. Aguarde um minuto e tente de novo.", podeTentarDeNovo: true },
     }),
   });
+  // Depois do rate-limit: o plugin só vale para rotas registradas depois dele.
+  registrarLinks(app, { historico, links: new RepositorioLinks(banco), usuarios });
   const clienteJira = opcoes.jira !== undefined ? opcoes.jira : config.jira ? criarClienteJira(config.jira) : null;
   if (clienteJira) app.log.info(`Jira ligado: ${clienteJira.url}`);
   registrarJira(app, { cliente: clienteJira, historico, jira: new RepositorioJira(banco), usuarios });
