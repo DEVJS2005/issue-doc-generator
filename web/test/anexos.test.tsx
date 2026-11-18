@@ -27,7 +27,7 @@ describe("anexos", () => {
     if (typeof a === "string") return;
     expect(a.tipo).toBe("image/png");
     expect(a.dados).toBe(PNG);
-    expect(a.previa.startsWith("blob:")).toBe(true);
+    expect(a.arquivo.size).toBeGreaterThan(0);
   });
 
   it("recusa tipo que não é imagem aceita", async () => {

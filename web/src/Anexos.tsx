@@ -1,9 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Prints anexados à descrição: vão só para a IA, nesta geração. Não ficam no histórico nem no
 // rascunho. Prints grandes são reduzidos no navegador antes de enviar (menos tokens, envio rápido).
 
-export type Anexo = { id: number; nome: string; tipo: "image/png" | "image/jpeg" | "image/webp" | "image/gif"; dados: string; previa: string };
+export type Anexo = { id: number; nome: string; tipo: "image/png" | "image/jpeg" | "image/webp" | "image/gif"; dados: string; arquivo: Blob };
 
 export const MAX_ANEXOS = 3;
 const MAX_BYTES = 4 * 1024 * 1024;
@@ -42,14 +42,42 @@ export async function lerAnexo(arquivo: File): Promise<Anexo | string> {
   if (blob.size > MAX_BYTES) return `“${arquivo.name || "imagem"}” passa de 4 MB mesmo depois de reduzida.`;
   const url = await paraDataUrl(blob);
   const tipo = (blob.type || arquivo.type) as Anexo["tipo"];
-  // Prévia por URL blob: do próprio arquivo (não pelo texto da data URL), liberada ao remover.
-  const previa = URL.createObjectURL(blob);
-  return { id: proximoId++, nome: arquivo.name || "print colado", tipo, dados: url.slice(url.indexOf(",") + 1), previa };
+  return { id: proximoId++, nome: arquivo.name || "print colado", tipo, dados: url.slice(url.indexOf(",") + 1), arquivo: blob };
 }
 
 /** Imagens que vieram coladas (Ctrl+V) ou arrastadas. */
 export function imagensDe(dados: DataTransfer | null): File[] {
   return dados ? Array.from(dados.files).filter((f) => f.type.startsWith("image/")) : [];
+}
+
+/**
+ * Miniatura desenhada num <canvas> a partir do próprio arquivo: nenhuma URL nem texto derivado do
+ * arquivo vai para atributo do HTML (é o que o CodeQL pede para imagens escolhidas pelo usuário).
+ */
+function Previa({ arquivo, nome }: { arquivo: Blob; nome: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (typeof createImageBitmap !== "function") return;
+    let cancelado = false;
+    createImageBitmap(arquivo)
+      .then((bitmap) => {
+        const canvas = ref.current;
+        const ctx = canvas?.getContext("2d");
+        if (!cancelado && canvas && ctx) {
+          // Preenche a miniatura como "object-fit: cover", centralizado.
+          const escala = Math.max(canvas.width / bitmap.width, canvas.height / bitmap.height);
+          const w = bitmap.width * escala;
+          const h = bitmap.height * escala;
+          ctx.drawImage(bitmap, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+        }
+        bitmap.close();
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelado = true;
+    };
+  }, [arquivo]);
+  return <canvas ref={ref} width={192} height={144} role="img" aria-label={`Prévia de ${nome}`} />;
 }
 
 export function Anexos({
@@ -91,7 +119,7 @@ export function Anexos({
         <ul className="anexos-lista">
           {anexos.map((a) => (
             <li key={a.id}>
-              <img src={a.previa} alt={`Prévia de ${a.nome}`} />
+              <Previa arquivo={a.arquivo} nome={a.nome} />
               <button type="button" className="anexos-remover" onClick={() => aoRemover(a.id)} disabled={desabilitado} aria-label={`Remover ${a.nome}`}>
                 ×
               </button>
@@ -125,11 +153,9 @@ export function useAnexos() {
     adicionar,
     remover: (id: number) =>
       setAnexos((atual) => {
-        atual.filter((a) => a.id === id).forEach((a) => URL.revokeObjectURL(a.previa));
         return atual.filter((a) => a.id !== id);
       }),
     limpar: () => {
-      anexos.forEach((a) => URL.revokeObjectURL(a.previa));
       setAnexos([]);
       setErro(null);
     },

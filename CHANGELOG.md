@@ -8,19 +8,24 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 ### Adicionado
 
-- Teste semanal com IA real no GitHub Actions (`ia-real.yml`) e o script
-  `npm run teste:ia-real --workspace server`. Provedores sem chave são pulados.
-- Dependabot agrupa as atualizações das Actions num PR só por semana.
-
-## [Não lançado]
-
-### Adicionado
-
 - **Anexar print ou imagem** à descrição (até 3, PNG, JPEG, WebP ou GIF), pelo botão "Anexar print"
   ou colando com Ctrl+V. A IA lê o que aparece na imagem (textos de tela, campos, mensagens de erro).
   Funciona nos 4 provedores. As imagens vão só para a IA nesta geração e não ficam no histórico, no
   rascunho nem no log. Prints grandes são reduzidos no navegador (até 1600 px), e o servidor confere
   se o conteúdo é mesmo do formato declarado.
+- **Nota de qualidade** da issue (0 a 100): checagens INVEST e ISTQB em 5 grupos (valor, escopo,
+  critérios, casos de teste e revisão), com o nível ("Pronta para o time", "Quase pronta" ou
+  "Precisa de revisão") e a sugestão de cada ponto que falta. É calculada no servidor, sem chamar a
+  IA de novo. Aparece ao gerar, ao refinar e ao abrir do histórico, e fica fora do PDF.
+- Ao abrir uma issue do histórico, os avisos de coerência agora também aparecem.
+- Teste semanal com IA real no GitHub Actions (`ia-real.yml`) e o script
+  `npm run teste:ia-real --workspace server`. Provedores sem chave são pulados.
+- Dependabot agrupa as atualizações das Actions num PR só por semana.
+
+### Corrigido
+
+- No celular, a aba Administração tinha rolagem horizontal na página inteira: os textos só para
+  leitor de tela das tabelas escapavam da área de rolagem.
 
 ## [1.2.0] - 2026-11-17
 
@@ -135,7 +140,6 @@ Primeira versão estável.
   imagem Docker.
 - JavaScript da tela dividido sob demanda (de 579 KB para 237 KB iniciais).
 
-[Não lançado]: https://github.com/DEVJS2005/issue-doc-generator/compare/v1.2.0...HEAD
 [Não lançado]: https://github.com/DEVJS2005/issue-doc-generator/compare/v1.2.0...HEAD
 [1.2.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.2.0
 [1.1.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.1.0

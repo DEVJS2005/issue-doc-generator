@@ -1,6 +1,7 @@
 import type { ImagemAnexa } from "../ia/imagens.js";
 import { z } from "zod";
 import { verificarCoerencia, type Aviso } from "../issue/coerencia.js";
+import { avaliarQualidade, type Qualidade } from "../issue/qualidade.js";
 import { montarMarkdown } from "../issue/markdown.js";
 import { validarIssue, type Issue } from "../issue/schema.js";
 import { ErroGeracao } from "../ia/erros.js";
@@ -21,6 +22,7 @@ export type ResultadoGeracao = {
   issue: Issue;
   markdown: string;
   avisos: Aviso[];
+  qualidade: Qualidade;
   uso: Uso;
   provedor: NomeProvedor;
   modelo: string;
@@ -85,6 +87,7 @@ export async function gerarIssue(
     issue,
     markdown: montarMarkdown(issue, opcoes.idioma),
     avisos: verificarCoerencia(issue),
+    qualidade: avaliarQualidade(issue),
     uso: resposta.uso,
     provedor: provedor.nome,
     modelo: resposta.modelo,

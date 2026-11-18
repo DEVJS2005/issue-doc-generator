@@ -91,9 +91,9 @@ Sugestão de ordem: primeiro o que dá mais retorno com menos esforço. Ao todo 
 
 | # | Item | Estimativa |
 |---|---|---|
-| 23 | **Nota de qualidade:** checklist INVEST e ISTQB com nota por seção e sugestões do que falta. | ~3 h |
+| 23 | **Nota de qualidade:** checklist INVEST e ISTQB com nota por seção e sugestões do que falta. | ✅ Calculada no servidor, sem chamar a IA de novo. |
 | 24 | **Anexar print ou imagem** junto da descrição; a IA lê a imagem (os 4 provedores aceitam). | ✅ Testado com o Gemini real lendo um print. |
-| 25 | **Log de auditoria:** quem gerou, apagou ou mudou usuários e ajustes, com tela de consulta para o admin. | ~3 h |
+| 25 | **Log de auditoria:** quem gerou, apagou ou mudou usuários e ajustes, com tela de consulta para o admin. | ✅ |
 | 26 | **Criar a issue direto no GitHub Issues, Jira ou Azure DevOps:** token no `.env` e projeto escolhido na tela. Começar por uma ferramenta, a que o time usa. | ~4 h cada |
 
 ### Antes de tudo: fechar o que já está pronto (~2 h)

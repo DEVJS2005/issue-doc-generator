@@ -231,6 +231,11 @@ de login ficam na memória do processo (reiniciar zera as contagens).
   apagadas sozinhas (na subida e a cada 6 horas). Como o histórico guarda a descrição, vale o aviso
   da tela: nada de dados pessoais reais.
 - Login: até 10 tentativas por IP a cada 15 minutos.
+- **Auditoria** (Administração → Auditoria): quem fez o quê, com data, IP e filtros por pessoa, ação
+  e período. Registra logins (inclusive os recusados), gerações, refinamentos, mudança de status,
+  links criados e revogados, issues apagadas, ajustes, usuários criados e alterados e backups feitos
+  e baixados. Não guarda senhas, tokens, chaves nem o texto das issues. Segue a mesma retenção do
+  histórico (`server/src/auditoria.ts`).
 - O log de cada chamada registra usuário, data, provedor, modelo, tokens (entrada, saída, cache
   lido e gravado), custo estimado e duração.
 
@@ -315,11 +320,18 @@ qualquer valor que mude a cada pedido no prompt de sistema.
 2. O servidor monta o prompt de sistema fixo e a entrada entre tags, e chama o provedor com
    streaming.
 3. A resposta volta à tela por SSE: `inicio`, `progresso` (fase e seção sendo escrita),
-   `resultado` (issue, Markdown e avisos) ou `erro` (código e mensagem amigável, sem stack trace).
+   `resultado` (issue, Markdown, avisos e nota de qualidade) ou `erro` (código e mensagem amigável,
+   sem stack trace).
 4. Fechar a conexão cancela a chamada à IA. Passou de `TEMPO_LIMITE_SEGUNDOS`, a geração é
    interrompida com erro `tempo_esgotado`.
 5. O log registra provedor, modelo, tokens (entrada, saída, cache lido e gravado) e duração.
    O texto da descrição só entra no log com `REGISTRAR_DESCRICAO=true`.
+
+**Nota de qualidade** (`server/src/issue/qualidade.ts`): de 0 a 100, com checagens INVEST e ISTQB
+em 5 grupos (valor e clareza, escopo e tamanho, critérios de aceite, casos de teste e revisão). Cada
+ponto que falha traz uma sugestão: termos vagos nos critérios, critério sem caso feliz, regra com
+número sem caso de valor limite, técnica sem a seção do ISTQB, `[a preencher]` sem pergunta para o
+PO, e assim por diante. É calculada no servidor, sem chamar a IA de novo, e não bloqueia nada.
 
 Erros tratados: recusa, resposta cortada (`max_tokens`), limite de taxa, autenticação, conta sem
 crédito, servidor instável, conexão, JSON fora do formato e tempo esgotado.

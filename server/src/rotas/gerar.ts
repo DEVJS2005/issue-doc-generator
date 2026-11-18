@@ -159,6 +159,7 @@ export async function responderComGeracao(
       issue: r.issue,
       markdown: r.markdown,
       avisos: r.avisos,
+      qualidade: r.qualidade,
       alteracoes: o.refinamento ? partesAlteradas(o.refinamento.issueAnterior, r.issue) : null,
       modelo: r.modelo,
       usouFallback: r.usouFallback,

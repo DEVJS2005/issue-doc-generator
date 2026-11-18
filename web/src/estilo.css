@@ -867,6 +867,9 @@ mark.lacuna {
 
 .tabela-rolagem {
   overflow-x: auto;
+  /* Segura os textos só para leitor de tela (.sr, absolutos) dentro da rolagem; sem isso eles
+     escapavam e a página inteira ganhava rolagem horizontal no celular. */
+  position: relative;
 }
 
 .tabela {
@@ -1289,6 +1292,131 @@ button.perigo:hover:not(:disabled) {
   margin: 0 0 12px;
 }
 
+/* ---------- Nota de qualidade (INVEST e ISTQB) ---------- */
+
+.qualidade {
+  --cor-nivel: var(--aviso-texto);
+  --fundo-nivel: var(--aviso-fundo);
+  margin: 12px 0;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--superficie);
+}
+
+.qualidade-pronta {
+  --cor-nivel: var(--sucesso-texto);
+  --fundo-nivel: var(--sucesso-fundo);
+}
+
+.qualidade-revisar {
+  --cor-nivel: var(--erro-texto);
+  --fundo-nivel: var(--erro-fundo);
+}
+
+.qualidade summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.qualidade summary::-webkit-details-marker {
+  display: none;
+}
+
+.qualidade-nota {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--fundo-nivel);
+  color: var(--cor-nivel);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.qualidade-resumo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  align-items: baseline;
+  font-size: 0.9rem;
+}
+
+.qualidade-resumo strong {
+  color: var(--cor-nivel);
+}
+
+.qualidade-resumo span {
+  color: var(--suave);
+}
+
+.qualidade-barra {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--superficie-2);
+  overflow: hidden;
+}
+
+.qualidade-barra span {
+  display: block;
+  height: 100%;
+  background: var(--cor-nivel);
+}
+
+.qualidade-grupos {
+  display: grid;
+  gap: 14px;
+  padding: 4px 12px 14px;
+  border-top: 1px solid var(--borda);
+}
+
+.qualidade-grupos h4 {
+  margin: 10px 0 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.qualidade-grupo-nota {
+  color: var(--suave);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.qualidade-grupos ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  font-size: 0.88rem;
+}
+
+.qualidade-grupos li {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 6px;
+}
+
+.qualidade-grupos li.ok {
+  color: var(--suave);
+}
+
+.qualidade-grupos li.ok > span:first-child {
+  color: var(--sucesso-texto);
+}
+
+.qualidade-grupos li.falta > span:first-child {
+  color: var(--aviso-texto);
+  font-weight: 700;
+  text-align: center;
+}
+
 /* ---------- Prints anexados ---------- */
 
 .anexos {
@@ -1320,7 +1448,7 @@ button.perigo:hover:not(:disabled) {
   position: relative;
 }
 
-.anexos-lista img {
+.anexos-lista canvas {
   display: block;
   width: 96px;
   height: 72px;

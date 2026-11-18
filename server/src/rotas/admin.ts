@@ -2,6 +2,7 @@ import { createReadStream } from "node:fs";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
 import type { Ajustes } from "../ajustes/ajustes.js";
+import { ACOES_AUDITORIA, type RepositorioAuditoria } from "../banco/auditoria.js";
 import type { Backups } from "../banco/backup.js";
 import { ErroValidacao } from "../banco/banco.js";
 import type { RepositorioUsuarios } from "../banco/usuarios.js";
@@ -34,7 +35,26 @@ const CorpoAlterarUsuario = z.object({
 const PROVEDORES = ["anthropic", "openai", "openai_compativel", "gemini"] as const;
 
 /** /api/admin/*: o hook de auth já garante login e perfil de admin. */
-export function registrarAdmin(app: FastifyInstance, o: { ajustes: Ajustes; usuarios: RepositorioUsuarios; backups: Backups }) {
+const FiltroAuditoria = z.object({
+  quem: z.string().trim().max(200).optional(),
+  acao: z.enum(ACOES_AUDITORIA).optional(),
+  de: z.coerce.number().int().nonnegative().optional(),
+  ate: z.coerce.number().int().nonnegative().optional(),
+  antesDe: z.coerce.number().int().positive().optional(),
+  limite: z.coerce.number().int().min(1).max(200).optional(),
+});
+
+export function registrarAdmin(
+  app: FastifyInstance,
+  o: { ajustes: Ajustes; usuarios: RepositorioUsuarios; backups: Backups; auditoria: RepositorioAuditoria },
+) {
+  // Auditoria: quem fez o quê, mais novo primeiro, com filtros e paginação por cursor.
+  app.get("/api/admin/auditoria", async (request, reply) => {
+    const filtro = FiltroAuditoria.safeParse(request.query);
+    if (!filtro.success) return falhou(reply, new ErroValidacao("Filtro da auditoria inválido."));
+    return o.auditoria.listar(filtro.data);
+  });
+
   // Backups do banco: lista, "Fazer backup agora" e download. Só o admin chega aqui, e com limite
   // de pedidos, porque cada um lê ou grava no disco.
   const limite = { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } };

@@ -386,6 +386,20 @@ test("administração mostra a seção de backup e o campo de cópias", async ({
   await expect(page.getByLabel("Backups do banco guardados")).toHaveValue("7");
 });
 
+test("a issue gerada vem com a nota de qualidade, também ao abrir do histórico", async ({ page }) => {
+  await entrar(page);
+  await gerar(page, "Qualidade: limitar cupons a 3 por pedido.");
+  const nota = page.locator(".qualidade");
+  await expect(nota.getByLabel(/^Nota \d+ de 100$/)).toBeVisible();
+  await nota.locator("summary").click();
+  await expect(nota.getByRole("heading", { name: /Casos de teste \(ISTQB/ })).toBeVisible();
+
+  await expect(page.getByText("Guardada no histórico.")).toBeVisible();
+  await page.getByRole("button", { name: "Histórico", exact: true }).click();
+  await page.getByRole("row", { name: /Limitar cupons por pedido/ }).first().getByRole("button", { name: "Abrir" }).click();
+  await expect(page.locator(".qualidade").getByLabel(/^Nota \d+ de 100$/)).toBeVisible();
+});
+
 test("anexa um print e gera a issue; o print não fica para a próxima", async ({ page }) => {
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
   await entrar(page);
