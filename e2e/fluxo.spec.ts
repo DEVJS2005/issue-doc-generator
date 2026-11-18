@@ -385,3 +385,17 @@ test("administração mostra a seção de backup e o campo de cópias", async ({
   await expect(page.getByText("O banco está em memória (modo de teste): não há backup.")).toBeVisible();
   await expect(page.getByLabel("Backups do banco guardados")).toHaveValue("7");
 });
+
+test("cria a issue no Jira uma vez e mostra o link", async ({ page }) => {
+  await entrar(page);
+  await gerar(page, "Jira: limitar cupons a 3 por pedido.");
+  await expect(page.getByText("Guardada no histórico.")).toBeVisible();
+  await page.getByRole("button", { name: "Criar no Jira" }).click();
+  const jira = page.locator(".jira");
+  await jira.getByLabel(/^Projeto/).selectOption("LOJ");
+  await jira.getByLabel(/^Tipo/).selectOption({ label: "História" });
+  await page.getByRole("button", { name: "Criar issue no Jira" }).click();
+  const link = page.getByRole("link", { name: /^LOJ-\d+ ↗$/ });
+  await expect(link).toHaveAttribute("href", /^https:\/\/jira\.exemplo\.dev\/browse\/LOJ-\d+$/);
+  await expect(page.getByRole("button", { name: "Criar no Jira" })).toHaveCount(0);
+});

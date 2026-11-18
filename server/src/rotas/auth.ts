@@ -31,7 +31,7 @@ const CorpoConfigurar = z.object({
 });
 
 /** Prefixos que exigem login; /api/admin exige também perfil de admin. */
-const PROTEGIDAS = ["/api/gerar", "/api/refinar", "/api/opcoes", "/api/historico", "/api/admin"];
+const PROTEGIDAS = ["/api/gerar", "/api/refinar", "/api/opcoes", "/api/historico", "/api/admin", "/api/jira"];
 
 function seguro(request: FastifyRequest) {
   return request.protocol === "https";

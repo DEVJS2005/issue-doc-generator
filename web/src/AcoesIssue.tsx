@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ErroApi, rotuloStatus, STATUS, type LinkCompartilhado, type MudancaStatus, type StatusIssue } from "./api";
 import { useDialogo } from "./Dialogo";
+import { EnviarJira } from "./EnviarJira";
 import { dataHora } from "./Historico";
 
 const VALIDADES = [
@@ -159,6 +160,7 @@ export function AcoesIssue({ historicoId, atualizacao, aoSessaoExpirar }: { hist
           </ul>
         )}
       </div>
+      <EnviarJira historicoId={historicoId} aoFalhar={tratar} />
       {erro && (
         <p className="erro" role="alert">
           {erro}

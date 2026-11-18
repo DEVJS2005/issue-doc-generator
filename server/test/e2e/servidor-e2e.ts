@@ -4,6 +4,7 @@ import { montarApp } from "../../src/app.js";
 import { carregarConfig } from "../../src/config.js";
 import { ErroGeracao } from "../../src/ia/erros.js";
 import type { Provedor } from "../../src/ia/tipos.js";
+import { criarClienteJira } from "../../src/integracoes/jira.js";
 import { montarMarkdown } from "../../src/issue/markdown.js";
 import { issueExemplo } from "../fixtures/issue.js";
 
@@ -48,7 +49,19 @@ const config = carregarConfig({
   PORTA: String(PORTA_E2E),
 });
 
-const app = await montarApp(config, { provedor });
+// Jira falso: um projeto, dois tipos; a criação numera LOJ-1, LOJ-2...
+let numeroJira = 0;
+const jiraFalso = (async (url: string, init?: RequestInit) => {
+  const caminho = new URL(url).pathname;
+  const responder = (status: number, corpo: unknown) => new Response(JSON.stringify(corpo), { status, headers: { "content-type": "application/json" } });
+  if (caminho === "/rest/api/2/project") return responder(200, [{ key: "LOJ", name: "Loja Exemplo" }]);
+  if (caminho === "/rest/api/2/issue/createmeta/LOJ/issuetypes") return responder(200, { values: [{ id: "1", name: "História" }, { id: "2", name: "Bug" }] });
+  if (caminho === "/rest/api/2/issue" && init?.method === "POST") return responder(201, { key: `LOJ-${++numeroJira}` });
+  return responder(404, { errorMessages: ["não existe"] });
+}) as typeof fetch;
+const jira = criarClienteJira({ url: "https://jira.exemplo.dev", email: "", token: "falso" }, jiraFalso);
+
+const app = await montarApp(config, { provedor, jira });
 
 // Rota só deste servidor de teste: o Markdown esperado, para comparar com Copiar e Baixar.
 app.get("/e2e/esperado", async () => ({

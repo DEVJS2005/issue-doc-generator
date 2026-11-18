@@ -12,6 +12,16 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
   `npm run teste:ia-real --workspace server`. Provedores sem chave são pulados.
 - Dependabot agrupa as atualizações das Actions num PR só por semana.
 
+## [Não lançado]
+
+### Adicionado
+
+- **Criar a issue no Jira**, direto do histórico: projeto e tipo escolhidos na tela, descrição
+  completa convertida para o formato do Jira e rótulo `issue-doc-generator`. Funciona no Jira Cloud
+  (e-mail e token de API) e no Data Center (token de acesso pessoal), com as credenciais só no
+  servidor (`JIRA_URL`, `JIRA_EMAIL` e `JIRA_TOKEN`). Cada issue vira uma só no Jira, e o link fica
+  guardado.
+
 ## [1.2.0] - 2026-11-17
 
 ### Adicionado
@@ -125,6 +135,7 @@ Primeira versão estável.
   imagem Docker.
 - JavaScript da tela dividido sob demanda (de 579 KB para 237 KB iniciais).
 
+[Não lançado]: https://github.com/DEVJS2005/issue-doc-generator/compare/v1.2.0...HEAD
 [Não lançado]: https://github.com/DEVJS2005/issue-doc-generator/compare/v1.2.0...HEAD
 [1.2.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.2.0
 [1.1.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.1.0

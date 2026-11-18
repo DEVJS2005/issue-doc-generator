@@ -94,7 +94,7 @@ Sugestão de ordem: primeiro o que dá mais retorno com menos esforço. Ao todo 
 | 23 | **Nota de qualidade:** checklist INVEST e ISTQB com nota por seção e sugestões do que falta. | ~3 h |
 | 24 | **Anexar print ou imagem** junto da descrição; a IA lê a imagem (os 4 provedores aceitam). | ~3 h |
 | 25 | **Log de auditoria:** quem gerou, apagou ou mudou usuários e ajustes, com tela de consulta para o admin. | ~3 h |
-| 26 | **Criar a issue direto no GitHub Issues, Jira ou Azure DevOps:** token no `.env` e projeto escolhido na tela. Começar por uma ferramenta, a que o time usa. | ~4 h cada |
+| 26 | **Criar a issue direto no GitHub Issues, Jira ou Azure DevOps:** token no `.env` e projeto escolhido na tela. Começar por uma ferramenta, a que o time usa. | Jira: ✅ (Cloud e Data Center). GitHub e Azure DevOps ficam para quando o time pedir. |
 
 ### Antes de tudo: fechar o que já está pronto (~2 h)
 
