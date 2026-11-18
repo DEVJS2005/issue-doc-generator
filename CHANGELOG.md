@@ -35,6 +35,26 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 - No celular, a aba Administração tinha rolagem horizontal na página inteira: os textos só para
   leitor de tela das tabelas escapavam da área de rolagem.
 
+
+### Segurança
+
+- Cabeçalhos de segurança em todas as respostas: CSP só com a própria origem (o script de tema saiu
+  do HTML para `/tema.js`), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`,
+  `Permissions-Policy`, `Cross-Origin-Opener-Policy` e HSTS em HTTPS.
+- Erros internos respondem uma mensagem genérica, sem o texto do erro nem o stack; o detalhe vai
+  só para o log.
+- Trocar a senha ou desativar alguém encerra as sessões abertas dessa pessoa (migração 6).
+- A sessão é conferida antes de ler o corpo do pedido: sem login, a geração (que aceita até 18 MB
+  com prints) é recusada sem ler o corpo.
+- A API aceita só JSON (`text/plain` passa a dar 415).
+- A leitura pública por link tem limite de 60 pedidos por minuto por IP.
+- `docker-compose.yml`: o container roda sem capacidades do kernel e sem escalada de privilégio.
+
+### Documentação
+
+- `SECURITY.md` (como relatar uma vulnerabilidade) e `CONTRIBUTING.md`.
+- README: seção de Segurança; Recursos, Como usar, Estrutura, Testes e "Subir num servidor"
+  atualizados.
 ## [1.2.0] - 2026-11-17
 
 ### Adicionado

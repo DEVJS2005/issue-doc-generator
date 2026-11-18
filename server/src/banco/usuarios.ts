@@ -76,6 +76,12 @@ export class RepositorioUsuarios {
     return l ? paraUsuario(l) : null;
   }
 
+  /** Sessões emitidas antes deste instante (ms) não valem mais. */
+  sessoesValidasDesde(email: string): number {
+    const l = this.db.prepare("SELECT sessoes_desde FROM usuarios WHERE email = ?").get(email.trim()) as { sessoes_desde: number } | undefined;
+    return l?.sessoes_desde ?? 0;
+  }
+
   private buscarPorId(id: number): Linha | undefined {
     return this.db.prepare("SELECT * FROM usuarios WHERE id = ?").get(id) as Linha | undefined;
   }
@@ -152,9 +158,21 @@ export class RepositorioUsuarios {
     if (mudancas.nome !== undefined && this.nomeEmUso(nome!, id)) {
       throw new ErroValidacao("Já existe um usuário com esse nome.", "nome_em_uso");
     }
+    const agora = Date.now();
+    // Senha nova ou conta desativada: as sessões abertas dessa pessoa caem.
+    const derrubarSessoes = mudancas.senha !== undefined || (mudancas.ativo === false && atual.ativo === 1);
     this.db
-      .prepare("UPDATE usuarios SET nome = ?, admin = ?, ativo = ?, senha_hash = ?, atualizado_em = ? WHERE id = ?")
-      .run(nome, admin ? 1 : 0, ativo ? 1 : 0, mudancas.senha !== undefined ? gerarHash(mudancas.senha) : atual.senha_hash, Date.now(), id);
+      .prepare("UPDATE usuarios SET nome = ?, admin = ?, ativo = ?, senha_hash = ?, atualizado_em = ?, sessoes_desde = CASE WHEN ? THEN ? ELSE sessoes_desde END WHERE id = ?")
+      .run(
+        nome,
+        admin ? 1 : 0,
+        ativo ? 1 : 0,
+        mudancas.senha !== undefined ? gerarHash(mudancas.senha) : atual.senha_hash,
+        agora,
+        derrubarSessoes ? 1 : 0,
+        agora,
+        id,
+      );
     return paraUsuario(this.buscarPorId(id)!);
   }
 }

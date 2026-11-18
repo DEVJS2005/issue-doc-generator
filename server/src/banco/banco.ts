@@ -73,6 +73,11 @@ export const MIGRACAO_JIRA = `
   );
 `;
 
+/** Migração 6: sessões emitidas antes desta data deixam de valer (troca de senha, desativação). */
+export const MIGRACAO_SESSOES = `
+  ALTER TABLE usuarios ADD COLUMN sessoes_desde INTEGER NOT NULL DEFAULT 0;
+`;
+
 // Um arquivo SQLite (node:sqlite, sem dependência nativa) guarda a configuração da IA, os usuários
 // e o histórico de issues. Cada item da lista é uma migração; a versão aplicada fica em
 // PRAGMA user_version. Nunca edite uma migração já publicada: acrescente outra no fim.
@@ -132,6 +137,7 @@ const MIGRACOES: string[] = [
   MIGRACAO_STATUS_E_LINKS,
   MIGRACAO_AUDITORIA,
   MIGRACAO_JIRA,
+  MIGRACAO_SESSOES,
 ];
 
 export type Banco = DatabaseSync;

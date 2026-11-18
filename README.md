@@ -29,11 +29,19 @@ Mudanças por versão: [CHANGELOG.md](CHANGELOG.md).
   transição de estado) e revisão com dúvidas para o PO.
 - **Vários provedores de IA:** Claude (Anthropic), ChatGPT (OpenAI), Gemini (Google) e servidores
   compatíveis com a OpenAI (Ollama, LM Studio, OpenRouter, Groq), com saída JSON validada por schema.
+- **Prints na descrição:** anexe até 3 imagens (ou cole com Ctrl+V); a IA lê textos de tela,
+  campos e mensagens de erro.
+- **Nota de qualidade** INVEST e ISTQB (0 a 100), com a sugestão do que falta em cada ponto.
 - **Refinar** em linguagem natural, com destaque do que mudou e **comparação de versões**.
-- **Histórico** por usuário, **administração** sem reiniciar o servidor e modelo reserva automático.
+- **Saídas:** Markdown, PDF, casos de teste em CSV (TestRail, Xray, Zephyr), link de leitura sem
+  login e **criação da issue no Jira** (Cloud e Data Center). Issue em português, inglês ou espanhol.
+- **Histórico** por usuário, com busca, status (Rascunho, Revisada, Aprovada) e versões;
+  **administração** sem reiniciar o servidor, modelo reserva automático, **auditoria** e backup
+  diário do banco.
 - **Login** por nome de usuário (ou e-mail) e senha, ou **SSO** (OpenID Connect: Entra ID, Google Workspace, Keycloak, Okta).
-- **Pronto para produção:** imagem Docker única, SQLite, logs JSON sem dados pessoais (LGPD), CI com
-  Vitest e Playwright.
+- **Pronto para produção:** imagem Docker pronta no ghcr.io, SQLite, logs JSON sem dados pessoais
+  (LGPD), cabeçalhos de segurança com CSP, CI com Vitest, Playwright, CodeQL e teste semanal com IA
+  real. Veja [Segurança](#segurança).
 
 ## In English
 
@@ -74,8 +82,10 @@ Brazilian Portuguese.
    - provedor, modelo, modelo reserva e esforço; o botão **Buscar modelos da chave** lista os
      modelos que a chave pode usar;
    - limite por hora, tempo limite e por quantos dias guardar o histórico;
-   - usuários: criar, tornar admin, desativar, trocar senha;
-   - registro de quem mudou o quê.
+   - usuários: criar, tornar admin, desativar, trocar senha (trocar a senha ou desativar encerra as
+     sessões abertas da pessoa);
+   - backup do banco (um por dia, sozinho, e "Fazer backup agora") e download;
+   - **Auditoria**: quem fez o quê, com data, IP e filtros por pessoa, ação e período.
 
    Vale na próxima geração, sem reiniciar o servidor.
 
@@ -85,23 +95,31 @@ Brazilian Portuguese.
 issue-doc-generator/
 ├── server/
 │   ├── prompts/           sistema.md (instruções) e istqb-base.md (gerado do submódulo)
-│   ├── scripts/           gerar-base-istqb.ts
+│   ├── scripts/           gerar-base-istqb.ts e teste-ia-real.ts (teste semanal com IA real)
 │   ├── src/
 │   │   ├── ajustes/       configuração em uso (.env + o que a administração salvou)
 │   │   ├── auth/          adaptador de login, senhas (scrypt), sessão assinada, limite de uso
-│   │   ├── banco/         SQLite: migrações, usuários, configuração, histórico
-│   │   ├── ia/            um arquivo por provedor, modelo reserva, lista de modelos, erros
-│   │   ├── issue/         schema da issue, Markdown, coerência, partes alteradas
+│   │   ├── banco/         SQLite: migrações, usuários, configuração, histórico, links,
+│   │   │                  backups, auditoria e envios ao Jira
+│   │   ├── ia/            um arquivo por provedor, modelo reserva, lista de modelos, erros,
+│   │   │                  validação das imagens anexadas
+│   │   ├── integracoes/   Jira (cliente da API v2 e conversão do Markdown)
+│   │   ├── issue/         schema da issue, Markdown, coerência, nota de qualidade, partes alteradas
 │   │   ├── prompt/        montagem do prompt, formatação da entrada, exemplos completos
 │   │   ├── geracao/       serviço comum a todos os provedores
-│   │   ├── rotas/         login e 1º admin, gerar e refinar (SSE), histórico, administração
+│   │   ├── rotas/         login e 1º admin, SSO, gerar e refinar (SSE), histórico, links,
+│   │   │                  administração e Jira
+│   │   ├── auditoria.ts   registro de quem fez o quê (hook no fim de cada resposta)
+│   │   ├── seguranca.ts   cabeçalhos de segurança (CSP) e tratador de erros
 │   │   └── custo.ts       estimativa de custo por chamada
 │   └── test/              Vitest (+ servidor do teste de ponta a ponta)
-├── web/                   React + Vite: login, gerar, histórico, administração
+├── web/                   React + Vite: login, gerar, histórico, administração (+ test/, Vitest)
 ├── data/                  banco SQLite (criado na 1ª subida; fora do git)
 ├── e2e/                   Playwright
-├── docs/istqb-ai-ready/   base ISTQB (submódulo git)
+├── docs/                  INSTALACAO-DOCKER.md, ROADMAP.md e istqb-ai-ready/ (submódulo git)
+├── .github/               CI, CodeQL, publicação no ghcr.io, teste com IA real, Dependabot
 ├── .env.example
+├── docker-compose.yml     instalação pela imagem pronta (docker-compose.build.yml constrói do código)
 └── Dockerfile             imagem única: o servidor também entrega o build do web/
 ```
 
@@ -134,8 +152,8 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 
 | Comando | O que roda |
 |---|---|
-| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, 1º admin, administração, usuários, modelo reserva, histórico, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema e rodapé) |
-| `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, administração, diálogos e validação dos campos |
+| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões, 1º admin, administração, usuários, modelo reserva, histórico, status, links, backup, auditoria, nota de qualidade, imagens, Jira, cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
+| `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, status, CSV, link de leitura, idioma, administração, backup, auditoria, nota de qualidade, prints, Jira (falso), CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos |
 | `npm run typecheck` | TypeScript do servidor e da tela |
 | `npm run lint` | ESLint (TypeScript e regras dos hooks do React), sem tolerar avisos |
 
@@ -167,7 +185,7 @@ No Docker, o CI:
 - confere que o banco sobrevive a um reinício (volume);
 - confere que um banco vazio mostra no log o link do primeiro admin.
 
-O teste de ponta a ponta usa o app real com um provedor de IA **falso**
+O teste de ponta a ponta usa o app real com um provedor de IA e um Jira **falsos**
 (`server/test/e2e/servidor-e2e.ts`): não gasta tokens nem precisa de chave. Na primeira vez,
 instale o navegador com `npx playwright install chromium`.
 
@@ -186,24 +204,18 @@ streaming, a atualização, o backup e os problemas comuns.
 
 ## Subir num servidor
 
-1. Clone com `--recurse-submodules` (ou rode `git submodule update --init`) e crie o `.env` a
-   partir do `.env.example`.
-2. No `.env`: as chaves de API dos provedores que vão ser usados e um `SEGREDO_SESSAO` longo e
-   aleatório, para as sessões sobreviverem a reinícios.
-3. `docker build` e
-   `docker run --env-file .env -p 3000:3000 -v issue-doc-generator-dados:/app/data --restart unless-stopped …`.
-   A imagem tem `HEALTHCHECK` em `/api/saude`.
-4. Na primeira subida, pegue no log o link `/configurar?codigo=...` e crie o primeiro admin. Na
-   aba Administração, escolha provedor e modelo e cadastre os demais usuários.
-5. Faça backup do volume `/app/data`: é um arquivo SQLite. Para um backup consistente com o
-   servidor rodando, use `sqlite3 issue-doc-generator.db ".backup copia.db"`.
-6. Coloque um proxy reverso com HTTPS na frente (nginx, Traefik, Caddy) apontando para a porta 3000,
-   e use `CONFIAR_PROXY=true`, para o cookie sair com `Secure` e o limite de login usar o IP real.
-   Para o streaming, desligue o buffer do proxy nessa rota (no nginx, `proxy_buffering off;`; o
-   servidor já envia `X-Accel-Buffering: no`) e deixe o tempo de leitura acima de
-   tempo limite configurado na Administração (padrão de 300 s).
-7. Os logs saem em JSON no stdout (`docker logs`). Eles não trazem o texto da descrição, a não ser
-   com `REGISTRAR_DESCRICAO=true`.
+O guia completo é o [docs/INSTALACAO-DOCKER.md](docs/INSTALACAO-DOCKER.md). Em resumo:
+
+1. Baixe o `docker-compose.yml` e o `.env.example` (não precisa clonar), crie o `.env` com a
+   chave de API e um `SEGREDO_SESSAO` longo e aleatório.
+2. `docker compose pull && docker compose up -d`. A imagem vem pronta do ghcr.io, roda como
+   usuário sem privilégio e tem `HEALTHCHECK` em `/api/saude`.
+3. Pegue no log o link `/configurar?codigo=...` e crie o primeiro admin. Na Administração, escolha
+   provedor e modelo e cadastre os usuários.
+4. Coloque um proxy com HTTPS na frente da porta 3000, com `CONFIAR_PROXY=true`, sem buffer na rota
+   da API (streaming) e com tempo de leitura acima do tempo limite da Administração.
+5. O backup é diário e automático, dentro do volume (pasta `backups`); copie essa pasta para fora
+   do servidor. Os logs saem em JSON no stdout, sem o texto das descrições.
 
 Rode **uma instância só**: o banco é um arquivo SQLite local, e o limite por hora e as tentativas
 de login ficam na memória do processo (reiniciar zera as contagens).
@@ -386,6 +398,30 @@ traz uma estimativa por chamada (`custoEstimadoUsd`, que para provedores fora da
 O tempo depende do modelo e do esforço. Modelos que raciocinam bastante podem passar de 60 s na
 1ª chamada; a tela avisa "ainda gerando…" e permite cancelar. O esforço "Baixo" (Administração)
 deixa mais rápido.
+
+## Segurança
+
+Resumo das proteções. Para relatar uma vulnerabilidade, veja o [SECURITY.md](SECURITY.md).
+
+- **Senhas** com hash scrypt e sal; **sessão** em cookie `HttpOnly`, `SameSite=Strict` (e `Secure`
+  atrás de HTTPS), assinado com HMAC. Trocar a senha ou desativar alguém encerra as sessões abertas
+  dessa pessoa. Login com limite de 10 tentativas por IP a cada 15 minutos.
+- **Acesso:** a sessão é conferida antes de ler o corpo do pedido; cada pessoa vê só as próprias
+  issues, e a administração exige perfil de admin. As credenciais (chaves de IA, Jira, OIDC) ficam
+  só no servidor.
+- **Cabeçalhos** em todas as respostas: CSP só com a própria origem (sem script ou estilo embutido),
+  `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy` e HSTS em HTTPS.
+- **Conteúdo:** o Markdown da IA passa por `rehype-sanitize` antes de virar HTML; o CSV protege
+  contra fórmulas; as imagens anexadas têm o formato conferido pelo conteúdo, não pela extensão.
+  A API aceita só JSON.
+- **Erros** internos respondem uma mensagem genérica; o detalhe vai só para o log, que não traz o
+  texto das descrições.
+- **Links de leitura:** token aleatório de 192 bits, guardado só como hash, com validade, revogação
+  e limite de pedidos por IP.
+- **Container:** roda como usuário sem privilégio, sem capacidades do kernel e sem escalada de
+  privilégio.
+- **GitHub:** CodeQL a cada PR, `npm audit` das dependências de produção no CI, Dependabot e
+  `main` protegida.
 
 ## Variáveis de ambiente
 

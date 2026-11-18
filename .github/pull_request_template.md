@@ -4,6 +4,7 @@
 
 ## Como testar
 
+- [ ] `npm run lint`
 - [ ] `npm run typecheck`
 - [ ] `npm test`
 - [ ] `npm run test:e2e` (se mexeu na tela ou nas rotas)
