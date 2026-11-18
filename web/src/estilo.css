@@ -1416,3 +1416,65 @@ button.perigo:hover:not(:disabled) {
   font-weight: 700;
   text-align: center;
 }
+
+/* ---------- Prints anexados ---------- */
+
+.anexos {
+  margin: -6px 0 16px;
+}
+
+.anexos-barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+}
+
+.anexos-barra .legenda {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.anexos-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.anexos-lista li {
+  position: relative;
+}
+
+.anexos-lista canvas {
+  display: block;
+  width: 96px;
+  height: 72px;
+  object-fit: cover;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--superficie-2);
+}
+
+.anexos-remover {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  border-color: var(--borda-forte);
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.anexos-remover:hover:not(:disabled) {
+  background: var(--erro-fundo);
+  border-color: var(--erro-texto);
+  color: var(--erro-texto);
+}

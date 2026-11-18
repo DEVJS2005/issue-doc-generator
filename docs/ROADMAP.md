@@ -92,7 +92,7 @@ Sugestão de ordem: primeiro o que dá mais retorno com menos esforço. Ao todo 
 | # | Item | Estimativa |
 |---|---|---|
 | 23 | **Nota de qualidade:** checklist INVEST e ISTQB com nota por seção e sugestões do que falta. | ✅ Calculada no servidor, sem chamar a IA de novo. |
-| 24 | **Anexar print ou imagem** junto da descrição; a IA lê a imagem (os 4 provedores aceitam). | ~3 h |
+| 24 | **Anexar print ou imagem** junto da descrição; a IA lê a imagem (os 4 provedores aceitam). | ✅ Testado com o Gemini real lendo um print. |
 | 25 | **Log de auditoria:** quem gerou, apagou ou mudou usuários e ajustes, com tela de consulta para o admin. | ✅ |
 | 26 | **Criar a issue direto no GitHub Issues, Jira ou Azure DevOps:** token no `.env` e projeto escolhido na tela. Começar por uma ferramenta, a que o time usa. | ~4 h cada |
 
@@ -103,7 +103,7 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 | # | Item | Estimativa |
 |---|---|---|
 | 27 | **Release v1.2.0.** Revisar e mesclar o PR #22 (lote 2), subir a versão nos `package.json`, trocar "Não lançado" por `[1.2.0]` no CHANGELOG e criar a tag `v1.2.0`. O CD publica a imagem e o `latest` deixa de ter o Gemini quebrado. É o primeiro release em AGPL. Na revisão do #22, decidir se o download do backup (que traz os hashes das senhas e o histórico inteiro) fica liberado para qualquer admin. | ~1 h |
-| 28 | **Instalação limpa de novo, pela imagem do ghcr.io.** Repetir o teste de 16/11 seguindo o guia atual (`docker compose pull`, sem build), já com a v1.2.0, e com geração real. Conferir também o link de compartilhamento e o backup dentro do container. | ~30 min |
+| 28 | **Instalação limpa de novo, pela imagem do ghcr.io.** Repetir o teste de 16/11 seguindo o guia atual (`docker compose pull`, sem build), já com a v1.2.0, e com geração real. Conferir também o link de compartilhamento e o backup dentro do container. | ✅ 17/11: v1.2.0 pública no ghcr.io (sem login), container saudável em 34 s, geração real com o Gemini, link de leitura, backup no volume e dados mantidos após reiniciar. |
 | 29 | **Teste com IA real no CI.** Workflow semanal (e manual) que gera uma issue curta em cada provedor com chave guardada nos *secrets* do GitHub. Se o SDK ou a API mudar, o CI avisa antes do usuário. Fica fora dos PRs, para não gastar tokens a cada push. | ~2 h |
 | 30 | **Menos PRs do Dependabot.** Agrupar as atualizações das Actions num PR só por semana (`groups` no `dependabot.yml`). Hoje vieram 8 PRs separados. | ~15 min |
 

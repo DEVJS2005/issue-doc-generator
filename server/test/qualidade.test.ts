@@ -81,5 +81,6 @@ describe("nota de qualidade nas rotas", () => {
     expect(aberta.json().item.qualidade.nota).toBe(resultado.qualidade.nota);
     expect(Array.isArray(aberta.json().item.avisos)).toBe(true);
     await app.close();
-  });
+    // Monta o app inteiro com imports dinâmicos: mais folga que os 5 s padrão em máquina ocupada.
+  }, 20_000);
 });

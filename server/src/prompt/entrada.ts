@@ -20,7 +20,7 @@ export type Exemplo = {
   saida: Issue;
 };
 
-const TAGS = /<\/?\s*(tipo|produto|descricao|contexto|idioma|issue_atual|ajuste)\s*>/gi;
+const TAGS = /<\/?\s*(tipo|produto|descricao|contexto|idioma|imagens|issue_atual|ajuste)\s*>/gi;
 
 /** Remove tags nossas de dentro do texto do usuário, para ele não fechar a tag antes da hora. */
 function limpar(texto: string): string {
@@ -43,12 +43,14 @@ export function formatarRefinamento(entrada: Entrada, issueAtual: Issue, ajuste:
  * Texto da entrada exatamente como a IA recebe, tanto nos pedidos quanto nos exemplos do prompt. A
  * tag <idioma> só vai fora do português, para os pedidos em português (e os exemplos) não mudarem.
  */
-export function formatarEntrada(e: Entrada): string {
+export function formatarEntrada(e: Entrada, imagens = 0): string {
   return [
     `<tipo>${e.tipo}</tipo>`,
     ...(e.idioma && e.idioma !== "pt-BR" ? [`<idioma>${e.idioma}</idioma>`] : []),
     `<produto>${limpar(e.produto)}</produto>`,
     `<descricao>\n${limpar(e.descricao)}\n</descricao>`,
     `<contexto>\n${limpar(e.contexto) || "(vazio)"}\n</contexto>`,
+    // Só com anexos, para os pedidos sem imagem (e os exemplos) não mudarem.
+    ...(imagens > 0 ? [`<imagens>${imagens}</imagens>`] : []),
   ].join("\n");
 }

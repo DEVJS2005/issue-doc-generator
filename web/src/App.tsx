@@ -19,6 +19,7 @@ import { FORMATOS_CSV, gerarCsv, type FormatoCsv, type IssueCsv } from "./csv";
 
 // Carregados sob demanda: o renderizador de Markdown (o maior pedaço do JavaScript) só baixa
 // quando há uma issue para mostrar; Histórico e Administração, quando a aba é aberta.
+import { Anexos, imagensDe, useAnexos } from "./Anexos";
 import { IconeAlerta, IconeSeta, Logo, Rodape, SeletorTema } from "./Interface";
 import { NotaQualidade } from "./Qualidade";
 
@@ -42,7 +43,7 @@ const ERROS_SSO: Record<string, string> = {
   indisponivel: "Não foi possível falar com o provedor de identidade. Tente de novo em instantes.",
 };
 
-const AVISO_DADOS = "Não cole dados pessoais reais (usuários, clientes, CPFs). O texto é enviado para processamento por IA.";
+const AVISO_DADOS = "Não cole dados pessoais reais (usuários, clientes, CPFs), nem em prints. O texto e as imagens são enviados para processamento por IA.";
 const SEGUNDOS_AINDA_GERANDO = 60;
 
 type Pagina = "gerar" | "historico" | "admin";
@@ -391,6 +392,7 @@ function Gerador({
   const [ajuste, setAjuste] = useState("");
   const [copiado, setCopiado] = useState(false);
   const controle = useRef<AbortController | null>(null);
+  const anexos = useAnexos();
 
   useEffect(() => {
     api
@@ -440,7 +442,8 @@ function Gerador({
     e.preventDefault();
     const entrada: Entrada = { descricao, tipo, produto: nomeProduto, contexto, idioma };
     salvarUltimoProduto(nomeProduto);
-    void executar("gerar", "/api/gerar", entrada, (r) => {
+    void executar("gerar", "/api/gerar", { ...entrada, imagens: anexos.paraEnvio() }, (r) => {
+      anexos.limpar();
       setResultado(r);
       setEntradaUsada(entrada);
       setAjuste("");
@@ -509,10 +512,23 @@ function Gerador({
             value={descricao}
             maxLength={opcoes.limites.descricao}
             onChange={(e) => setDescricao(e.target.value)}
+            onPaste={(e) => {
+              // Print colado: vira anexo. Se a área de transferência também tem texto, o texto entra normalmente.
+              const imagens = imagensDe(e.clipboardData);
+              if (!imagens.length) return;
+              if (!e.clipboardData.getData("text")) e.preventDefault();
+              void anexos.adicionar(imagens);
+            }}
             placeholder="Ex.: No checkout, o cliente consegue aplicar quantos cupons quiser. Queremos limitar a 3 por pedido."
             required
           />
         </Campo>
+        <Anexos anexos={anexos.anexos} aoAdicionar={(f) => void anexos.adicionar(f)} aoRemover={anexos.remover} desabilitado={ocupado} />
+        {anexos.erro && (
+          <p className="erro caixa" role="alert">
+            {anexos.erro}
+          </p>
+        )}
         <div className="linha">
           <label>
             Tipo
