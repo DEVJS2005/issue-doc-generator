@@ -178,6 +178,12 @@ describe("rotas do Jira", () => {
     expect(denovo.json().envio.chave).toBe("LOJ-42");
     expect(pedidos.filter((p) => p.metodo === "POST")).toHaveLength(1);
 
+    // A criação entra na auditoria (só a que deu certo, não a repetida).
+    const admin = await entrar(a, "qa@exemplo.dev", "senha-de-teste");
+    const eventos = (await a.inject({ method: "GET", url: "/api/admin/auditoria?acao=criar_jira", headers: { cookie: admin } })).json().eventos;
+    expect(eventos).toHaveLength(1);
+    expect(eventos[0]).toMatchObject({ quem: "outra@exemplo.dev", alvo: String(id), detalhe: { projeto: "LOJ" } });
+
     const envio = await a.inject({ method: "GET", url: `/api/historico/${id}/jira`, headers: { cookie } });
     expect(envio.json().envio).toMatchObject({ chave: "LOJ-42", enviadoPor: "outra" });
 

@@ -47,7 +47,22 @@ export const MIGRACAO_STATUS_E_LINKS = `
   CREATE INDEX links_por_issue ON links (issue_id);
 `;
 
-/** Migração: issue enviada ao Jira (uma por issue do histórico, com a chave e o link de lá). */
+/** Migração 4: registro de auditoria (quem fez o quê, sem senhas, tokens nem texto de issue). */
+export const MIGRACAO_AUDITORIA = `
+  CREATE TABLE auditoria (
+    id INTEGER PRIMARY KEY,
+    quando INTEGER NOT NULL,
+    quem TEXT NOT NULL,
+    acao TEXT NOT NULL,
+    alvo TEXT,
+    detalhe TEXT,
+    ip TEXT
+  );
+  CREATE INDEX auditoria_por_data ON auditoria (quando);
+  CREATE INDEX auditoria_por_acao ON auditoria (acao, id);
+`;
+
+/** Migração 5: issue enviada ao Jira (uma por issue do histórico, com a chave e o link de lá). */
 export const MIGRACAO_JIRA = `
   CREATE TABLE jira_envios (
     issue_id INTEGER PRIMARY KEY REFERENCES issues (id) ON DELETE CASCADE,
@@ -115,6 +130,7 @@ const MIGRACOES: string[] = [
   `,
   MIGRACAO_NOME,
   MIGRACAO_STATUS_E_LINKS,
+  MIGRACAO_AUDITORIA,
   MIGRACAO_JIRA,
 ];
 

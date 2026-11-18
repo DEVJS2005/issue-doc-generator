@@ -78,6 +78,8 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
   });
 
   function entrar(request: FastifyRequest, reply: FastifyReply, usuario: Usuario) {
+    request.usuario = usuario; // para a auditoria saber quem entrou
+
     reply.header("set-cookie", cookieSessao(o.sessoes.criar(usuario), o.sessoes.maxAgeSegundos, seguro(request)));
     return { usuario };
   }

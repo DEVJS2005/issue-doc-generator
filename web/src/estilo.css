@@ -867,6 +867,9 @@ mark.lacuna {
 
 .tabela-rolagem {
   overflow-x: auto;
+  /* Segura os textos só para leitor de tela (.sr, absolutos) dentro da rolagem; sem isso eles
+     escapavam e a página inteira ganhava rolagem horizontal no celular. */
+  position: relative;
 }
 
 .tabela {
@@ -1287,6 +1290,12 @@ button.perigo:hover:not(:disabled) {
 
 .compartilhado-meta {
   margin: 0 0 12px;
+}
+
+/* Auditoria: login recusado em destaque discreto */
+.tabela tr.evento-alerta td:nth-child(3) {
+  color: var(--erro-texto);
+  font-weight: 500;
 }
 
 /* ---------- Jira ---------- */

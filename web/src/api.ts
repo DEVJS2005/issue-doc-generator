@@ -48,6 +48,32 @@ export type InfoBackup = { nome: string; bytes: number; criadoEm: number };
 export type ProjetoJira = { chave: string; nome: string };
 export type TipoJira = { id: string; nome: string };
 export type EnvioJira = { chave: string; url: string; enviadoPor: string; enviadoEm: number };
+export type AcaoAuditoria =
+  | "login"
+  | "login_falhou"
+  | "primeiro_admin"
+  | "gerar"
+  | "refinar"
+  | "status"
+  | "apagar_issue"
+  | "criar_link"
+  | "revogar_link"
+  | "ajustes"
+  | "criar_usuario"
+  | "alterar_usuario"
+  | "backup"
+  | "baixar_backup"
+  | "criar_jira";
+export type EventoAuditoria = {
+  id: number;
+  quando: number;
+  quem: string;
+  acao: AcaoAuditoria;
+  alvo: string | null;
+  detalhe: Record<string, unknown> | null;
+  ip: string | null;
+};
+export type FiltroAuditoria = { quem?: string; acao?: AcaoAuditoria; de?: number; ate?: number; antesDe?: number };
 export type Progresso = { fase: "analisando" | "escrevendo"; caracteres: number; secao: string | null };
 export type Resultado = {
   issue: unknown;
@@ -181,6 +207,11 @@ export const api = {
   envioJira: (id: number) => chamar<{ envio: EnvioJira | null }>("GET", `/api/historico/${id}/jira`),
   enviarJira: (id: number, projeto: string, tipoId: string) =>
     postar(`/api/historico/${id}/jira`, { projeto, tipoId }).then((r) => lerJson<{ envio: EnvioJira }>(r)),
+  auditoria: (f: FiltroAuditoria) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(f)) if (v !== undefined && v !== "") p.set(k, String(v));
+    return chamar<{ eventos: EventoAuditoria[]; proximo: number | null }>("GET", `/api/admin/auditoria${p.size ? `?${p}` : ""}`);
+  },
   fazerBackup: () => postar("/api/admin/backups", {}).then((r) => lerJson<{ backup: InfoBackup }>(r)),
   apagarIssue: (id: number) => chamar<{ ok: true }>("DELETE", `/api/historico/${id}`),
   versao: (id: number, numero: number) => chamar<{ versao: Versao & { markdown: string } }>("GET", `/api/historico/${id}/versoes/${numero}`),

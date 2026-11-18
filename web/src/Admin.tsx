@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { api, ErroApi, type EstadoAdmin, type InfoBackup, type UsuarioAdmin, type ValoresAjustes } from "./api";
+import { Auditoria } from "./Auditoria";
 import { useDialogo } from "./Dialogo";
 import { ERRO_NOME, PADRAO_NOME, useValidacao } from "./Formulario";
 import { dataHora } from "./Historico";
@@ -329,6 +330,8 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
           </ul>
         )}
       </section>
+
+      <Auditoria aoFalhar={falhou} />
     </>
   );
 }
