@@ -16,16 +16,19 @@ import { Backups } from "./banco/backup.js";
 import { abrirBanco } from "./banco/banco.js";
 import { RepositorioConfiguracao } from "./banco/configuracao.js";
 import { RepositorioHistorico } from "./banco/historico.js";
+import { RepositorioJira } from "./banco/jira.js";
 import { RepositorioLinks } from "./banco/links.js";
 import { RepositorioUsuarios } from "./banco/usuarios.js";
 import type { Config } from "./config.js";
 import { criarProvedor } from "./ia/index.js";
+import { criarClienteJira, type ClienteJira } from "./integracoes/jira.js";
 import type { Provedor } from "./ia/tipos.js";
 import { TIPOS_ISSUE } from "./issue/schema.js";
 import { registrarAdmin } from "./rotas/admin.js";
 import { registrarAuth } from "./rotas/auth.js";
 import { LIMITE_CONTEXTO, LIMITE_DESCRICAO, registrarRotaGerar } from "./rotas/gerar.js";
 import { registrarHistorico } from "./rotas/historico.js";
+import { registrarJira } from "./rotas/jira.js";
 import { registrarLinks } from "./rotas/links.js";
 import { LIMITE_AJUSTE, registrarRotaRefinar } from "./rotas/refinar.js";
 
@@ -44,6 +47,8 @@ export type OpcoesApp = {
   codigoConfiguracao?: string;
   /** Provedor de login único (testes). Se omitido, vem de OIDC_* no .env. */
   sso?: ProvedorSso | null;
+  /** Cliente do Jira (testes). Se omitido, vem de JIRA_* no .env. */
+  jira?: ClienteJira | null;
 };
 
 export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
@@ -157,6 +162,9 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
       erro: { codigo: "muitas_tentativas", mensagem: "Muitas requisições seguidas. Aguarde um minuto e tente de novo.", podeTentarDeNovo: true },
     }),
   });
+  const clienteJira = opcoes.jira !== undefined ? opcoes.jira : config.jira ? criarClienteJira(config.jira) : null;
+  if (clienteJira) app.log.info(`Jira ligado: ${clienteJira.url}`);
+  registrarJira(app, { cliente: clienteJira, historico, jira: new RepositorioJira(banco), usuarios });
   registrarAdmin(app, { ajustes, usuarios, backups, auditoria });
 
   // Em produção o servidor também entrega o build do web/.

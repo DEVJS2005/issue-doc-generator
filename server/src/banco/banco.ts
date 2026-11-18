@@ -62,6 +62,17 @@ export const MIGRACAO_AUDITORIA = `
   CREATE INDEX auditoria_por_acao ON auditoria (acao, id);
 `;
 
+/** Migração 5: issue enviada ao Jira (uma por issue do histórico, com a chave e o link de lá). */
+export const MIGRACAO_JIRA = `
+  CREATE TABLE jira_envios (
+    issue_id INTEGER PRIMARY KEY REFERENCES issues (id) ON DELETE CASCADE,
+    chave TEXT NOT NULL,
+    url TEXT NOT NULL,
+    enviado_por TEXT NOT NULL,
+    enviado_em INTEGER NOT NULL
+  );
+`;
+
 // Um arquivo SQLite (node:sqlite, sem dependência nativa) guarda a configuração da IA, os usuários
 // e o histórico de issues. Cada item da lista é uma migração; a versão aplicada fica em
 // PRAGMA user_version. Nunca edite uma migração já publicada: acrescente outra no fim.
@@ -120,6 +131,7 @@ const MIGRACOES: string[] = [
   MIGRACAO_NOME,
   MIGRACAO_STATUS_E_LINKS,
   MIGRACAO_AUDITORIA,
+  MIGRACAO_JIRA,
 ];
 
 export type Banco = DatabaseSync;

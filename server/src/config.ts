@@ -1,3 +1,4 @@
+import type { ConfigJira } from "./integracoes/jira.js";
 import path from "node:path";
 import { z } from "zod";
 import type { ConfigOidc } from "./auth/oidc.js";
@@ -47,6 +48,11 @@ const esquema = z.object({
   OIDC_URL_RETORNO: z.string().trim().default(""),
   OIDC_ROTULO: z.string().trim().default("Entrar com SSO"),
   OIDC_DOMINIOS_AUTOCADASTRO: z.string().default(""),
+  // Jira (criar a issue direto lá). Desligado enquanto JIRA_URL ou JIRA_TOKEN estiver vazio.
+  // Cloud: JIRA_EMAIL + token de API. Data Center: só o token de acesso pessoal (JIRA_EMAIL vazio).
+  JIRA_URL: z.string().trim().default(""),
+  JIRA_EMAIL: z.string().trim().default(""),
+  JIRA_TOKEN: z.string().default(""),
   // Nos testes (NODE_ENV=test) o banco é em memória; fora deles, data/ na pasta onde o servidor roda.
   ARQUIVO_BANCO: z
     .string()
@@ -57,6 +63,7 @@ const esquema = z.object({
 export type Config = {
   arquivoBanco: string;
   oidc: ConfigOidc | null;
+  jira: ConfigJira | null;
   provedor: NomeProvedor;
   modelo: string;
   anthropicApiKey: string;
@@ -96,6 +103,7 @@ export function carregarConfig(env: NodeJS.ProcessEnv = process.env): Config {
   return {
     arquivoBanco: e.ARQUIVO_BANCO,
     oidc,
+    jira: e.JIRA_URL && e.JIRA_TOKEN ? { url: e.JIRA_URL, email: e.JIRA_EMAIL, token: e.JIRA_TOKEN } : null,
     provedor: e.PROVEDOR,
     modelo,
     anthropicApiKey: e.ANTHROPIC_API_KEY,

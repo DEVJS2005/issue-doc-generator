@@ -411,3 +411,17 @@ test("anexa um print e gera a issue; o print não fica para a próxima", async (
   await expect(page.locator(".issue h3", { hasText: "Dúvidas para o PO" })).toBeVisible();
   await expect(page.getByRole("img", { name: "Prévia de tela.png" })).toHaveCount(0);
 });
+
+test("cria a issue no Jira uma vez e mostra o link", async ({ page }) => {
+  await entrar(page);
+  await gerar(page, "Jira: limitar cupons a 3 por pedido.");
+  await expect(page.getByText("Guardada no histórico.")).toBeVisible();
+  await page.getByRole("button", { name: "Criar no Jira" }).click();
+  const jira = page.locator(".jira");
+  await jira.getByLabel(/^Projeto/).selectOption("LOJ");
+  await jira.getByLabel(/^Tipo/).selectOption({ label: "História" });
+  await page.getByRole("button", { name: "Criar issue no Jira" }).click();
+  const link = page.getByRole("link", { name: /^LOJ-\d+ ↗$/ });
+  await expect(link).toHaveAttribute("href", /^https:\/\/jira\.exemplo\.dev\/browse\/LOJ-\d+$/);
+  await expect(page.getByRole("button", { name: "Criar no Jira" })).toHaveCount(0);
+});

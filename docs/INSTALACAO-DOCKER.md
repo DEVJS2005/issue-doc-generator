@@ -159,6 +159,13 @@ preencha estas variáveis no `.env` e recrie o container:
 
 Os detalhes estão na seção "Login único (SSO)" do README.
 
+## 9. Jira (opcional)
+
+Para o botão **Criar no Jira**, preencha `JIRA_URL`, `JIRA_EMAIL` e `JIRA_TOKEN` no `.env` (no
+Jira Data Center, deixe `JIRA_EMAIL` vazio e use um token de acesso pessoal) e rode
+`docker compose up -d`. O servidor precisa alcançar o endereço do Jira. Detalhes na seção
+"Criar a issue no Jira" do README.
+
 ## Atualizar
 
 ```bash

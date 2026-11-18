@@ -17,6 +17,7 @@ export const ROTULO_ACAO: Record<AcaoAuditoria, string> = {
   alterar_usuario: "Alterou usuário",
   backup: "Fez backup",
   baixar_backup: "Baixou backup",
+  criar_jira: "Criou no Jira",
 };
 
 /** Detalhe em uma linha legível. Os campos vêm do servidor, já sem senhas nem tokens. */
@@ -30,6 +31,8 @@ export function descreverDetalhe(e: Pick<EventoAuditoria, "acao" | "detalhe">): 
       return [d.tipo, d.produto, d.idioma && d.idioma !== "pt-BR" ? d.idioma : null].filter(Boolean).join(" · ");
     case "status":
       return `para ${String(d.para ?? "")}`;
+    case "criar_jira":
+      return `projeto ${String(d.projeto ?? "")}`;
     case "criar_link":
       return `válido por ${String(d.dias ?? "?")} dia(s)`;
     case "revogar_link":

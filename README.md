@@ -265,6 +265,24 @@ biblioteca real, sem rede. O retorno (cookie de estado, cadastro, domínio, desa
 testado com um provedor falso. A troca do código pelo token contra um provedor de verdade ainda não
 foi testada: faça um login de teste ao configurar.
 
+### Criar a issue no Jira
+
+Com o Jira configurado, cada issue do histórico ganha o botão **Criar no Jira**. A pessoa escolhe o
+projeto e o tipo (a lista vem do Jira, com as permissões da conta configurada), e a issue é criada
+com o título como resumo, o texto completo na descrição (tabelas, listas e o fluxo de decisão
+convertidos para o formato do Jira) e o rótulo `issue-doc-generator`. O link para a issue criada
+fica guardado: cada issue do histórico vira uma só no Jira, e refinamentos depois disso não
+atualizam o Jira.
+
+- **Jira Cloud:** `JIRA_URL` (ex.: `https://empresa.atlassian.net`), `JIRA_EMAIL` e `JIRA_TOKEN`
+  (token de API da conta).
+- **Jira Data Center:** `JIRA_URL` e `JIRA_TOKEN` com um token de acesso pessoal (PAT), e
+  `JIRA_EMAIL` vazio.
+
+As credenciais ficam só no servidor. Use uma conta de serviço com permissão de criar issues nos
+projetos do time: todas as issues são criadas em nome dela. Usa a REST API v2, que existe nas duas
+versões do Jira.
+
 ## Provedores de IA
 
 Um provedor e um modelo valem para todos, escolhidos na **Administração**. As chaves ficam no
@@ -391,6 +409,9 @@ Só segredos e infraestrutura. Provedor, modelo, limites, usuários e retenção
 | `OIDC_URL_RETORNO` | `http://localhost:PORTA/api/sso/retorno` | URL de retorno cadastrada no provedor. |
 | `OIDC_ROTULO` | `Entrar com SSO` | Texto do botão de SSO. |
 | `OIDC_DOMINIOS_AUTOCADASTRO` | (vazio) | Domínios cujos e-mails viram usuário no 1º login. |
+| `JIRA_URL` | (vazio) | Endereço do Jira. Vazio desliga o botão "Criar no Jira". |
+| `JIRA_EMAIL` | (vazio) | E-mail da conta (Jira Cloud). Vazio no Data Center. |
+| `JIRA_TOKEN` | (vazio) | Token de API (Cloud) ou token de acesso pessoal (Data Center). |
 
 **Formato antigo (opcional):** `PROVEDOR`, `MODELO`, `ESFORCO`, `LIMITE_POR_HORA` e
 `TEMPO_LIMITE_SEGUNDOS` ainda são lidos, mas só como ponto de partida enquanto a Administração

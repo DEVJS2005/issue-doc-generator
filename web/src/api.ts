@@ -45,6 +45,9 @@ export type IssuePublica = {
   markdown: string;
 };
 export type InfoBackup = { nome: string; bytes: number; criadoEm: number };
+export type ProjetoJira = { chave: string; nome: string };
+export type TipoJira = { id: string; nome: string };
+export type EnvioJira = { chave: string; url: string; enviadoPor: string; enviadoEm: number };
 export type AcaoAuditoria =
   | "login"
   | "login_falhou"
@@ -59,7 +62,8 @@ export type AcaoAuditoria =
   | "criar_usuario"
   | "alterar_usuario"
   | "backup"
-  | "baixar_backup";
+  | "baixar_backup"
+  | "criar_jira";
 export type EventoAuditoria = {
   id: number;
   quando: number;
@@ -210,6 +214,12 @@ export const api = {
   revogarLink: (id: number, link: number) => chamar<{ ok: true }>("DELETE", `/api/historico/${id}/links/${link}`),
   publico: (token: string) => fetch(`/api/publico/${encodeURIComponent(token)}`).then((r) => lerJson<{ issue: IssuePublica }>(r)),
   backups: () => chamar<{ disponivel: boolean; copias: number; backups: InfoBackup[] }>("GET", "/api/admin/backups"),
+  jira: () => chamar<{ ligado: boolean; url: string | null }>("GET", "/api/jira"),
+  projetosJira: () => chamar<{ projetos: ProjetoJira[] }>("GET", "/api/jira/projetos"),
+  tiposJira: (projeto: string) => chamar<{ tipos: TipoJira[] }>("GET", `/api/jira/tipos?projeto=${encodeURIComponent(projeto)}`),
+  envioJira: (id: number) => chamar<{ envio: EnvioJira | null }>("GET", `/api/historico/${id}/jira`),
+  enviarJira: (id: number, projeto: string, tipoId: string) =>
+    postar(`/api/historico/${id}/jira`, { projeto, tipoId }).then((r) => lerJson<{ envio: EnvioJira }>(r)),
   auditoria: (f: FiltroAuditoria) => {
     const p = new URLSearchParams();
     for (const [k, v] of Object.entries(f)) if (v !== undefined && v !== "") p.set(k, String(v));

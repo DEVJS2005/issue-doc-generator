@@ -8,6 +8,11 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 ### Adicionado
 
+- **Criar a issue no Jira**, direto do histórico: projeto e tipo escolhidos na tela, descrição
+  completa convertida para o formato do Jira e rótulo `issue-doc-generator`. Funciona no Jira Cloud
+  (e-mail e token de API) e no Data Center (token de acesso pessoal), com as credenciais só no
+  servidor (`JIRA_URL`, `JIRA_EMAIL` e `JIRA_TOKEN`). Cada issue vira uma só no Jira, e o link fica
+  guardado.
 - **Anexar print ou imagem** à descrição (até 3, PNG, JPEG, WebP ou GIF), pelo botão "Anexar print"
   ou colando com Ctrl+V. A IA lê o que aparece na imagem (textos de tela, campos, mensagens de erro).
   Funciona nos 4 provedores. As imagens vão só para a IA nesta geração e não ficam no histórico, no
@@ -18,6 +23,9 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
   "Precisa de revisão") e a sugestão de cada ponto que falta. É calculada no servidor, sem chamar a
   IA de novo. Aparece ao gerar, ao refinar e ao abrir do histórico, e fica fora do PDF.
 - Ao abrir uma issue do histórico, os avisos de coerência agora também aparecem.
+- **Auditoria** na Administração: quem fez o quê (logins, inclusive os recusados, gerações,
+  refinamentos, status, links, issues apagadas, ajustes, usuários, backups e criações no Jira), com
+  data, IP e filtros. Sem senhas, tokens nem texto de issue. Segue a retenção do histórico.
 - Teste semanal com IA real no GitHub Actions (`ia-real.yml`) e o script
   `npm run teste:ia-real --workspace server`. Provedores sem chave são pulados.
 - Dependabot agrupa as atualizações das Actions num PR só por semana.

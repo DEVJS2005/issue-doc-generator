@@ -1478,3 +1478,30 @@ button.perigo:hover:not(:disabled) {
   border-color: var(--erro-texto);
   color: var(--erro-texto);
 }
+
+/* ---------- Jira ---------- */
+
+.rotulo-campo {
+  display: block;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.jira p {
+  margin: 6px 0 0;
+}
+
+.jira a {
+  font-weight: 600;
+  color: var(--acento);
+}
+
+.jira-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.jira-form label {
+  margin: 0;
+}
