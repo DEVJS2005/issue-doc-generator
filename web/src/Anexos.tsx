@@ -42,7 +42,9 @@ export async function lerAnexo(arquivo: File): Promise<Anexo | string> {
   if (blob.size > MAX_BYTES) return `“${arquivo.name || "imagem"}” passa de 4 MB mesmo depois de reduzida.`;
   const url = await paraDataUrl(blob);
   const tipo = (blob.type || arquivo.type) as Anexo["tipo"];
-  return { id: proximoId++, nome: arquivo.name || "print colado", tipo, dados: url.slice(url.indexOf(",") + 1), previa: url };
+  // Prévia por URL blob: do próprio arquivo (não pelo texto da data URL), liberada ao remover.
+  const previa = URL.createObjectURL(blob);
+  return { id: proximoId++, nome: arquivo.name || "print colado", tipo, dados: url.slice(url.indexOf(",") + 1), previa };
 }
 
 /** Imagens que vieram coladas (Ctrl+V) ou arrastadas. */
@@ -121,8 +123,13 @@ export function useAnexos() {
     anexos,
     erro,
     adicionar,
-    remover: (id: number) => setAnexos((atual) => atual.filter((a) => a.id !== id)),
+    remover: (id: number) =>
+      setAnexos((atual) => {
+        atual.filter((a) => a.id === id).forEach((a) => URL.revokeObjectURL(a.previa));
+        return atual.filter((a) => a.id !== id);
+      }),
     limpar: () => {
+      anexos.forEach((a) => URL.revokeObjectURL(a.previa));
       setAnexos([]);
       setErro(null);
     },
