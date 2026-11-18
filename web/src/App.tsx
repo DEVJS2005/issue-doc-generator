@@ -20,6 +20,7 @@ import { FORMATOS_CSV, gerarCsv, type FormatoCsv, type IssueCsv } from "./csv";
 // Carregados sob demanda: o renderizador de Markdown (o maior pedaço do JavaScript) só baixa
 // quando há uma issue para mostrar; Histórico e Administração, quando a aba é aberta.
 import { IconeAlerta, IconeSeta, Logo, Rodape, SeletorTema } from "./Interface";
+import { NotaQualidade } from "./Qualidade";
 
 import { ERRO_NOME, PADRAO_NOME, useValidacao } from "./Formulario";
 import { baixarPdf, metadadosPdf, nomeArquivo } from "./impressao";
@@ -381,7 +382,7 @@ function Gerador({
   const [agora, setAgora] = useState(Date.now());
   const [resultado, setResultado] = useState<Resultado | null>(() =>
     aberta
-      ? { issue: aberta.issue, markdown: aberta.markdown, avisos: [], alteracoes: null, modelo: aberta.modelo, usouFallback: false, duracaoMs: 0, historicoId: aberta.id }
+      ? { issue: aberta.issue, markdown: aberta.markdown, avisos: aberta.avisos ?? [], qualidade: aberta.qualidade ?? null, alteracoes: null, modelo: aberta.modelo, usouFallback: false, duracaoMs: 0, historicoId: aberta.id }
       : null,
   );
   const [entradaUsada, setEntradaUsada] = useState<Entrada | null>(aberta?.entrada ?? null);
@@ -641,6 +642,7 @@ function Gerador({
               </ul>
             </div>
           )}
+          {resultado.qualidade && <NotaQualidade qualidade={resultado.qualidade} />}
           {entradaUsada && (
             <dl className="metadados-pdf so-impressao" aria-hidden="true">
               {metadadosPdf({ produto: entradaUsada.produto, tipo: entradaUsada.tipo, ...meta }).map(([rotulo, valor]) => (
