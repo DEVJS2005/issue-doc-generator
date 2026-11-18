@@ -1,3 +1,5 @@
+import { verificarCoerencia } from "../issue/coerencia.js";
+import { avaliarQualidade } from "../issue/qualidade.js";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { STATUS_ISSUE, type RepositorioHistorico, type StatusIssue } from "../banco/historico.js";
@@ -61,7 +63,9 @@ export function registrarHistorico(app: FastifyInstance, o: { historico: Reposit
     const nomes = o.usuarios.nomesPorEmail();
     const autor = item ? (nomes.get(item.usuario) ?? item.usuario) : null;
     const mudancasStatus = o.historico.mudancasStatus(id).map((m) => ({ ...m, quem: nomes.get(m.quem) ?? m.quem }));
-    return { item: item && { ...item, autor }, versoes: o.historico.versoes(id), mudancasStatus };
+    // Ao abrir do histórico, os avisos e a nota são recalculados sobre a versão atual.
+    const analise = item ? { avisos: verificarCoerencia(item.issue), qualidade: avaliarQualidade(item.issue) } : null;
+    return { item: item && { ...item, autor, ...analise }, versoes: o.historico.versoes(id), mudancasStatus };
   });
 
   // Status: Rascunho → Revisada → Aprovada (e de volta). Quem pode ver a issue pode mudar.

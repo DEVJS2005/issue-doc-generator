@@ -13,9 +13,14 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
   (e-mail e token de API) e no Data Center (token de acesso pessoal), com as credenciais só no
   servidor (`JIRA_URL`, `JIRA_EMAIL` e `JIRA_TOKEN`). Cada issue vira uma só no Jira, e o link fica
   guardado.
+- **Nota de qualidade** da issue (0 a 100): checagens INVEST e ISTQB em 5 grupos (valor, escopo,
+  critérios, casos de teste e revisão), com o nível ("Pronta para o time", "Quase pronta" ou
+  "Precisa de revisão") e a sugestão de cada ponto que falta. É calculada no servidor, sem chamar a
+  IA de novo. Aparece ao gerar, ao refinar e ao abrir do histórico, e fica fora do PDF.
+- Ao abrir uma issue do histórico, os avisos de coerência agora também aparecem.
 - **Auditoria** na Administração: quem fez o quê (logins, inclusive os recusados, gerações,
-  refinamentos, status, links, issues apagadas, ajustes, usuários e backups), com data, IP e
-  filtros. Sem senhas, tokens nem texto de issue. Segue a retenção do histórico.
+  refinamentos, status, links, issues apagadas, ajustes, usuários, backups e criações no Jira), com
+  data, IP e filtros. Sem senhas, tokens nem texto de issue. Segue a retenção do histórico.
 - Teste semanal com IA real no GitHub Actions (`ia-real.yml`) e o script
   `npm run teste:ia-real --workspace server`. Provedores sem chave são pulados.
 - Dependabot agrupa as atualizações das Actions num PR só por semana.

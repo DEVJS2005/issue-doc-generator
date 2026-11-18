@@ -336,11 +336,18 @@ qualquer valor que mude a cada pedido no prompt de sistema.
 2. O servidor monta o prompt de sistema fixo e a entrada entre tags, e chama o provedor com
    streaming.
 3. A resposta volta à tela por SSE: `inicio`, `progresso` (fase e seção sendo escrita),
-   `resultado` (issue, Markdown e avisos) ou `erro` (código e mensagem amigável, sem stack trace).
+   `resultado` (issue, Markdown, avisos e nota de qualidade) ou `erro` (código e mensagem amigável,
+   sem stack trace).
 4. Fechar a conexão cancela a chamada à IA. Passou de `TEMPO_LIMITE_SEGUNDOS`, a geração é
    interrompida com erro `tempo_esgotado`.
 5. O log registra provedor, modelo, tokens (entrada, saída, cache lido e gravado) e duração.
    O texto da descrição só entra no log com `REGISTRAR_DESCRICAO=true`.
+
+**Nota de qualidade** (`server/src/issue/qualidade.ts`): de 0 a 100, com checagens INVEST e ISTQB
+em 5 grupos (valor e clareza, escopo e tamanho, critérios de aceite, casos de teste e revisão). Cada
+ponto que falha traz uma sugestão: termos vagos nos critérios, critério sem caso feliz, regra com
+número sem caso de valor limite, técnica sem a seção do ISTQB, `[a preencher]` sem pergunta para o
+PO, e assim por diante. É calculada no servidor, sem chamar a IA de novo, e não bloqueia nada.
 
 Erros tratados: recusa, resposta cortada (`max_tokens`), limite de taxa, autenticação, conta sem
 crédito, servidor instável, conexão, JSON fora do formato e tempo esgotado.

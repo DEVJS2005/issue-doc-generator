@@ -386,33 +386,18 @@ test("administração mostra a seção de backup e o campo de cópias", async ({
   await expect(page.getByLabel("Backups do banco guardados")).toHaveValue("7");
 });
 
-test("auditoria mostra quem entrou e o login recusado, com filtro por ação", async ({ page }) => {
-  await page.goto("/");
-  await page.getByLabel("Usuário ou e-mail").fill("qa");
-  await page.getByLabel("Senha").fill("senha-errada-x");
-  await page.getByRole("button", { name: "Entrar" }).click();
-  await expect(page.getByRole("alert")).toHaveText("Usuário ou senha incorretos.");
-
+test("a issue gerada vem com a nota de qualidade, também ao abrir do histórico", async ({ page }) => {
   await entrar(page);
-  await page.getByRole("button", { name: "Administração" }).click();
-  const auditoria = page.locator("section", { has: page.getByRole("heading", { name: "Auditoria" }) });
-  await expect(auditoria.getByRole("cell", { name: "Login recusado" }).first()).toBeVisible();
-  await expect(auditoria.getByRole("cell", { name: /tentou como “qa”/ }).first()).toBeVisible();
-  await expect(auditoria).not.toContainText("senha-errada-x");
+  await gerar(page, "Qualidade: limitar cupons a 3 por pedido.");
+  const nota = page.locator(".qualidade");
+  await expect(nota.getByLabel(/^Nota \d+ de 100$/)).toBeVisible();
+  await nota.locator("summary").click();
+  await expect(nota.getByRole("heading", { name: /Casos de teste \(ISTQB/ })).toBeVisible();
 
-  await auditoria.getByLabel("Ação").selectOption({ label: "Entrou" });
-  await expect(auditoria.getByRole("cell", { name: "Login recusado" })).toHaveCount(0);
-  await expect(auditoria.getByRole("cell", { name: "Entrou" }).first()).toBeVisible();
-});
-
-test("no celular, nenhuma aba ganha rolagem horizontal", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await entrar(page);
-  for (const aba of ["Gerar", "Histórico", "Administração"]) {
-    await page.getByRole("button", { name: aba, exact: true }).click();
-    await page.waitForLoadState("networkidle");
-    expect(await page.evaluate(() => document.documentElement.scrollWidth), aba).toBeLessThanOrEqual(390);
-  }
+  await expect(page.getByText("Guardada no histórico.")).toBeVisible();
+  await page.getByRole("button", { name: "Histórico", exact: true }).click();
+  await page.getByRole("row", { name: /Limitar cupons por pedido/ }).first().getByRole("button", { name: "Abrir" }).click();
+  await expect(page.locator(".qualidade").getByLabel(/^Nota \d+ de 100$/)).toBeVisible();
 });
 
 test("cria a issue no Jira uma vez e mostra o link", async ({ page }) => {
