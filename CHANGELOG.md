@@ -38,6 +38,7 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 ### Segurança
 
+- Autorização das rotas da API reforçada.
 - Jira: só os projetos de `JIRA_PROJETOS` (chaves separadas por vírgula; `*` libera todos)
   aparecem e aceitam issues, conferidos no servidor. **Vazio não libera nenhum:** quem já usa o
   Jira precisa preencher `JIRA_PROJETOS` ao atualizar. A URL do Jira só aparece para o admin.

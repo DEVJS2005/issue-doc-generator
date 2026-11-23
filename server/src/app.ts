@@ -2,10 +2,11 @@ import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import Fastify from "fastify";
+import Fastify, { type RouteOptions } from "fastify";
 import fastifyStatic from "@fastify/static";
 import rateLimit from "@fastify/rate-limit";
 import { Ajustes } from "./ajustes/ajustes.js";
+import { exigirAdmin, pareceApi } from "./auth/acesso.js";
 import { criarAutenticadorBanco, lerUsuariosDoEnv, type Autenticador } from "./auth/autenticador.js";
 import { criarProvedorOidc, type ProvedorSso } from "./auth/oidc.js";
 import { registrarSso } from "./rotas/sso.js";
@@ -50,6 +51,8 @@ export type OpcoesApp = {
   sso?: ProvedorSso | null;
   /** Cliente do Jira (testes). Se omitido, vem de JIRA_* no .env. */
   jira?: ClienteJira | null;
+  /** Recebe cada rota registrada (testes de autorização). */
+  aoRegistrarRota?: (rota: RouteOptions) => void;
 };
 
 export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
@@ -57,6 +60,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     logger: { level: process.env.NODE_ENV === "test" ? "silent" : "info" },
     trustProxy: config.confiarProxy,
   });
+  if (opcoes.aoRegistrarRota) app.addHook("onRoute", opcoes.aoRegistrarRota);
   registrarCabecalhos(app);
   registrarErros(app);
 
@@ -174,14 +178,18 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     }
   }
   registrarJira(app, { cliente: clienteJira, projetos: config.jiraProjetos, historico, jira: new RepositorioJira(banco), usuarios });
-  registrarAdmin(app, { ajustes, usuarios, backups, auditoria });
+  // Rotas de admin num plugin encapsulado, com a checagem de admin própria dele.
+  await app.register(async (admin) => {
+    exigirAdmin(admin);
+    registrarAdmin(admin, { ajustes, usuarios, backups, auditoria });
+  });
 
   // Em produção o servidor também entrega o build do web/.
   const pastaWeb = opcoes.pastaWeb ?? pastaWebPadrao;
   if (existsSync(path.join(pastaWeb, "index.html"))) {
     await app.register(fastifyStatic, { root: pastaWeb });
     app.setNotFoundHandler((req, reply) => {
-      if (req.url.startsWith("/api/")) {
+      if (pareceApi(req.url)) {
         return reply.code(404).send({ erro: "Rota não encontrada." });
       }
       return reply.sendFile("index.html");
