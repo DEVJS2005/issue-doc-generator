@@ -114,7 +114,8 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 | 31 | **Autorização das rotas da API reforçada:** regra pela rota registrada, negação por padrão (só uma lista explícita de rotas públicas), checagem própria de admin nas rotas de administração e testes que percorrem todas as rotas da API. | ✅ PR #34 |
 | 32 | **IP do cliente atrás de proxy:** `CONFIAR_PROXY` com número de saltos ou lista de IP/CIDR (`true` = 1 proxy), limite de login também por conta, porta publicada só em `127.0.0.1` e guia do nginx/Caddy/Traefik. | ✅ PR #35 |
 | 33 | **Jira: projetos liberados.** `JIRA_PROJETOS` filtra a lista e é conferido no servidor nos tipos e na criação (403 fora da lista); a URL do Jira só para o admin. | ✅ PR #36 |
-| 34 | **Refinar a partir do histórico:** com `historicoId`, a base é a versão atual e a entrada guardadas; versão antiga na tela dá 409. | Em revisão no PR #37 |
+| 34 | **Refinar a partir do histórico:** com `historicoId`, a base é a versão atual e a entrada guardadas; versão antiga na tela dá 409. | ✅ PR #37 |
+| 35 | **Texto do Jira:** escapar `!`, `_`, `+` e `??`, e neutralizar `{noformat}`/`{code}` dentro do bloco de código. | Em revisão no PR #38 |
 
 Ficaram de fora nesta rodada:
 - cenários em Gherkin;
@@ -195,3 +196,7 @@ Passo a passo completo em [INSTALACAO-DOCKER.md](INSTALACAO-DOCKER.md). Em resum
 - **23/11, refinar:**
   - a base do refinamento de uma issue do histórico vem do banco, não do pedido;
   - a tela manda o número da versão; versão antiga recebe 409 e a pessoa abre a issue de novo.
+- **23/11, texto do Jira:**
+  - o itálico que o próprio Markdown da issue gera continua itálico; o resto do texto é escapado;
+  - dentro do bloco de código, `{noformat}` e `{code}` ganham um espaço de largura zero depois da
+    chave (o Jira não lê escape ali).

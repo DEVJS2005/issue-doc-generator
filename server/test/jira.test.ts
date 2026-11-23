@@ -74,6 +74,34 @@ describe("Markdown para o texto do Jira", () => {
     expect(emLinha("palavra-composta continua")).toBe("palavra-composta continua");
   });
 
+  it("não deixa o texto virar imagem, menção, macro nem fechar o bloco de código", () => {
+    const md = [
+      "Veja !https://exemplo.dev/x.png! e avise [~usuario] ou [link|javascript:alert(1)].",
+      "Texto com +sublinhado+, ??citação??, {color:red}vermelho{color} e nome_de_campo.",
+      "h1. não é título",
+      "bq. nem citação",
+      "Código `!img.png! [~ana] {noformat}` em linha.",
+      "```",
+      "linha antes",
+      "{noformat}",
+      "*isto continua dentro do bloco*",
+      "{code}",
+      "```",
+      "_Não se aplica._",
+    ].join("\n");
+    const jira = markdownParaJira(md).split("\n");
+    expect(jira[0]).toBe("Veja \\!https://exemplo.dev/x.png\\! e avise \\[\\~usuario\\] ou \\[link\\|javascript:alert(1)\\].");
+    expect(jira[1]).toBe("Texto com \\+sublinhado\\+, \\?\\?citação\\?\\?, \\{color:red\\}vermelho\\{color\\} e nome\\_de\\_campo.");
+    expect(jira[2]).toBe("h1\\. não é título");
+    expect(jira[3]).toBe("bq\\. nem citação");
+    expect(jira[4]).toBe("Código {{\\!img.png\\! \\[\\~ana\\] \\{noformat\\}}} em linha.");
+    // O bloco abre uma vez e fecha uma vez: o {noformat} e o {code} de dentro não contam.
+    expect(jira.filter((l) => l === "{noformat}")).toHaveLength(2);
+    expect(jira.slice(5, 11)).toEqual(["{noformat}", "linha antes", "{\u200bnoformat}", "*isto continua dentro do bloco*", "{\u200bcode}", "{noformat}"]);
+    // Itálico do próprio Markdown da issue continua itálico.
+    expect(jira[11]).toBe("_Não se aplica._");
+  });
+
   it("converte as issues de exemplo sem sobrar Markdown de tabela nem de título", () => {
     for (const e of EXEMPLOS) {
       const jira = markdownParaJira(montarMarkdown(e.saida));
