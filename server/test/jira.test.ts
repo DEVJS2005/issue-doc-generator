@@ -168,9 +168,9 @@ describe("rotas do Jira", () => {
     },
   };
 
-  async function app(jira: ReturnType<typeof criarClienteJira> | null) {
+  async function app(jira: ReturnType<typeof criarClienteJira> | null, projetos = "LOJ,ADM") {
     const a = await montarApp(
-      carregarConfig({ USUARIOS_PERMITIDOS: `${USUARIO_TESTE},outra@exemplo.dev:senha-da-outra`, ANTHROPIC_API_KEY: "sk-teste" }),
+      carregarConfig({ USUARIOS_PERMITIDOS: `${USUARIO_TESTE},outra@exemplo.dev:senha-da-outra`, ANTHROPIC_API_KEY: "sk-teste", JIRA_PROJETOS: projetos }),
       { provedor, jira },
     );
     const cookie = await entrar(a, "outra@exemplo.dev", "senha-da-outra");
@@ -219,6 +219,56 @@ describe("rotas do Jira", () => {
     const terceiro = await entrar(a, "qa@exemplo.dev", "senha-de-teste");
     expect((await a.inject({ method: "GET", url: `/api/historico/${id}/jira`, headers: { cookie: terceiro } })).statusCode).toBe(200);
     await a.close();
+  });
+
+  it("só lista, mostra os tipos e cria nos projetos de JIRA_PROJETOS", async () => {
+    const { pedidos, buscar } = jiraFalso(RESPOSTAS);
+    const { a, cookie, id } = await app(criarClienteJira(CLOUD, buscar), "loj");
+    const projetos = (await a.inject({ method: "GET", url: "/api/jira/projetos", headers: { cookie } })).json().projetos;
+    expect(projetos).toEqual([{ chave: "LOJ", nome: "Loja" }]);
+
+    const tipos = await a.inject({ method: "GET", url: "/api/jira/tipos?projeto=ADM", headers: { cookie } });
+    expect(tipos.statusCode).toBe(403);
+    expect(tipos.json().erro.codigo).toBe("projeto_nao_permitido");
+
+    const fora = await a.inject({ method: "POST", url: `/api/historico/${id}/jira`, headers: { cookie }, payload: { projeto: "ADM", tipoId: "10001" } });
+    expect(fora.statusCode).toBe(403);
+    expect(fora.json().erro.mensagem).toContain("JIRA_PROJETOS");
+    expect(pedidos.filter((p) => p.metodo === "POST")).toHaveLength(0);
+
+    const dentro = await a.inject({ method: "POST", url: `/api/historico/${id}/jira`, headers: { cookie }, payload: { projeto: "LOJ", tipoId: "10001" } });
+    expect(dentro.statusCode).toBe(201);
+    await a.close();
+  });
+
+  it("JIRA_PROJETOS vazio não libera nenhum projeto; * libera todos", async () => {
+    const vazio = jiraFalso(RESPOSTAS);
+    const v = await app(criarClienteJira(CLOUD, vazio.buscar), "");
+    expect((await v.a.inject({ method: "GET", url: "/api/jira/projetos", headers: { cookie: v.cookie } })).json().projetos).toEqual([]);
+    const r = await v.a.inject({ method: "POST", url: `/api/historico/${v.id}/jira`, headers: { cookie: v.cookie }, payload: { projeto: "LOJ", tipoId: "10001" } });
+    expect(r.statusCode).toBe(403);
+    expect(vazio.pedidos.filter((p) => p.metodo === "POST")).toHaveLength(0);
+    await v.a.close();
+
+    const todos = jiraFalso(RESPOSTAS);
+    const t = await app(criarClienteJira(CLOUD, todos.buscar), "*");
+    expect((await t.a.inject({ method: "GET", url: "/api/jira/projetos", headers: { cookie: t.cookie } })).json().projetos).toHaveLength(2);
+    await t.a.close();
+  });
+
+  it("a URL do Jira só aparece para o admin", async () => {
+    const { buscar } = jiraFalso(RESPOSTAS);
+    const { a, cookie } = await app(criarClienteJira(CLOUD, buscar));
+    expect((await a.inject({ method: "GET", url: "/api/jira", headers: { cookie } })).json()).toEqual({ ligado: true, url: null });
+    const admin = await entrar(a);
+    expect((await a.inject({ method: "GET", url: "/api/jira", headers: { cookie: admin } })).json()).toEqual({ ligado: true, url: "https://empresa.atlassian.net" });
+    await a.close();
+  });
+
+  it("lê JIRA_PROJETOS: chaves em maiúsculas, * ou vazio", () => {
+    expect(carregarConfig({ JIRA_PROJETOS: " loj, App " }).jiraProjetos).toEqual(["LOJ", "APP"]);
+    expect(carregarConfig({ JIRA_PROJETOS: "*" }).jiraProjetos).toBe("*");
+    expect(carregarConfig({}).jiraProjetos).toEqual([]);
   });
 
   it("sem login, as rotas do Jira respondem 401", async () => {

@@ -21,7 +21,7 @@ import { RepositorioHistorico } from "./banco/historico.js";
 import { RepositorioJira } from "./banco/jira.js";
 import { RepositorioLinks } from "./banco/links.js";
 import { RepositorioUsuarios } from "./banco/usuarios.js";
-import type { Config } from "./config.js";
+import { trustProxyDoFastify, type Config } from "./config.js";
 import { criarProvedor } from "./ia/index.js";
 import { criarClienteJira, type ClienteJira } from "./integracoes/jira.js";
 import type { Provedor } from "./ia/tipos.js";
@@ -58,7 +58,7 @@ export type OpcoesApp = {
 export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   const app = Fastify({
     logger: { level: process.env.NODE_ENV === "test" ? "silent" : "info" },
-    trustProxy: config.confiarProxy,
+    trustProxy: trustProxyDoFastify(config.confiarProxy),
   });
   if (opcoes.aoRegistrarRota) app.addHook("onRoute", opcoes.aoRegistrarRota);
   registrarCabecalhos(app);
@@ -171,8 +171,13 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   // Depois do rate-limit: o plugin só vale para rotas registradas depois dele.
   registrarLinks(app, { historico, links: new RepositorioLinks(banco), usuarios });
   const clienteJira = opcoes.jira !== undefined ? opcoes.jira : config.jira ? criarClienteJira(config.jira) : null;
-  if (clienteJira) app.log.info(`Jira ligado: ${clienteJira.url}`);
-  registrarJira(app, { cliente: clienteJira, historico, jira: new RepositorioJira(banco), usuarios });
+  if (clienteJira) {
+    app.log.info(`Jira ligado: ${clienteJira.url}`);
+    if (config.jiraProjetos !== "*" && config.jiraProjetos.length === 0) {
+      app.log.warn("JIRA_PROJETOS vazio: nenhum projeto do Jira está liberado e o envio fica bloqueado. Liste as chaves (ex.: LOJ,APP) ou use * para todos.");
+    }
+  }
+  registrarJira(app, { cliente: clienteJira, projetos: config.jiraProjetos, historico, jira: new RepositorioJira(banco), usuarios });
   // Rotas de admin num plugin encapsulado, com a checagem de admin própria dele.
   await app.register(async (admin) => {
     exigirAdmin(admin);

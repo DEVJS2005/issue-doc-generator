@@ -64,8 +64,10 @@ export function usuarioDaRequisicao(request: FastifyRequest, o: OpcoesAuth): Usu
 }
 
 export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
-  // 10 tentativas por IP a cada 15 minutos, para login e para a configuração inicial.
+  // 10 tentativas por IP a cada 15 minutos, para login e para a configuração inicial. O login tem
+  // também 10 por conta (nome ou e-mail), que valem mesmo quando os pedidos vêm de IPs diferentes.
   const tentativas = new Limitador(10, 15 * 60_000);
+  const porConta = new Limitador(10, 15 * 60_000);
 
   // onRequest: barra quem não tem sessão antes de ler o corpo (a geração aceita até 18 MB com prints).
   // Decide pelo padrão da rota que o roteador escolheu, não pela URL recebida: assim o
@@ -93,12 +95,18 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
     }
     const corpo = CorpoLogin.safeParse(request.body);
     if (!corpo.success) return reply.code(400).send(erro("entrada_invalida", corpo.error.issues[0]?.message ?? "Entrada inválida."));
+    const conta = corpo.data.login.normalize("NFKC").toLowerCase();
+    if (!porConta.tentar(conta).ok) {
+      request.log.warn({ evento: "login_conta_limitada" }, "login: limite de tentativas da conta");
+      return reply.code(429).send(erro("muitas_tentativas", "Muitas tentativas de login. Aguarde alguns minutos.", true));
+    }
     const usuario = await o.autenticador.autenticar(corpo.data.login, corpo.data.senha);
     if (!usuario) {
       request.log.info({ evento: "login_falhou" }, "login: usuário ou senha incorretos");
       return reply.code(401).send(erro("credenciais_invalidas", "Usuário ou senha incorretos.", true));
     }
     tentativas.limpar(request.ip);
+    porConta.limpar(conta);
     request.log.info({ evento: "login", usuario: usuario.email }, "login: ok");
     return entrar(request, reply, usuario);
   });

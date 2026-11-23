@@ -101,6 +101,7 @@ export function EnviarJira({ historicoId, aoFalhar }: { historicoId: number; aoF
         </p>
       ) : (
         <div className="jira-form">
+          {projetos?.length === 0 && <p className="legenda">Nenhum projeto do Jira liberado. Fale com o administrador.</p>}
           <label>
             Projeto
             <select value={escolha.projeto} onChange={(e) => setEscolha({ projeto: e.target.value, tipoId: "" })} disabled={!projetos}>
