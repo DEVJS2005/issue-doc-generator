@@ -47,6 +47,7 @@ const config = carregarConfig({
   SEGREDO_SESSAO: "segredo-e2e",
   LIMITE_POR_HORA: "100",
   PORTA: String(PORTA_E2E),
+  JIRA_PROJETOS: "LOJ",
 });
 
 // Jira falso: um projeto, dois tipos; a criação numera LOJ-1, LOJ-2...

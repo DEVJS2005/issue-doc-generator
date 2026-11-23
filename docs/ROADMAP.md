@@ -112,6 +112,8 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 | # | Item | Estado / estimativa |
 |---|---|---|
 | 31 | **Autorização das rotas da API reforçada:** regra pela rota registrada, negação por padrão (só uma lista explícita de rotas públicas), checagem própria de admin nas rotas de administração e testes que percorrem todas as rotas da API. | ✅ PR #34 |
+| 32 | **IP do cliente atrás de proxy:** `CONFIAR_PROXY` com número de saltos ou lista de IP/CIDR (`true` = 1 proxy), limite de login também por conta, porta publicada só em `127.0.0.1` e guia do nginx/Caddy/Traefik. | ✅ PR #35 |
+| 33 | **Jira: projetos liberados.** `JIRA_PROJETOS` filtra a lista e é conferido no servidor nos tipos e na criação (403 fora da lista); a URL do Jira só para o admin. | ✅ PR #36 |
 | 34 | **Refinar a partir do histórico:** com `historicoId`, a base é a versão atual e a entrada guardadas; versão antiga na tela dá 409. | Em revisão no PR #37 |
 
 Ficaram de fora nesta rodada:
@@ -177,6 +179,13 @@ Passo a passo completo em [INSTALACAO-DOCKER.md](INSTALACAO-DOCKER.md). Em resum
   - autorização das rotas da API pela rota registrada no servidor, com negação por padrão: rota nova
     nasce exigindo login, e rota pública precisa entrar numa lista explícita;
   - as rotas de administração ganham uma checagem própria de admin (defesa em profundidade).
+- **23/11, proxy:**
+  - `CONFIAR_PROXY=true` passa a valer um proxy na frente, não "qualquer um";
+  - o limite de login vale por IP e por conta;
+  - o `docker-compose.yml` publica a porta só em `127.0.0.1`.
+- **23/11, Jira:**
+  - `JIRA_PROJETOS` vazio não libera nenhum projeto (seguro por padrão); `*` libera todos;
+  - quem já usa o Jira precisa preencher a variável ao atualizar (aviso no log e no CHANGELOG).
 - **23/11, refinar:**
   - a base do refinamento de uma issue do histórico vem do banco, não do pedido;
   - a tela manda o número da versão; versão antiga recebe 409 e a pessoa abre a issue de novo.
