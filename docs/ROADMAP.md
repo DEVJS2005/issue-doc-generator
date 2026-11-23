@@ -111,7 +111,7 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 
 | # | Item | Estado / estimativa |
 |---|---|---|
-| 31 | **Autorização das rotas da API reforçada:** regra pela rota registrada, negação por padrão (só uma lista explícita de rotas públicas), checagem própria de admin nas rotas de administração e testes que percorrem todas as rotas da API. | Em revisão (PR aberto) |
+| 31 | **Autorização das rotas da API reforçada:** regra pela rota registrada, negação por padrão (só uma lista explícita de rotas públicas), checagem própria de admin nas rotas de administração e testes que percorrem todas as rotas da API. | Em revisão no PR #34 |
 
 Ficaram de fora nesta rodada:
 - cenários em Gherkin;
