@@ -12,7 +12,10 @@ services:
       ARQUIVO_BANCO: /app/data/issue-doc-generator.db
       PORTA: "3000"
     ports:
-      - "${PORTA_HOST:-3000}:3000"
+      # Só nesta máquina (127.0.0.1): o proxy com HTTPS, no mesmo servidor, encaminha para cá.
+      # Sem proxy, para abrir para a rede, troque por "${PORTA_HOST:-3000}:3000" e deixe
+      # CONFIAR_PROXY=false (senão o IP de quem acessa pode ser forjado).
+      - "127.0.0.1:${PORTA_HOST:-3000}:3000"
     volumes:
       - dados:/app/data
     restart: unless-stopped

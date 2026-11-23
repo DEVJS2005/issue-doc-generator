@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
+import { ERRO_NAO_AUTENTICADO, ERRO_SEM_PERMISSAO, rotaExigeAdmin, rotaExigeLogin } from "../auth/acesso.js";
 import type { Autenticador, Usuario } from "../auth/autenticador.js";
 import { Limitador } from "../auth/limite.js";
 import { COOKIE_SESSAO, cookieSaida, cookieSessao, lerCookie, type Sessoes } from "../auth/sessao.js";
@@ -29,9 +30,6 @@ const CorpoConfigurar = z.object({
   email: z.string().trim().min(1, "Informe o e-mail.").max(200),
   senha: z.string().max(200),
 });
-
-/** Prefixos que exigem login; /api/admin exige também perfil de admin. */
-const PROTEGIDAS = ["/api/gerar", "/api/refinar", "/api/opcoes", "/api/historico", "/api/admin", "/api/jira"];
 
 function seguro(request: FastifyRequest) {
   return request.protocol === "https";
@@ -66,18 +64,21 @@ export function usuarioDaRequisicao(request: FastifyRequest, o: OpcoesAuth): Usu
 }
 
 export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
-  // 10 tentativas por IP a cada 15 minutos, para login e para a configuração inicial.
+  // 10 tentativas por IP a cada 15 minutos, para login e para a configuração inicial. O login tem
+  // também 10 por conta (nome ou e-mail), que valem mesmo quando os pedidos vêm de IPs diferentes.
   const tentativas = new Limitador(10, 15 * 60_000);
+  const porConta = new Limitador(10, 15 * 60_000);
 
   // onRequest: barra quem não tem sessão antes de ler o corpo (a geração aceita até 18 MB com prints).
+  // Decide pelo padrão da rota que o roteador escolheu, não pela URL recebida: assim o
+  // percent-encoding, as maiúsculas ou as barras extras não mudam a regra. Toda rota /api exige
+  // login, menos as públicas (auth/acesso.ts). Sem rota registrada, segue para o 404.
   app.addHook("onRequest", async (request, reply) => {
-    const caminho = request.url.split("?")[0];
-    if (!PROTEGIDAS.some((p) => caminho === p || caminho.startsWith(`${p}/`))) return;
+    const rota = request.routeOptions.url;
+    if (!rota || !rotaExigeLogin(rota)) return;
     const usuario = usuarioDaRequisicao(request, o);
-    if (!usuario) return reply.code(401).send(erro("nao_autenticado", "Entre com seu e-mail e senha para continuar."));
-    if (caminho.startsWith("/api/admin") && !usuario.admin) {
-      return reply.code(403).send(erro("sem_permissao", "Só administradores podem abrir esta área."));
-    }
+    if (!usuario) return reply.code(401).send({ erro: ERRO_NAO_AUTENTICADO });
+    if (rotaExigeAdmin(rota) && !usuario.admin) return reply.code(403).send({ erro: ERRO_SEM_PERMISSAO });
     request.usuario = usuario;
   });
 
@@ -94,12 +95,18 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
     }
     const corpo = CorpoLogin.safeParse(request.body);
     if (!corpo.success) return reply.code(400).send(erro("entrada_invalida", corpo.error.issues[0]?.message ?? "Entrada inválida."));
+    const conta = corpo.data.login.normalize("NFKC").toLowerCase();
+    if (!porConta.tentar(conta).ok) {
+      request.log.warn({ evento: "login_conta_limitada" }, "login: limite de tentativas da conta");
+      return reply.code(429).send(erro("muitas_tentativas", "Muitas tentativas de login. Aguarde alguns minutos.", true));
+    }
     const usuario = await o.autenticador.autenticar(corpo.data.login, corpo.data.senha);
     if (!usuario) {
       request.log.info({ evento: "login_falhou" }, "login: usuário ou senha incorretos");
       return reply.code(401).send(erro("credenciais_invalidas", "Usuário ou senha incorretos.", true));
     }
     tentativas.limpar(request.ip);
+    porConta.limpar(conta);
     request.log.info({ evento: "login", usuario: usuario.email }, "login: ok");
     return entrar(request, reply, usuario);
   });

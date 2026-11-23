@@ -9,6 +9,7 @@ import type { RepositorioUsuarios } from "../banco/usuarios.js";
 import { ErroGeracao } from "../ia/erros.js";
 import { listarModelos } from "../ia/modelos.js";
 import type { NomeProvedor } from "../ia/tipos.js";
+import { usuarioObrigatorio } from "../auth/acesso.js";
 
 function falhou(reply: FastifyReply, e: unknown) {
   if (e instanceof ErroValidacao) {
@@ -34,7 +35,6 @@ const CorpoAlterarUsuario = z.object({
 
 const PROVEDORES = ["anthropic", "openai", "openai_compativel", "gemini"] as const;
 
-/** /api/admin/*: o hook de auth já garante login e perfil de admin. */
 const FiltroAuditoria = z.object({
   quem: z.string().trim().max(200).optional(),
   acao: z.enum(ACOES_AUDITORIA).optional(),
@@ -44,6 +44,11 @@ const FiltroAuditoria = z.object({
   limite: z.coerce.number().int().min(1).max(200).optional(),
 });
 
+/**
+ * /api/admin/*: o hook geral de login já barra quem não é admin. Por defesa em profundidade, o
+ * app.ts registra estas rotas num plugin encapsulado com uma checagem própria de admin
+ * (exigirAdmin, em auth/acesso.ts).
+ */
 export function registrarAdmin(
   app: FastifyInstance,
   o: { ajustes: Ajustes; usuarios: RepositorioUsuarios; backups: Backups; auditoria: RepositorioAuditoria },
@@ -73,7 +78,7 @@ export function registrarAdmin(
     }
     const backup = o.backups.fazer();
     o.backups.podar(o.ajustes.valores().backupCopias);
-    request.log.info({ evento: "backup", nome: backup.nome, usuario: request.usuario!.email }, "administração: backup feito");
+    request.log.info({ evento: "backup", nome: backup.nome, usuario: usuarioObrigatorio(request).email }, "administração: backup feito");
     return reply.code(201).send({ backup });
   });
 
@@ -81,7 +86,7 @@ export function registrarAdmin(
     const nome = (request.params as { nome: string }).nome;
     const arquivo = o.backups.caminho(nome);
     if (!arquivo) return reply.code(404).send({ erro: { codigo: "nao_encontrado", mensagem: "Backup não encontrado.", podeTentarDeNovo: false } });
-    request.log.info({ evento: "backup_baixado", nome, usuario: request.usuario!.email }, "administração: backup baixado");
+    request.log.info({ evento: "backup_baixado", nome, usuario: usuarioObrigatorio(request).email }, "administração: backup baixado");
     return reply
       .header("content-type", "application/vnd.sqlite3")
       .header("content-disposition", `attachment; filename="${nome}"`)
@@ -95,8 +100,8 @@ export function registrarAdmin(
 
   app.put("/api/admin/ajustes", async (request, reply) => {
     try {
-      o.ajustes.salvar(request.body, request.usuario!.email);
-      request.log.info({ evento: "ajustes_salvos", usuario: request.usuario!.email, valores: o.ajustes.valores() }, "administração: ajustes salvos");
+      o.ajustes.salvar(request.body, usuarioObrigatorio(request).email);
+      request.log.info({ evento: "ajustes_salvos", usuario: usuarioObrigatorio(request).email, valores: o.ajustes.valores() }, "administração: ajustes salvos");
       return estado();
     } catch (e) {
       return falhou(reply, e);
@@ -124,7 +129,7 @@ export function registrarAdmin(
     if (!corpo.success) return falhou(reply, new ErroValidacao("Dados do usuário inválidos."));
     try {
       const usuario = o.usuarios.criar(corpo.data.email, corpo.data.senha, corpo.data.admin, { nome: corpo.data.nome });
-      request.log.info({ evento: "usuario_criado", por: request.usuario!.email, usuario: usuario.email, admin: usuario.admin }, "administração: usuário criado");
+      request.log.info({ evento: "usuario_criado", por: usuarioObrigatorio(request).email, usuario: usuario.email, admin: usuario.admin }, "administração: usuário criado");
       return reply.code(201).send({ usuario });
     } catch (e) {
       return falhou(reply, e);
@@ -138,7 +143,7 @@ export function registrarAdmin(
     try {
       const usuario = o.usuarios.atualizar(id, corpo.data);
       request.log.info(
-        { evento: "usuario_alterado", por: request.usuario!.email, usuario: usuario.email, admin: usuario.admin, ativo: usuario.ativo, trocouSenha: corpo.data.senha !== undefined },
+        { evento: "usuario_alterado", por: usuarioObrigatorio(request).email, usuario: usuario.email, admin: usuario.admin, ativo: usuario.ativo, trocouSenha: corpo.data.senha !== undefined },
         "administração: usuário alterado",
       );
       return { usuario };

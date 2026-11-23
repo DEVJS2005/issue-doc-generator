@@ -21,7 +21,8 @@
     "test:e2e": "npm run build && playwright test",
     "dev:server": "npm run dev --workspace server",
     "dev:web": "npm run dev --workspace web",
-    "lint": "eslint . --max-warnings 0"
+    "lint": "eslint . --max-warnings 0",
+    "changelog": "npm run changelog --workspace server --"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

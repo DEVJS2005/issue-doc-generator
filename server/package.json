@@ -11,7 +11,8 @@
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prompt:istqb": "tsx scripts/gerar-base-istqb.ts",
-    "teste:ia-real": "tsx --env-file-if-exists=../.env scripts/teste-ia-real.ts"
+    "teste:ia-real": "tsx --env-file-if-exists=../.env scripts/teste-ia-real.ts",
+    "changelog": "tsx scripts/changelog.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

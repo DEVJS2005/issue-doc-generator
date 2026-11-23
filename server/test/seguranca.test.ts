@@ -55,7 +55,9 @@ describe("erros", () => {
     a.get("/api/teste-quebra", async () => {
       throw new Error("SQLITE_ERROR: no such table segredo_interno at C:\\caminho\\banco.ts");
     });
-    const r = await a.inject({ method: "GET", url: "/api/teste-quebra" });
+    // Rota nova da API exige login por padrão.
+    const cookie = await entrar(a);
+    const r = await a.inject({ method: "GET", url: "/api/teste-quebra", headers: { cookie } });
     expect(r.statusCode).toBe(500);
     expect(r.json()).toEqual({ erro: { codigo: "erro_interno", mensagem: "Algo deu errado no servidor. Tente de novo em instantes.", podeTentarDeNovo: true } });
     expect(r.body).not.toMatch(/SQLITE|segredo_interno|caminho/);

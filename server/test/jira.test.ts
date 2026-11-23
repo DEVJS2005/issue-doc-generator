@@ -74,6 +74,34 @@ describe("Markdown para o texto do Jira", () => {
     expect(emLinha("palavra-composta continua")).toBe("palavra-composta continua");
   });
 
+  it("não deixa o texto virar imagem, menção, macro nem fechar o bloco de código", () => {
+    const md = [
+      "Veja !https://exemplo.dev/x.png! e avise [~usuario] ou [link|javascript:alert(1)].",
+      "Texto com +sublinhado+, ??citação??, {color:red}vermelho{color} e nome_de_campo.",
+      "h1. não é título",
+      "bq. nem citação",
+      "Código `!img.png! [~ana] {noformat}` em linha.",
+      "```",
+      "linha antes",
+      "{noformat}",
+      "*isto continua dentro do bloco*",
+      "{code}",
+      "```",
+      "_Não se aplica._",
+    ].join("\n");
+    const jira = markdownParaJira(md).split("\n");
+    expect(jira[0]).toBe("Veja \\!https://exemplo.dev/x.png\\! e avise \\[\\~usuario\\] ou \\[link\\|javascript:alert(1)\\].");
+    expect(jira[1]).toBe("Texto com \\+sublinhado\\+, \\?\\?citação\\?\\?, \\{color:red\\}vermelho\\{color\\} e nome\\_de\\_campo.");
+    expect(jira[2]).toBe("h1\\. não é título");
+    expect(jira[3]).toBe("bq\\. nem citação");
+    expect(jira[4]).toBe("Código {{\\!img.png\\! \\[\\~ana\\] \\{noformat\\}}} em linha.");
+    // O bloco abre uma vez e fecha uma vez: o {noformat} e o {code} de dentro não contam.
+    expect(jira.filter((l) => l === "{noformat}")).toHaveLength(2);
+    expect(jira.slice(5, 11)).toEqual(["{noformat}", "linha antes", "{\u200bnoformat}", "*isto continua dentro do bloco*", "{\u200bcode}", "{noformat}"]);
+    // Itálico do próprio Markdown da issue continua itálico.
+    expect(jira[11]).toBe("_Não se aplica._");
+  });
+
   it("converte as issues de exemplo sem sobrar Markdown de tabela nem de título", () => {
     for (const e of EXEMPLOS) {
       const jira = markdownParaJira(montarMarkdown(e.saida));
@@ -140,9 +168,9 @@ describe("rotas do Jira", () => {
     },
   };
 
-  async function app(jira: ReturnType<typeof criarClienteJira> | null) {
+  async function app(jira: ReturnType<typeof criarClienteJira> | null, projetos = "LOJ,ADM") {
     const a = await montarApp(
-      carregarConfig({ USUARIOS_PERMITIDOS: `${USUARIO_TESTE},outra@exemplo.dev:senha-da-outra`, ANTHROPIC_API_KEY: "sk-teste" }),
+      carregarConfig({ USUARIOS_PERMITIDOS: `${USUARIO_TESTE},outra@exemplo.dev:senha-da-outra`, ANTHROPIC_API_KEY: "sk-teste", JIRA_PROJETOS: projetos }),
       { provedor, jira },
     );
     const cookie = await entrar(a, "outra@exemplo.dev", "senha-da-outra");
@@ -191,6 +219,56 @@ describe("rotas do Jira", () => {
     const terceiro = await entrar(a, "qa@exemplo.dev", "senha-de-teste");
     expect((await a.inject({ method: "GET", url: `/api/historico/${id}/jira`, headers: { cookie: terceiro } })).statusCode).toBe(200);
     await a.close();
+  });
+
+  it("só lista, mostra os tipos e cria nos projetos de JIRA_PROJETOS", async () => {
+    const { pedidos, buscar } = jiraFalso(RESPOSTAS);
+    const { a, cookie, id } = await app(criarClienteJira(CLOUD, buscar), "loj");
+    const projetos = (await a.inject({ method: "GET", url: "/api/jira/projetos", headers: { cookie } })).json().projetos;
+    expect(projetos).toEqual([{ chave: "LOJ", nome: "Loja" }]);
+
+    const tipos = await a.inject({ method: "GET", url: "/api/jira/tipos?projeto=ADM", headers: { cookie } });
+    expect(tipos.statusCode).toBe(403);
+    expect(tipos.json().erro.codigo).toBe("projeto_nao_permitido");
+
+    const fora = await a.inject({ method: "POST", url: `/api/historico/${id}/jira`, headers: { cookie }, payload: { projeto: "ADM", tipoId: "10001" } });
+    expect(fora.statusCode).toBe(403);
+    expect(fora.json().erro.mensagem).toContain("JIRA_PROJETOS");
+    expect(pedidos.filter((p) => p.metodo === "POST")).toHaveLength(0);
+
+    const dentro = await a.inject({ method: "POST", url: `/api/historico/${id}/jira`, headers: { cookie }, payload: { projeto: "LOJ", tipoId: "10001" } });
+    expect(dentro.statusCode).toBe(201);
+    await a.close();
+  });
+
+  it("JIRA_PROJETOS vazio não libera nenhum projeto; * libera todos", async () => {
+    const vazio = jiraFalso(RESPOSTAS);
+    const v = await app(criarClienteJira(CLOUD, vazio.buscar), "");
+    expect((await v.a.inject({ method: "GET", url: "/api/jira/projetos", headers: { cookie: v.cookie } })).json().projetos).toEqual([]);
+    const r = await v.a.inject({ method: "POST", url: `/api/historico/${v.id}/jira`, headers: { cookie: v.cookie }, payload: { projeto: "LOJ", tipoId: "10001" } });
+    expect(r.statusCode).toBe(403);
+    expect(vazio.pedidos.filter((p) => p.metodo === "POST")).toHaveLength(0);
+    await v.a.close();
+
+    const todos = jiraFalso(RESPOSTAS);
+    const t = await app(criarClienteJira(CLOUD, todos.buscar), "*");
+    expect((await t.a.inject({ method: "GET", url: "/api/jira/projetos", headers: { cookie: t.cookie } })).json().projetos).toHaveLength(2);
+    await t.a.close();
+  });
+
+  it("a URL do Jira só aparece para o admin", async () => {
+    const { buscar } = jiraFalso(RESPOSTAS);
+    const { a, cookie } = await app(criarClienteJira(CLOUD, buscar));
+    expect((await a.inject({ method: "GET", url: "/api/jira", headers: { cookie } })).json()).toEqual({ ligado: true, url: null });
+    const admin = await entrar(a);
+    expect((await a.inject({ method: "GET", url: "/api/jira", headers: { cookie: admin } })).json()).toEqual({ ligado: true, url: "https://empresa.atlassian.net" });
+    await a.close();
+  });
+
+  it("lê JIRA_PROJETOS: chaves em maiúsculas, * ou vazio", () => {
+    expect(carregarConfig({ JIRA_PROJETOS: " loj, App " }).jiraProjetos).toEqual(["LOJ", "APP"]);
+    expect(carregarConfig({ JIRA_PROJETOS: "*" }).jiraProjetos).toBe("*");
+    expect(carregarConfig({}).jiraProjetos).toEqual([]);
   });
 
   it("sem login, as rotas do Jira respondem 401", async () => {

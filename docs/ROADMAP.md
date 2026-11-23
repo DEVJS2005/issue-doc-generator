@@ -108,10 +108,26 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 | 29 | **Teste com IA real no CI.** Workflow semanal (e manual) que gera uma issue curta em cada provedor com chave guardada nos *secrets* do GitHub. Se o SDK ou a API mudar, o CI avisa antes do usuário. Fica fora dos PRs, para não gastar tokens a cada push. | ✅ PR #27. Falta cadastrar a chave nos *secrets*. |
 | 30 | **Menos PRs do Dependabot.** Agrupar as atualizações das Actions num PR só por semana (`groups` no `dependabot.yml`). Hoje vieram 8 PRs separados. | ✅ PR #27. |
 
+### Reforço do acesso (23/11)
+
+| # | Item | Estado / estimativa |
+|---|---|---|
+| 31 | **Autorização das rotas da API reforçada:** regra pela rota registrada, negação por padrão (só uma lista explícita de rotas públicas), checagem própria de admin nas rotas de administração e testes que percorrem todas as rotas da API. | ✅ PR #34 |
+| 32 | **IP do cliente atrás de proxy:** `CONFIAR_PROXY` com número de saltos ou lista de IP/CIDR (`true` = 1 proxy), limite de login também por conta, porta publicada só em `127.0.0.1` e guia do nginx/Caddy/Traefik. | ✅ PR #35 |
+| 33 | **Jira: projetos liberados.** `JIRA_PROJETOS` filtra a lista e é conferido no servidor nos tipos e na criação (403 fora da lista); a URL do Jira só para o admin. | ✅ PR #36 |
+| 34 | **Refinar a partir do histórico:** com `historicoId`, a base é a versão atual e a entrada guardadas; versão antiga na tela dá 409. | ✅ PR #37 |
+| 35 | **Texto do Jira:** escapar `!`, `_`, `+` e `??`, e neutralizar `{noformat}`/`{code}` dentro do bloco de código. | Em revisão no PR #38 |
+
 Ficaram de fora nesta rodada:
 - cenários em Gherkin;
 - contexto fixo por produto;
 - modelos de issue por time.
+
+### Processo (23/11)
+
+| # | Item | Estado / estimativa |
+|---|---|---|
+| 36 | **Fila de PRs sem conflito:** changelog e roadmap por fragmento (`changelog.d/`, juntados no release) e workflow que atualiza as branches dos PRs com a `main`. | Em revisão |
 
 ## Para o DevOps
 

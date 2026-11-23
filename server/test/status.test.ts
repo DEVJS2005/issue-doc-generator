@@ -75,7 +75,7 @@ describe("status da issue", () => {
       method: "POST",
       url: "/api/refinar",
       headers: { cookie: comum },
-      payload: { entrada: ENTRADA, issue: issueExemplo(), ajuste: "Prioridade Alta", historicoId: id },
+      payload: { entrada: ENTRADA, issue: issueExemplo(), ajuste: "Prioridade Alta", historicoId: id, versao: 1 },
     });
     const aberta = await ler(comum);
     expect(aberta.item.status).toBe("rascunho");

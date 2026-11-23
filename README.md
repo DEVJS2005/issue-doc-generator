@@ -95,10 +95,12 @@ Brazilian Portuguese.
 issue-doc-generator/
 ├── server/
 │   ├── prompts/           sistema.md (instruções) e istqb-base.md (gerado do submódulo)
-│   ├── scripts/           gerar-base-istqb.ts e teste-ia-real.ts (teste semanal com IA real)
+│   ├── scripts/           gerar-base-istqb.ts, teste-ia-real.ts (teste semanal com IA real) e
+│   │                      changelog.ts (junta changelog.d/ no CHANGELOG e no ROADMAP)
 │   ├── src/
 │   │   ├── ajustes/       configuração em uso (.env + o que a administração salvou)
-│   │   ├── auth/          adaptador de login, senhas (scrypt), sessão assinada, limite de uso
+│   │   ├── auth/          adaptador de login, regras de acesso das rotas, senhas (scrypt),
+│   │   │                  sessão assinada, limite de uso
 │   │   ├── banco/         SQLite: migrações, usuários, configuração, histórico, links,
 │   │   │                  backups, auditoria e envios ao Jira
 │   │   ├── ia/            um arquivo por provedor, modelo reserva, lista de modelos, erros,
@@ -117,6 +119,7 @@ issue-doc-generator/
 ├── data/                  banco SQLite (criado na 1ª subida; fora do git)
 ├── e2e/                   Playwright
 ├── docs/                  INSTALACAO-DOCKER.md, ROADMAP.md e istqb-ai-ready/ (submódulo git)
+├── changelog.d/           um fragmento do changelog por PR, juntado no release
 ├── .github/               CI, CodeQL, publicação no ghcr.io, teste com IA real, Dependabot
 ├── .env.example
 ├── docker-compose.yml     instalação pela imagem pronta (docker-compose.build.yml constrói do código)
@@ -152,7 +155,7 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 
 | Comando | O que roda |
 |---|---|
-| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões, 1º admin, administração, usuários, modelo reserva, histórico, status, links, backup, auditoria, nota de qualidade, imagens, Jira, cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
+| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões, acesso de cada rota da API, IP atrás de proxy, limite de login por IP e por conta, 1º admin, administração, usuários, modelo reserva, histórico, refinar a partir da versão guardada, status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
 | `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, status, CSV, link de leitura, idioma, administração, backup, auditoria, nota de qualidade, prints, Jira (falso), CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos |
 | `npm run typecheck` | TypeScript do servidor e da tela |
 | `npm run lint` | ESLint (TypeScript e regras dos hooks do React), sem tolerar avisos |
@@ -174,6 +177,9 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
   `ghcr.io/devjs2005/issue-doc-generator:main`. Uma tag `vX.Y.Z` publica `:X.Y.Z` e `:latest` e
   cria o Release com o trecho do CHANGELOG. A tag só é aceita se bater com o `package.json` e
   tiver uma seção no CHANGELOG.
+- **Atualizar PRs** (`.github/workflows/atualizar-prs.yml`): a cada push na `main`, atualiza com ela
+  as branches dos PRs abertos que ficaram para trás (precisa do segredo `ATUALIZAR_PRS_TOKEN`; veja o
+  [CONTRIBUTING](CONTRIBUTING.md)). Com o auto-merge ligado no PR, a fila anda sozinha.
 - **Regra da `main`:** só entra por PR, com os checks acima verdes e a branch atualizada; push
   direto e force push são bloqueados.
 
@@ -213,7 +219,9 @@ O guia completo é o [docs/INSTALACAO-DOCKER.md](docs/INSTALACAO-DOCKER.md). Em 
 3. Pegue no log o link `/configurar?codigo=...` e crie o primeiro admin. Na Administração, escolha
    provedor e modelo e cadastre os usuários.
 4. Coloque um proxy com HTTPS na frente da porta 3000, com `CONFIAR_PROXY=true`, sem buffer na rota
-   da API (streaming) e com tempo de leitura acima do tempo limite da Administração.
+   da API (streaming) e com tempo de leitura acima do tempo limite da Administração. O
+   `docker-compose.yml` publica a porta só em `127.0.0.1`; não deixe a 3000 aberta para a rede
+   com `CONFIAR_PROXY` ligado.
 5. O backup é diário e automático, dentro do volume (pasta `backups`); copie essa pasta para fora
    do servidor. Os logs saem em JSON no stdout, sem o texto das descrições.
 
@@ -290,6 +298,9 @@ atualizam o Jira.
   (token de API da conta).
 - **Jira Data Center:** `JIRA_URL` e `JIRA_TOKEN` com um token de acesso pessoal (PAT), e
   `JIRA_EMAIL` vazio.
+- **Projetos liberados:** `JIRA_PROJETOS` com as chaves, separadas por vírgula (ex.: `LOJ,APP`).
+  A tela só mostra esses projetos, e o servidor recusa os outros. `*` libera todos os que o token
+  alcança; vazio não libera nenhum (o servidor avisa no log).
 
 As credenciais ficam só no servidor. Use uma conta de serviço com permissão de criar issues nos
 projetos do time: todas as issues são criadas em nome dela. Usa a REST API v2, que existe nas duas
@@ -405,9 +416,14 @@ Resumo das proteções. Para relatar uma vulnerabilidade, veja o [SECURITY.md](S
 
 - **Senhas** com hash scrypt e sal; **sessão** em cookie `HttpOnly`, `SameSite=Strict` (e `Secure`
   atrás de HTTPS), assinado com HMAC. Trocar a senha ou desativar alguém encerra as sessões abertas
-  dessa pessoa. Login com limite de 10 tentativas por IP a cada 15 minutos.
-- **Acesso:** a sessão é conferida antes de ler o corpo do pedido; cada pessoa vê só as próprias
-  issues, e a administração exige perfil de admin. As credenciais (chaves de IA, Jira, OIDC) ficam
+  dessa pessoa. Login com limite de 10 tentativas a cada 15 minutos por IP e também por conta.
+  Atrás de proxy, o IP real vem só dos proxies confiáveis (`CONFIAR_PROXY`).
+- **Jira:** só os projetos de `JIRA_PROJETOS`, conferidos no servidor; a URL do Jira só aparece
+  para o admin.
+- **Acesso:** toda rota da API exige login, menos uma lista curta de rotas públicas (saúde, login,
+  configuração inicial, SSO e leitura por link); a regra vale pela rota registrada, não pelo texto
+  da URL. A sessão é conferida antes de ler o corpo do pedido; cada pessoa vê só as próprias
+  issues, e a administração exige perfil de admin (conferido duas vezes). As credenciais (chaves de IA, Jira, OIDC) ficam
   só no servidor.
 - **Cabeçalhos** em todas as respostas: CSP só com a própria origem (sem script ou estilo embutido),
   `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy` e HSTS em HTTPS.
@@ -434,7 +450,7 @@ Só segredos e infraestrutura. Provedor, modelo, limites, usuários e retenção
 | `SEGREDO_SESSAO` | (vazio = temporário) | Assina o cookie de sessão. |
 | `SESSAO_HORAS` | `12` | Duração da sessão. |
 | `PORTA` | `3000` | Porta HTTP. |
-| `CONFIAR_PROXY` | `false` | `true` atrás de proxy reverso com HTTPS. |
+| `CONFIAR_PROXY` | `false` | Proxy reverso com HTTPS na frente: `true` (1 proxy), o número de proxies ou a lista de IP/CIDR deles. |
 | `ARQUIVO_BANCO` | `data/issue-doc-generator.db` (Docker: `/app/data/issue-doc-generator.db`) | Arquivo do banco SQLite. |
 | `REGISTRAR_DESCRICAO` | `false` | Registrar o texto da descrição nos logs (LGPD). |
 | `PRECO_POR_MTOK` | (vazio) | `entrada,saida,cacheLeitura,cacheEscrita` em US$/MTok, para o custo no log. |
@@ -448,6 +464,7 @@ Só segredos e infraestrutura. Provedor, modelo, limites, usuários e retenção
 | `JIRA_URL` | (vazio) | Endereço do Jira. Vazio desliga o botão "Criar no Jira". |
 | `JIRA_EMAIL` | (vazio) | E-mail da conta (Jira Cloud). Vazio no Data Center. |
 | `JIRA_TOKEN` | (vazio) | Token de API (Cloud) ou token de acesso pessoal (Data Center). |
+| `JIRA_PROJETOS` | (vazio = nenhum) | Chaves dos projetos liberados, separadas por vírgula; `*` libera todos. |
 
 **Formato antigo (opcional):** `PROVEDOR`, `MODELO`, `ESFORCO`, `LIMITE_POR_HORA` e
 `TEMPO_LIMITE_SEGUNDOS` ainda são lidos, mas só como ponto de partida enquanto a Administração
