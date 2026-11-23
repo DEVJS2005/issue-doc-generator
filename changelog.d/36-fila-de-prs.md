@@ -1,4 +1,5 @@
 categoria: Documentação
+pr: 39
 roadmap: 36
 decisao: changelog e roadmap por fragmento em `changelog.d/`, juntados no release; os PRs deixam de editar o `CHANGELOG.md`, a tabela de itens e o histórico de decisões
 decisao: workflow `atualizar-prs.yml` atualiza as branches dos PRs com a `main`, com um token próprio (o do Actions não dispara o CI)
