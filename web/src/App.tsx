@@ -455,7 +455,7 @@ function Gerador({
   function refinar(e: FormEvent) {
     e.preventDefault();
     if (!resultado || !entradaUsada) return;
-    const corpo = { entrada: entradaUsada, issue: resultado.issue, ajuste, historicoId: resultado.historicoId };
+    const corpo = { entrada: entradaUsada, issue: resultado.issue, ajuste, historicoId: resultado.historicoId, versao: meta.versao };
     void executar("refinar", "/api/refinar", corpo, (r) => {
       setResultado(r);
       setAjuste("");

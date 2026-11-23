@@ -47,6 +47,9 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 - Jira: só os projetos de `JIRA_PROJETOS` (chaves separadas por vírgula; `*` libera todos)
   aparecem e aceitam issues, conferidos no servidor. **Vazio não libera nenhum:** quem já usa o
   Jira precisa preencher `JIRA_PROJETOS` ao atualizar. A URL do Jira só aparece para o admin.
+- Refinar uma issue do histórico parte sempre da versão e da entrada guardadas no servidor. Se a
+  tela estiver numa versão antiga (outra aba ou outra pessoa refinou antes), o servidor recusa e
+  pede para abrir a issue de novo.
 - Cabeçalhos de segurança em todas as respostas: CSP só com a própria origem (o script de tema saiu
   do HTML para `/tema.js`), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`,
   `Permissions-Policy`, `Cross-Origin-Opener-Policy` e HSTS em HTTPS.

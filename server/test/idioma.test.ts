@@ -78,7 +78,7 @@ describe("geração em outro idioma (rota)", () => {
           method: "POST",
           url: "/api/refinar",
           headers: { cookie },
-          payload: { entrada: aberta.item.entrada, issue: issueExemplo(), ajuste: "High priority", historicoId: r.historicoId },
+          payload: { entrada: aberta.item.entrada, issue: issueExemplo(), ajuste: "High priority", historicoId: r.historicoId, versao: aberta.item.versoes },
         })
       ).body,
     );
