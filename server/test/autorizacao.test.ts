@@ -49,6 +49,9 @@ const hex = (c: string, maiuscula = false) => {
 /** O mesmo caminho escrito de outros jeitos que um roteador pode (ou não) entender igual. */
 function variacoes(caminho: string): string[] {
   const resto = caminho.slice("/api/".length);
+  // Só a primeira barra depois de /api/ vira %2F (de propósito).
+  const barra = resto.indexOf("/");
+  const umaBarraCodificada = barra < 0 ? resto : `${resto.slice(0, barra)}%2F${resto.slice(barra + 1)}`;
   const tudoCodificado = resto
     .split("/")
     .map((parte) => [...parte].map((c) => hex(c, true)).join(""))
@@ -59,7 +62,7 @@ function variacoes(caminho: string): string[] {
     `/api/${tudoCodificado}`,
     `/api%2F${resto}`,
     `/api%2f${resto}`,
-    `/api/${resto.replace("/", "%2F")}`,
+    `/api/${umaBarraCodificada}`,
     caminho.toUpperCase(),
     `/api/${resto[0].toUpperCase()}${resto.slice(1)}`,
     `/API/${resto}`,
