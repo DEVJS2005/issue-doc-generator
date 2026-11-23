@@ -3,12 +3,33 @@
 
 // Marcadores temporários (caracteres de controle que não aparecem no texto da issue).
 const NEGRITO = "\u0001";
+const ITALICO = "\u0004";
 const CODIGO_INI = "\u0002";
 const CODIGO_FIM = "\u0003";
 
-/** Escapa o que o Jira interpretaria como formatação: [ ] { } * ^ ~ | e o "-" de riscado. */
+/**
+ * Escapa o que o Jira interpretaria como formatação: [ ] (links e menções [~usuario]), { } (macros),
+ * * _ + ^ ~ (negrito, itálico, sublinhado, sobrescrito, subscrito), ! (imagem), | (tabela), ??
+ * (citação) e o "-" de riscado.
+ */
 function escapar(texto: string) {
-  return texto.replace(/[[\]{}*^~|]/g, (c) => `\\${c}`).replace(/(^|\s)-(?=\S)/g, "$1\\-");
+  return texto
+    .replace(/[[\]{}*^~|!_+]/g, (c) => `\\${c}`)
+    .replace(/\?\?/g, "\\?\\?")
+    .replace(/(^|\s)-(?=\S)/g, "$1\\-");
+}
+
+/** Linha de texto que o Jira leria como título ou citação (h1. … bq.): o ponto vira literal. */
+function semBlocoNoInicio(linha: string) {
+  return linha.replace(/^(\s*)(h[1-6]|bq)\./, "$1$2\\.");
+}
+
+/**
+ * Dentro de {noformat} o Jira não lê escape: uma linha com "{noformat}" fecharia o bloco. Um espaço
+ * de largura zero depois da chave mantém o texto igual na tela e não fecha o bloco.
+ */
+function dentroDeBloco(linha: string) {
+  return linha.replace(/\{(noformat|code)/gi, "{\u200b$1");
 }
 
 /** Negrito, itálico e código em linha; o resto é escapado. */
@@ -16,12 +37,14 @@ export function emLinha(md: string): string {
   const codigos: string[] = [];
   let s = md.replace(/`([^`]+)`/g, (_, c: string) => `${CODIGO_INI}${codigos.push(c) - 1}${CODIGO_FIM}`);
   s = s.replace(/\*\*(.+?)\*\*/g, `${NEGRITO}$1${NEGRITO}`);
+  // Itálico do Markdown (_texto_, entre espaços ou pontuação); "_" no meio de palavra é escapado.
+  s = s.replace(/(^|[\s(])_([^_\n]+?)_(?=$|[\s).,;:!?])/g, `$1${ITALICO}$2${ITALICO}`);
   s = s.replace(/<br\s*\/?>/gi, "\n");
   s = escapar(s);
-  s = s.replaceAll(NEGRITO, "*");
+  s = s.replaceAll(NEGRITO, "*").replaceAll(ITALICO, "_");
   // Linha quebrada dentro de célula de tabela: \\ é a quebra de linha do Jira.
   s = s.replace(/\n/g, " \\\\ ");
-  return s.replace(new RegExp(`${CODIGO_INI}(\\d+)${CODIGO_FIM}`, "g"), (_, i: string) => `{{${codigos[Number(i)].replace(/[{}]/g, (c) => `\\${c}`)}}}`);
+  return s.replace(new RegExp(`${CODIGO_INI}(\\d+)${CODIGO_FIM}`, "g"), (_, i: string) => `{{${escapar(codigos[Number(i)])}}}`);
 }
 
 /** Divide uma linha de tabela Markdown em células, respeitando o "\|" escapado. */
@@ -46,7 +69,7 @@ export function markdownParaJira(md: string): string {
       continue;
     }
     if (emCodigo) {
-      saida.push(linha);
+      saida.push(dentroDeBloco(linha));
       continue;
     }
 
@@ -83,7 +106,7 @@ export function markdownParaJira(md: string): string {
       saida.push("----");
       continue;
     }
-    saida.push(emLinha(linha));
+    saida.push(semBlocoNoInicio(emLinha(linha)));
   }
   if (emCodigo) saida.push("{noformat}");
   return saida.join("\n");
