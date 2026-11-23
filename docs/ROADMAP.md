@@ -1,6 +1,6 @@
 # Roadmap
 
-Atualizado em 17/11/2026. As estimativas são de tempo de implementação com testes, sem contar a
+Atualizado em 23/11/2026. As estimativas são de tempo de implementação com testes, sem contar a
 revisão.
 
 ## Onde estamos
@@ -107,6 +107,12 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 | 29 | **Teste com IA real no CI.** Workflow semanal (e manual) que gera uma issue curta em cada provedor com chave guardada nos *secrets* do GitHub. Se o SDK ou a API mudar, o CI avisa antes do usuário. Fica fora dos PRs, para não gastar tokens a cada push. | ~2 h |
 | 30 | **Menos PRs do Dependabot.** Agrupar as atualizações das Actions num PR só por semana (`groups` no `dependabot.yml`). Hoje vieram 8 PRs separados. | ~15 min |
 
+### Reforço do acesso (23/11)
+
+| # | Item | Estado / estimativa |
+|---|---|---|
+| 33 | **Jira: projetos liberados.** `JIRA_PROJETOS` filtra a lista e é conferido no servidor nos tipos e na criação (403 fora da lista); a URL do Jira só para o admin. | Em revisão (PR aberto) |
+
 Ficaram de fora nesta rodada:
 - cenários em Gherkin;
 - contexto fixo por produto;
@@ -166,3 +172,7 @@ Passo a passo completo em [INSTALACAO-DOCKER.md](INSTALACAO-DOCKER.md). Em resum
   - o PDF sai pela impressão do navegador, sem biblioteca nova;
   - a instalação para o DevOps passa a usar a imagem pronta do ghcr.io;
   - na revisão do fim do dia, entram os itens 27 a 30.
+
+- **23/11, Jira:**
+  - `JIRA_PROJETOS` vazio não libera nenhum projeto (seguro por padrão); `*` libera todos;
+  - quem já usa o Jira precisa preencher a variável ao atualizar (aviso no log e no CHANGELOG).

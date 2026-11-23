@@ -29,18 +29,33 @@ function falhou(reply: FastifyReply, e: unknown) {
  */
 export function registrarJira(
   app: FastifyInstance,
-  o: { cliente: ClienteJira | null; historico: RepositorioHistorico; jira: RepositorioJira; usuarios: RepositorioUsuarios },
+  o: {
+    cliente: ClienteJira | null;
+    /** "*" (todos) ou as chaves liberadas, em maiúsculas (JIRA_PROJETOS). */
+    projetos: "*" | string[];
+    historico: RepositorioHistorico;
+    jira: RepositorioJira;
+    usuarios: RepositorioUsuarios;
+  },
 ) {
+  const permitido = (projeto: string) => o.projetos === "*" || o.projetos.includes(projeto.toUpperCase());
+  const naoPermitido = (reply: FastifyReply) =>
+    erro(reply, 403, "projeto_nao_permitido", "Este projeto do Jira não está liberado. Peça ao administrador para incluí-lo em JIRA_PROJETOS.");
+
   // Cada chamada vai a um servidor externo: limite por pessoa.
   const limite = { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } };
   const desligado = (reply: FastifyReply) => erro(reply, 404, "jira_desligado", "A integração com o Jira não está configurada no servidor.");
 
-  app.get("/api/jira", async () => ({ ligado: o.cliente !== null, url: o.cliente?.url ?? null }));
+  // A URL do Jira (pode ser interna) só aparece para o admin.
+  app.get("/api/jira", async (request) => ({
+    ligado: o.cliente !== null,
+    url: o.cliente && request.usuario?.admin ? o.cliente.url : null,
+  }));
 
   app.get("/api/jira/projetos", limite, async (_request, reply) => {
     if (!o.cliente) return desligado(reply);
     try {
-      return { projetos: await o.cliente.projetos() };
+      return { projetos: (await o.cliente.projetos()).filter((p) => permitido(p.chave)) };
     } catch (e) {
       return falhou(reply, e);
     }
@@ -50,6 +65,7 @@ export function registrarJira(
     if (!o.cliente) return desligado(reply);
     const projeto = String((request.query as { projeto?: string }).projeto ?? "").trim();
     if (!projeto || projeto.length > 50) return erro(reply, 400, "entrada_invalida", "Escolha o projeto do Jira.");
+    if (!permitido(projeto)) return naoPermitido(reply);
     try {
       return { tipos: await o.cliente.tipos(projeto) };
     } catch (e) {
@@ -71,6 +87,7 @@ export function registrarJira(
     if (!Number.isInteger(id) || !podeVer(request, o.historico.dono(id))) return erro(reply, 404, "nao_encontrado", "Issue não encontrada.");
     const corpo = CorpoEnvio.safeParse(request.body);
     if (!corpo.success) return erro(reply, 400, "entrada_invalida", corpo.error.issues[0]?.message ?? "Entrada inválida.");
+    if (!permitido(corpo.data.projeto)) return naoPermitido(reply);
 
     // Uma issue do histórico vira uma só no Jira: a segunda tentativa devolve a que já existe.
     const existente = o.jira.obter(id);
