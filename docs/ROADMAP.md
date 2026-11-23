@@ -1,6 +1,6 @@
 # Roadmap
 
-Atualizado em 17/11/2026. As estimativas são de tempo de implementação com testes, sem contar a
+Atualizado em 23/11/2026. As estimativas são de tempo de implementação com testes, sem contar a
 revisão.
 
 ## Onde estamos
@@ -107,6 +107,12 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 | 29 | **Teste com IA real no CI.** Workflow semanal (e manual) que gera uma issue curta em cada provedor com chave guardada nos *secrets* do GitHub. Se o SDK ou a API mudar, o CI avisa antes do usuário. Fica fora dos PRs, para não gastar tokens a cada push. | ~2 h |
 | 30 | **Menos PRs do Dependabot.** Agrupar as atualizações das Actions num PR só por semana (`groups` no `dependabot.yml`). Hoje vieram 8 PRs separados. | ~15 min |
 
+### Reforço do acesso (23/11)
+
+| # | Item | Estado / estimativa |
+|---|---|---|
+| 35 | **Texto do Jira:** escapar `!`, `_`, `+` e `??`, e neutralizar `{noformat}`/`{code}` dentro do bloco de código. | Em revisão (PR aberto) |
+
 Ficaram de fora nesta rodada:
 - cenários em Gherkin;
 - contexto fixo por produto;
@@ -166,3 +172,8 @@ Passo a passo completo em [INSTALACAO-DOCKER.md](INSTALACAO-DOCKER.md). Em resum
   - o PDF sai pela impressão do navegador, sem biblioteca nova;
   - a instalação para o DevOps passa a usar a imagem pronta do ghcr.io;
   - na revisão do fim do dia, entram os itens 27 a 30.
+
+- **23/11, texto do Jira:**
+  - o itálico que o próprio Markdown da issue gera continua itálico; o resto do texto é escapado;
+  - dentro do bloco de código, `{noformat}` e `{code}` ganham um espaço de largura zero depois da
+    chave (o Jira não lê escape ali).

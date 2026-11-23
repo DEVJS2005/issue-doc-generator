@@ -38,6 +38,8 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 ### Segurança
 
+- Texto enviado ao Jira: mais marcações escapadas (imagem, menção, sublinhado, citação e
+  itálico fora do Markdown da issue), e o bloco de código não fecha antes da hora.
 - Cabeçalhos de segurança em todas as respostas: CSP só com a própria origem (o script de tema saiu
   do HTML para `/tema.js`), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`,
   `Permissions-Policy`, `Cross-Origin-Opener-Policy` e HSTS em HTTPS.
