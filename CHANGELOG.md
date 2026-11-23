@@ -42,6 +42,11 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
   `npm run teste:ia-real --workspace server`. Provedores sem chave são pulados.
 - Dependabot agrupa as atualizações das Actions num PR só por semana.
 
+### Alterado
+
+- Banco: três migrações novas (4: auditoria; 5: envios ao Jira; 6: sessões encerradas na troca de
+  senha). Rodam sozinhas ao subir; nada a fazer na atualização.
+
 ### Corrigido
 
 - No celular, a aba Administração tinha rolagem horizontal na página inteira: os textos só para
