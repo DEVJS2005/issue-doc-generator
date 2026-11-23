@@ -38,6 +38,11 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 ### Segurança
 
+- `CONFIAR_PROXY` aceita o número de proxies ou a lista de IP/CIDR deles; `true` passa a valer
+  **um** proxy na frente. O guia do nginx troca `$proxy_add_x_forwarded_for` por `$remote_addr`.
+- Limite de tentativas de login também por conta, além do IP.
+- `docker-compose.yml` publica a porta só em `127.0.0.1` (para o proxy no mesmo servidor). Quem
+  acessa direto pela rede, sem proxy, precisa ajustar a linha da porta (veja o guia).
 - Cabeçalhos de segurança em todas as respostas: CSP só com a própria origem (o script de tema saiu
   do HTML para `/tema.js`), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`,
   `Permissions-Policy`, `Cross-Origin-Opener-Policy` e HSTS em HTTPS.

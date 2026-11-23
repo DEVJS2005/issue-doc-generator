@@ -152,7 +152,7 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 
 | Comando | O que roda |
 |---|---|
-| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões, 1º admin, administração, usuários, modelo reserva, histórico, status, links, backup, auditoria, nota de qualidade, imagens, Jira, cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
+| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões, IP atrás de proxy, limite de login por IP e por conta, 1º admin, administração, usuários, modelo reserva, histórico, status, links, backup, auditoria, nota de qualidade, imagens, Jira, cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
 | `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, status, CSV, link de leitura, idioma, administração, backup, auditoria, nota de qualidade, prints, Jira (falso), CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos |
 | `npm run typecheck` | TypeScript do servidor e da tela |
 | `npm run lint` | ESLint (TypeScript e regras dos hooks do React), sem tolerar avisos |
@@ -213,7 +213,9 @@ O guia completo é o [docs/INSTALACAO-DOCKER.md](docs/INSTALACAO-DOCKER.md). Em 
 3. Pegue no log o link `/configurar?codigo=...` e crie o primeiro admin. Na Administração, escolha
    provedor e modelo e cadastre os usuários.
 4. Coloque um proxy com HTTPS na frente da porta 3000, com `CONFIAR_PROXY=true`, sem buffer na rota
-   da API (streaming) e com tempo de leitura acima do tempo limite da Administração.
+   da API (streaming) e com tempo de leitura acima do tempo limite da Administração. O
+   `docker-compose.yml` publica a porta só em `127.0.0.1`; não deixe a 3000 aberta para a rede
+   com `CONFIAR_PROXY` ligado.
 5. O backup é diário e automático, dentro do volume (pasta `backups`); copie essa pasta para fora
    do servidor. Os logs saem em JSON no stdout, sem o texto das descrições.
 
@@ -405,7 +407,8 @@ Resumo das proteções. Para relatar uma vulnerabilidade, veja o [SECURITY.md](S
 
 - **Senhas** com hash scrypt e sal; **sessão** em cookie `HttpOnly`, `SameSite=Strict` (e `Secure`
   atrás de HTTPS), assinado com HMAC. Trocar a senha ou desativar alguém encerra as sessões abertas
-  dessa pessoa. Login com limite de 10 tentativas por IP a cada 15 minutos.
+  dessa pessoa. Login com limite de 10 tentativas a cada 15 minutos por IP e também por conta.
+  Atrás de proxy, o IP real vem só dos proxies confiáveis (`CONFIAR_PROXY`).
 - **Acesso:** a sessão é conferida antes de ler o corpo do pedido; cada pessoa vê só as próprias
   issues, e a administração exige perfil de admin. As credenciais (chaves de IA, Jira, OIDC) ficam
   só no servidor.
@@ -434,7 +437,7 @@ Só segredos e infraestrutura. Provedor, modelo, limites, usuários e retenção
 | `SEGREDO_SESSAO` | (vazio = temporário) | Assina o cookie de sessão. |
 | `SESSAO_HORAS` | `12` | Duração da sessão. |
 | `PORTA` | `3000` | Porta HTTP. |
-| `CONFIAR_PROXY` | `false` | `true` atrás de proxy reverso com HTTPS. |
+| `CONFIAR_PROXY` | `false` | Proxy reverso com HTTPS na frente: `true` (1 proxy), o número de proxies ou a lista de IP/CIDR deles. |
 | `ARQUIVO_BANCO` | `data/issue-doc-generator.db` (Docker: `/app/data/issue-doc-generator.db`) | Arquivo do banco SQLite. |
 | `REGISTRAR_DESCRICAO` | `false` | Registrar o texto da descrição nos logs (LGPD). |
 | `PRECO_POR_MTOK` | (vazio) | `entrada,saida,cacheLeitura,cacheEscrita` em US$/MTok, para o custo no log. |
