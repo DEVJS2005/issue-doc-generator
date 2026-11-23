@@ -1,0 +1,49 @@
+# Atualiza com a main as branches dos PRs abertos que ficaram para trás, a cada push na main.
+# Assim a regra "branch atualizada" da main não trava a fila de PRs.
+#
+# Usa um token próprio (segredo ATUALIZAR_PRS_TOKEN, veja o CONTRIBUTING): o que é feito com o
+# GITHUB_TOKEN não dispara o CI, e os checks obrigatórios ficariam parados. Sem o segredo, o
+# workflow só avisa e não faz nada. PR com conflito não é tocado: o aviso aparece no resumo.
+name: Atualizar PRs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: atualizar-prs
+  cancel-in-progress: true
+
+jobs:
+  atualizar:
+    name: Atualiza as branches dos PRs com a main
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Atualiza os PRs que estão atrás da main
+        env:
+          GH_TOKEN: ${{ secrets.ATUALIZAR_PRS_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::notice::Segredo ATUALIZAR_PRS_TOKEN não configurado: nenhum PR foi atualizado (veja o CONTRIBUTING)."
+            exit 0
+          fi
+          # Só PRs deste repositório (não de fork), fora de rascunho e que não são de robôs (o
+          # Dependabot atualiza os dele sozinho).
+          numeros=$(gh pr list --repo "$REPO" --state open --limit 100 \
+            --json number,isDraft,isCrossRepository,author \
+            --jq '.[] | select(.isDraft | not) | select(.isCrossRepository | not) | select((.author.is_bot // false) | not) | .number')
+          for numero in $numeros; do
+            if saida=$(gh api -X PUT "repos/$REPO/pulls/$numero/update-branch" 2>&1); then
+              echo "PR #$numero: atualizado com a main."
+            elif printf '%s' "$saida" | grep -qi "conflict"; then
+              echo "::warning::PR #$numero tem conflito com a main: resolva na branch."
+            else
+              echo "PR #$numero: nada a fazer."
+            fi
+          done
