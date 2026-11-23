@@ -111,7 +111,7 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 
 | # | Item | Estado / estimativa |
 |---|---|---|
-| 35 | **Texto do Jira:** escapar `!`, `_`, `+` e `??`, e neutralizar `{noformat}`/`{code}` dentro do bloco de código. | Em revisão (PR aberto) |
+| 35 | **Texto do Jira:** escapar `!`, `_`, `+` e `??`, e neutralizar `{noformat}`/`{code}` dentro do bloco de código. | Em revisão no PR #38 |
 
 Ficaram de fora nesta rodada:
 - cenários em Gherkin;
