@@ -24,11 +24,32 @@ npm run test:e2e   # se mexeu na tela ou nas rotas (na 1ª vez: npx playwright i
 - O título do PR segue o [Conventional Commits](https://www.conventionalcommits.org/pt-br/), por
   exemplo `feat: ...`, `fix(admin): ...` ou `docs: ...`. O CI confere.
 - A `main` só aceita PR com o CI verde e a branch atualizada.
-- Atualize o README, o `docs/ROADMAP.md` e o `CHANGELOG.md` (seção "Não lançado") quando for o caso.
+- **Changelog e roadmap por fragmento:** crie um arquivo em [`changelog.d/`](changelog.d/README.md)
+  com a categoria, o texto do changelog e, se houver, o item do ROADMAP, o número do PR e as
+  decisões. Não edite o `CHANGELOG.md`, a tabela de itens nem o histórico de decisões no PR: o
+  release junta tudo (`npm run changelog -- --versao X.Y.Z`). Assim os PRs não conflitam entre si.
+  Itens novos do ROADMAP entram juntos, num PR `docs:` antes de começar a fase.
+- Atualize o README quando for o caso.
 - Nada de chaves, senhas ou dados pessoais reais no código, nos testes ou nos logs. Os testes usam
   dados fictícios (`@exemplo.dev`) e uma IA falsa.
 - Mudança no banco: acrescente uma migração no fim de `MIGRACOES` (`server/src/banco/banco.ts`);
   nunca edite uma migração já publicada.
+
+## Fila de PRs sem trabalho manual
+
+A `main` exige a branch atualizada. Para isso não travar a fila:
+
+1. **Auto-merge:** em Settings → General, marque "Allow auto-merge". Em cada PR pronto, clique em
+   "Enable auto-merge": ele entra sozinho quando o CI fica verde.
+2. **Atualização das branches:** o workflow `atualizar-prs.yml` atualiza com a `main` os PRs abertos
+   (fora de rascunho, deste repositório) a cada push na `main`. Ele precisa do segredo
+   `ATUALIZAR_PRS_TOKEN`, porque o que o `GITHUB_TOKEN` faz não dispara o CI:
+   - crie um *fine-grained personal access token* só para este repositório, com
+     **Contents: Read and write** e **Pull requests: Read and write**, e validade curta (ex.: 90 dias);
+   - guarde em Settings → Secrets and variables → Actions → New repository secret, com o nome
+     `ATUALIZAR_PRS_TOKEN`;
+   - sem o segredo, o workflow só avisa e não faz nada.
+3. PR com conflito não é atualizado: o aviso aparece no resumo do workflow, e a correção é na branch.
 
 ## Estilo
 

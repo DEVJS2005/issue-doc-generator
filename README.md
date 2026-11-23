@@ -95,7 +95,8 @@ Brazilian Portuguese.
 issue-doc-generator/
 ├── server/
 │   ├── prompts/           sistema.md (instruções) e istqb-base.md (gerado do submódulo)
-│   ├── scripts/           gerar-base-istqb.ts e teste-ia-real.ts (teste semanal com IA real)
+│   ├── scripts/           gerar-base-istqb.ts, teste-ia-real.ts (teste semanal com IA real) e
+│   │                      changelog.ts (junta changelog.d/ no CHANGELOG e no ROADMAP)
 │   ├── src/
 │   │   ├── ajustes/       configuração em uso (.env + o que a administração salvou)
 │   │   ├── auth/          adaptador de login, regras de acesso das rotas, senhas (scrypt),
@@ -118,6 +119,7 @@ issue-doc-generator/
 ├── data/                  banco SQLite (criado na 1ª subida; fora do git)
 ├── e2e/                   Playwright
 ├── docs/                  INSTALACAO-DOCKER.md, ROADMAP.md e istqb-ai-ready/ (submódulo git)
+├── changelog.d/           um fragmento do changelog por PR, juntado no release
 ├── .github/               CI, CodeQL, publicação no ghcr.io, teste com IA real, Dependabot
 ├── .env.example
 ├── docker-compose.yml     instalação pela imagem pronta (docker-compose.build.yml constrói do código)
@@ -175,6 +177,9 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
   `ghcr.io/devjs2005/issue-doc-generator:main`. Uma tag `vX.Y.Z` publica `:X.Y.Z` e `:latest` e
   cria o Release com o trecho do CHANGELOG. A tag só é aceita se bater com o `package.json` e
   tiver uma seção no CHANGELOG.
+- **Atualizar PRs** (`.github/workflows/atualizar-prs.yml`): a cada push na `main`, atualiza com ela
+  as branches dos PRs abertos que ficaram para trás (precisa do segredo `ATUALIZAR_PRS_TOKEN`; veja o
+  [CONTRIBUTING](CONTRIBUTING.md)). Com o auto-merge ligado no PR, a fila anda sozinha.
 - **Regra da `main`:** só entra por PR, com os checks acima verdes e a branch atualizada; push
   direto e force push são bloqueados.
 

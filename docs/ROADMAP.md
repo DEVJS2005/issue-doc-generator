@@ -120,6 +120,12 @@ Ficaram de fora nesta rodada:
 - contexto fixo por produto;
 - modelos de issue por time.
 
+### Processo (23/11)
+
+| # | Item | Estado / estimativa |
+|---|---|---|
+| 36 | **Fila de PRs sem conflito:** changelog e roadmap por fragmento (`changelog.d/`, juntados no release) e workflow que atualiza as branches dos PRs com a `main`. | Em revisão |
+
 ## Para o DevOps
 
 Passo a passo completo em [INSTALACAO-DOCKER.md](INSTALACAO-DOCKER.md). Em resumo:
