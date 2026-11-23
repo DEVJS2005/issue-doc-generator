@@ -153,7 +153,7 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 
 | Comando | O que roda |
 |---|---|
-| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões, acesso de cada rota da API, IP atrás de proxy, limite de login por IP e por conta, 1º admin, administração, usuários, modelo reserva, histórico, status, links, backup, auditoria, nota de qualidade, imagens, Jira, cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
+| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões, acesso de cada rota da API, IP atrás de proxy, limite de login por IP e por conta, 1º admin, administração, usuários, modelo reserva, histórico, status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
 | `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, status, CSV, link de leitura, idioma, administração, backup, auditoria, nota de qualidade, prints, Jira (falso), CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos |
 | `npm run typecheck` | TypeScript do servidor e da tela |
 | `npm run lint` | ESLint (TypeScript e regras dos hooks do React), sem tolerar avisos |
@@ -293,6 +293,9 @@ atualizam o Jira.
   (token de API da conta).
 - **Jira Data Center:** `JIRA_URL` e `JIRA_TOKEN` com um token de acesso pessoal (PAT), e
   `JIRA_EMAIL` vazio.
+- **Projetos liberados:** `JIRA_PROJETOS` com as chaves, separadas por vírgula (ex.: `LOJ,APP`).
+  A tela só mostra esses projetos, e o servidor recusa os outros. `*` libera todos os que o token
+  alcança; vazio não libera nenhum (o servidor avisa no log).
 
 As credenciais ficam só no servidor. Use uma conta de serviço com permissão de criar issues nos
 projetos do time: todas as issues são criadas em nome dela. Usa a REST API v2, que existe nas duas
@@ -410,6 +413,8 @@ Resumo das proteções. Para relatar uma vulnerabilidade, veja o [SECURITY.md](S
   atrás de HTTPS), assinado com HMAC. Trocar a senha ou desativar alguém encerra as sessões abertas
   dessa pessoa. Login com limite de 10 tentativas a cada 15 minutos por IP e também por conta.
   Atrás de proxy, o IP real vem só dos proxies confiáveis (`CONFIAR_PROXY`).
+- **Jira:** só os projetos de `JIRA_PROJETOS`, conferidos no servidor; a URL do Jira só aparece
+  para o admin.
 - **Acesso:** toda rota da API exige login, menos uma lista curta de rotas públicas (saúde, login,
   configuração inicial, SSO e leitura por link); a regra vale pela rota registrada, não pelo texto
   da URL. A sessão é conferida antes de ler o corpo do pedido; cada pessoa vê só as próprias
@@ -454,6 +459,7 @@ Só segredos e infraestrutura. Provedor, modelo, limites, usuários e retenção
 | `JIRA_URL` | (vazio) | Endereço do Jira. Vazio desliga o botão "Criar no Jira". |
 | `JIRA_EMAIL` | (vazio) | E-mail da conta (Jira Cloud). Vazio no Data Center. |
 | `JIRA_TOKEN` | (vazio) | Token de API (Cloud) ou token de acesso pessoal (Data Center). |
+| `JIRA_PROJETOS` | (vazio = nenhum) | Chaves dos projetos liberados, separadas por vírgula; `*` libera todos. |
 
 **Formato antigo (opcional):** `PROVEDOR`, `MODELO`, `ESFORCO`, `LIMITE_POR_HORA` e
 `TEMPO_LIMITE_SEGUNDOS` ainda são lidos, mas só como ponto de partida enquanto a Administração

@@ -98,6 +98,9 @@ const esquema = z.object({
   JIRA_URL: z.string().trim().default(""),
   JIRA_EMAIL: z.string().trim().default(""),
   JIRA_TOKEN: z.string().default(""),
+  // Chaves dos projetos em que se pode criar issues, separadas por vírgula; "*" libera todos.
+  // Vazio: nenhum (o envio fica bloqueado e o servidor avisa no log).
+  JIRA_PROJETOS: z.string().default(""),
   // Nos testes (NODE_ENV=test) o banco é em memória; fora deles, data/ na pasta onde o servidor roda.
   ARQUIVO_BANCO: z
     .string()
@@ -109,6 +112,8 @@ export type Config = {
   arquivoBanco: string;
   oidc: ConfigOidc | null;
   jira: ConfigJira | null;
+  /** Projetos do Jira liberados: "*" (todos) ou as chaves, em maiúsculas. Lista vazia: nenhum. */
+  jiraProjetos: "*" | string[];
   provedor: NomeProvedor;
   modelo: string;
   anthropicApiKey: string;
@@ -149,6 +154,7 @@ export function carregarConfig(env: NodeJS.ProcessEnv = process.env): Config {
     arquivoBanco: e.ARQUIVO_BANCO,
     oidc,
     jira: e.JIRA_URL && e.JIRA_TOKEN ? { url: e.JIRA_URL, email: e.JIRA_EMAIL, token: e.JIRA_TOKEN } : null,
+    jiraProjetos: e.JIRA_PROJETOS.trim() === "*" ? "*" : lista(e.JIRA_PROJETOS).map((c) => c.toUpperCase()),
     provedor: e.PROVEDOR,
     modelo,
     anthropicApiKey: e.ANTHROPIC_API_KEY,

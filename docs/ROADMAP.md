@@ -112,7 +112,8 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 | # | Item | Estado / estimativa |
 |---|---|---|
 | 31 | **Autorização das rotas da API reforçada:** regra pela rota registrada, negação por padrão (só uma lista explícita de rotas públicas), checagem própria de admin nas rotas de administração e testes que percorrem todas as rotas da API. | ✅ PR #34 |
-| 32 | **IP do cliente atrás de proxy:** `CONFIAR_PROXY` com número de saltos ou lista de IP/CIDR (`true` = 1 proxy), limite de login também por conta, porta publicada só em `127.0.0.1` e guia do nginx/Caddy/Traefik. | Em revisão no PR #35 |
+| 32 | **IP do cliente atrás de proxy:** `CONFIAR_PROXY` com número de saltos ou lista de IP/CIDR (`true` = 1 proxy), limite de login também por conta, porta publicada só em `127.0.0.1` e guia do nginx/Caddy/Traefik. | ✅ PR #35 |
+| 33 | **Jira: projetos liberados.** `JIRA_PROJETOS` filtra a lista e é conferido no servidor nos tipos e na criação (403 fora da lista); a URL do Jira só para o admin. | Em revisão no PR #36 |
 
 Ficaram de fora nesta rodada:
 - cenários em Gherkin;
@@ -181,3 +182,6 @@ Passo a passo completo em [INSTALACAO-DOCKER.md](INSTALACAO-DOCKER.md). Em resum
   - `CONFIAR_PROXY=true` passa a valer um proxy na frente, não "qualquer um";
   - o limite de login vale por IP e por conta;
   - o `docker-compose.yml` publica a porta só em `127.0.0.1`.
+- **23/11, Jira:**
+  - `JIRA_PROJETOS` vazio não libera nenhum projeto (seguro por padrão); `*` libera todos;
+  - quem já usa o Jira precisa preencher a variável ao atualizar (aviso no log e no CHANGELOG).
