@@ -1,4 +1,5 @@
 import type { ConfigJira } from "./integracoes/jira.js";
+import { isIP } from "node:net";
 import path from "node:path";
 import { z } from "zod";
 import type { ConfigOidc } from "./auth/oidc.js";
@@ -16,6 +17,40 @@ const booleano = (padrao: "true" | "false") =>
     .enum(["true", "false"])
     .default(padrao)
     .transform((v) => v === "true");
+
+/**
+ * Em quem confiar para ler o IP real e o protocolo (X-Forwarded-For e X-Forwarded-Proto). Vai
+ * direto para o `trustProxy` do Fastify:
+ * - false: em ninguém (o IP é o da conexão);
+ * - número de saltos: quantos proxies há na frente (true vale 1, nunca "todos");
+ * - lista de IP/CIDR: os endereços dos proxies.
+ */
+export type ConfiancaProxy = false | number | string[];
+
+function ipOuCidr(item: string) {
+  const [ip, mascara, ...resto] = item.split("/");
+  const versao = isIP(ip);
+  if (!versao || resto.length) return false;
+  if (mascara === undefined) return true;
+  const bits = Number(mascara);
+  return /^\d+$/.test(mascara) && bits >= 0 && bits <= (versao === 4 ? 32 : 128);
+}
+
+/** O formato que o `trustProxy` do Fastify aceita. Saltos viram a função equivalente do proxy-addr. */
+export function trustProxyDoFastify(c: ConfiancaProxy): boolean | string[] | ((endereco: string, salto: number) => boolean) {
+  if (c === false || c === 0) return false;
+  if (typeof c === "number") return (_endereco, salto) => salto < c;
+  return c;
+}
+
+export function lerConfiancaProxy(valor: string): ConfiancaProxy | null {
+  const v = valor.trim().toLowerCase();
+  if (v === "" || v === "false" || v === "0") return false;
+  if (v === "true") return 1;
+  if (/^\d+$/.test(v)) return Number(v);
+  const itens = lista(v);
+  return itens.length && itens.every(ipOuCidr) ? itens : null;
+}
 
 // Só a Claude tem modelo padrão. Para os outros provedores, MODELO é obrigatório: nomes de
 // modelos mudam com frequência e o servidor não deve adivinhar.
@@ -39,7 +74,17 @@ const esquema = z.object({
   REGISTRAR_DESCRICAO: booleano("false"),
   SEGREDO_SESSAO: z.string().default(""),
   SESSAO_HORAS: z.coerce.number().positive().default(12),
-  CONFIAR_PROXY: booleano("false"),
+  CONFIAR_PROXY: z
+    .string()
+    .default("false")
+    .transform((v, ctx) => {
+      const confianca = lerConfiancaProxy(v);
+      if (confianca === null) {
+        ctx.addIssue({ code: "custom", message: "CONFIAR_PROXY: use false, true, o número de proxies ou a lista de IP/CIDR dos proxies." });
+        return z.NEVER;
+      }
+      return confianca;
+    }),
   PRECO_POR_MTOK: z.string().trim().default(""),
   // Login único (OpenID Connect). Desligado enquanto OIDC_EMISSOR estiver vazio.
   OIDC_EMISSOR: z.string().trim().default(""),
@@ -85,7 +130,7 @@ export type Config = {
   registrarDescricao: boolean;
   segredoSessao: string;
   sessaoHoras: number;
-  confiarProxy: boolean;
+  confiarProxy: ConfiancaProxy;
   precoPorMtok: Preco | null;
 };
 

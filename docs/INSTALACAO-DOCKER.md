@@ -80,6 +80,12 @@ Prefere construir a imagem a partir do código? Clone o repositório e rode
 
 Para usar outra porta no servidor: `PORTA_HOST=8080 docker compose up -d`.
 
+A porta fica aberta **só no próprio servidor** (`127.0.0.1`), para o proxy com HTTPS do passo 7.
+Para abrir de outra máquina antes de ter o proxy, use um túnel SSH
+(`ssh -L 3000:127.0.0.1:3000 usuario@servidor` e abra `http://localhost:3000`). Sem proxy nenhum,
+para abrir para a rede, troque no `docker-compose.yml` a linha da porta por
+`"${PORTA_HOST:-3000}:3000"` e deixe `CONFIAR_PROXY=false`.
+
 ## 5. Criar o primeiro administrador
 
 Na primeira subida, com o banco vazio, o log mostra um link de uso único:
@@ -88,7 +94,8 @@ Na primeira subida, com o banco vazio, o log mostra um link de uso único:
 docker compose logs app | grep configurar
 ```
 
-Abra o link no navegador, trocando `localhost:3000` pelo endereço do servidor. Escolha o nome de
+Abra o link no navegador (pelo túnel SSH ou, se já tiver o proxy, trocando `localhost:3000` pelo
+endereço dele). Escolha o nome de
 usuário, o e-mail e a senha. O link só funciona uma vez. Se o container reiniciar antes de alguém
 usá-lo, aparece um link novo no log.
 
@@ -115,8 +122,18 @@ Coloque um proxy com HTTPS na frente da porta 3000 e acrescente ao `.env`:
 CONFIAR_PROXY=true
 ```
 
-Com isso, o cookie de sessão sai com `Secure`, e o limite de tentativas de login passa a usar o IP
-real de quem acessa.
+Com isso, o cookie de sessão sai com `Secure`, e o limite de tentativas de login e a auditoria
+passam a usar o IP real de quem acessa. `true` quer dizer **um** proxy na frente. Com mais de um
+(por exemplo, CDN + nginx), use o número: `CONFIAR_PROXY=2`. Se os IPs dos proxies forem fixos, a
+opção mais segura é listá-los: `CONFIAR_PROXY=127.0.0.1,10.0.0.0/8`.
+
+**Não deixe a porta 3000 aberta para a rede** com `CONFIAR_PROXY` ligado: quem falar direto com
+ela escreve o `X-Forwarded-For` que quiser. O `docker-compose.yml` já publica a porta só em
+`127.0.0.1`, para o proxy no mesmo servidor. Com o proxy em outra máquina, publique só para ela
+(firewall) e liste o IP dela em `CONFIAR_PROXY`.
+
+O proxy deve **substituir** o `X-Forwarded-For` pelo IP que ele viu, e não acrescentar ao que veio
+do navegador.
 
 A geração usa streaming (SSE), então o proxy **não pode** segurar a resposta. Exemplo de
 configuração para o nginx:
@@ -129,17 +146,28 @@ server {
   location / {
     proxy_pass http://127.0.0.1:3000;
     proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-For $remote_addr;
     proxy_set_header X-Forwarded-Proto $scheme;
   }
 
   location /api/ {
     proxy_pass http://127.0.0.1:3000;
     proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-For $remote_addr;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_buffering off;          # streaming da geração
     proxy_read_timeout 360s;      # acima do tempo limite da Administração
+  }
+}
+```
+
+No Caddy, o `reverse_proxy` já faz isso; no Traefik, não marque `forwardedHeaders.insecure` nem
+ponha IPs em `trustedIPs` do entrypoint, a não ser os de outro proxy seu na frente dele.
+
+```caddy
+issues.suaempresa.com.br {
+  reverse_proxy 127.0.0.1:3000 {
+    flush_interval -1   # streaming da geração
   }
 }
 ```

@@ -39,6 +39,11 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 ### Segurança
 
 - Autorização das rotas da API reforçada.
+- `CONFIAR_PROXY` aceita o número de proxies ou a lista de IP/CIDR deles; `true` passa a valer
+  **um** proxy na frente. O guia do nginx troca `$proxy_add_x_forwarded_for` por `$remote_addr`.
+- Limite de tentativas de login também por conta, além do IP.
+- `docker-compose.yml` publica a porta só em `127.0.0.1` (para o proxy no mesmo servidor). Quem
+  acessa direto pela rede, sem proxy, precisa ajustar a linha da porta (veja o guia).
 - Jira: só os projetos de `JIRA_PROJETOS` (chaves separadas por vírgula; `*` libera todos)
   aparecem e aceitam issues, conferidos no servidor. **Vazio não libera nenhum:** quem já usa o
   Jira precisa preencher `JIRA_PROJETOS` ao atualizar. A URL do Jira só aparece para o admin.
