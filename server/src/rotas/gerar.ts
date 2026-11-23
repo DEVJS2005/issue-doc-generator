@@ -10,6 +10,7 @@ import { ErroGeracao, normalizarErro } from "../ia/erros.js";
 import { partesAlteradas } from "../issue/alteracoes.js";
 import { TIPOS_ISSUE, type Issue } from "../issue/schema.js";
 import { formatarEntrada, IDIOMAS, type Entrada } from "../prompt/entrada.js";
+import { usuarioObrigatorio } from "../auth/acesso.js";
 
 export const LIMITE_DESCRICAO = 4000;
 export const LIMITE_CONTEXTO = 8000;
@@ -91,7 +92,7 @@ export async function responderComGeracao(
     return reply.code(503).send({ erro: e.paraTela() });
   }
 
-  const quem = reply.request.usuario?.email ?? "anonimo";
+  const quem = usuarioObrigatorio(reply.request).email;
   const cota = o.ajustes.limiteUso.tentar(quem);
   if (!cota.ok) {
     app.log.warn({ evento: "limite_uso", usuario: quem }, "limite de uso atingido");

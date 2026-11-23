@@ -6,6 +6,7 @@ import type { RepositorioUsuarios } from "../banco/usuarios.js";
 import { ErroJira, type ClienteJira } from "../integracoes/jira.js";
 import { markdownParaJira } from "../integracoes/jira-texto.js";
 import { podeVer } from "./historico.js";
+import { usuarioObrigatorio } from "../auth/acesso.js";
 
 const CorpoEnvio = z.object({
   projeto: z.string().trim().min(1, "Escolha o projeto do Jira.").max(50),
@@ -89,9 +90,9 @@ export function registrarJira(
         descricao: `${markdownParaJira(item.markdown)}\n\n----\n_Gerada pelo Issue Doc Generator (versão ${item.versoes})._`,
         rotulos: [ROTULO],
       });
-      const envio = { chave: criada.chave, url: criada.url, enviadoPor: request.usuario!.email, enviadoEm: Date.now() };
+      const envio = { chave: criada.chave, url: criada.url, enviadoPor: usuarioObrigatorio(request).email, enviadoEm: Date.now() };
       o.jira.registrar(id, envio);
-      request.log.info({ evento: "jira_criada", id, chave: criada.chave, usuario: request.usuario!.email }, "jira: issue criada");
+      request.log.info({ evento: "jira_criada", id, chave: criada.chave, usuario: usuarioObrigatorio(request).email }, "jira: issue criada");
       const nome = o.usuarios.nomesPorEmail().get(envio.enviadoPor) ?? envio.enviadoPor;
       return reply.code(201).send({ envio: { ...envio, enviadoPor: nome } });
     } catch (e) {

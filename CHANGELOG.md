@@ -38,6 +38,7 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 ### Segurança
 
+- Autorização das rotas da API reforçada.
 - Texto enviado ao Jira: mais marcações escapadas (imagem, menção, sublinhado, citação e
   itálico fora do Markdown da issue), e o bloco de código não fecha antes da hora.
 - Cabeçalhos de segurança em todas as respostas: CSP só com a própria origem (o script de tema saiu

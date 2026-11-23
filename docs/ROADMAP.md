@@ -111,6 +111,7 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 
 | # | Item | Estado / estimativa |
 |---|---|---|
+| 31 | **Autorização das rotas da API reforçada:** regra pela rota registrada, negação por padrão (só uma lista explícita de rotas públicas), checagem própria de admin nas rotas de administração e testes que percorrem todas as rotas da API. | ✅ PR #34 |
 | 35 | **Texto do Jira:** escapar `!`, `_`, `+` e `??`, e neutralizar `{noformat}`/`{code}` dentro do bloco de código. | Em revisão no PR #38 |
 
 Ficaram de fora nesta rodada:
@@ -172,7 +173,10 @@ Passo a passo completo em [INSTALACAO-DOCKER.md](INSTALACAO-DOCKER.md). Em resum
   - o PDF sai pela impressão do navegador, sem biblioteca nova;
   - a instalação para o DevOps passa a usar a imagem pronta do ghcr.io;
   - na revisão do fim do dia, entram os itens 27 a 30.
-
+- **23/11:**
+  - autorização das rotas da API pela rota registrada no servidor, com negação por padrão: rota nova
+    nasce exigindo login, e rota pública precisa entrar numa lista explícita;
+  - as rotas de administração ganham uma checagem própria de admin (defesa em profundidade).
 - **23/11, texto do Jira:**
   - o itálico que o próprio Markdown da issue gera continua itálico; o resto do texto é escapado;
   - dentro do bloco de código, `{noformat}` e `{code}` ganham um espaço de largura zero depois da
