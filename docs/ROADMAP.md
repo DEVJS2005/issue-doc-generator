@@ -111,7 +111,7 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 
 | # | Item | Estado / estimativa |
 |---|---|---|
-| 32 | **IP do cliente atrás de proxy:** `CONFIAR_PROXY` com número de saltos ou lista de IP/CIDR (`true` = 1 proxy), limite de login também por conta, porta publicada só em `127.0.0.1` e guia do nginx/Caddy/Traefik. | Em revisão (PR aberto) |
+| 32 | **IP do cliente atrás de proxy:** `CONFIAR_PROXY` com número de saltos ou lista de IP/CIDR (`true` = 1 proxy), limite de login também por conta, porta publicada só em `127.0.0.1` e guia do nginx/Caddy/Traefik. | Em revisão no PR #35 |
 
 Ficaram de fora nesta rodada:
 - cenários em Gherkin;
