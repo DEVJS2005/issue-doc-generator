@@ -16,6 +16,10 @@ services:
     volumes:
       - dados:/app/data
     restart: unless-stopped
+    # Endurecimento: sem capacidades do kernel e sem escalada de privilégio (o app roda como "node").
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   dados:

@@ -425,3 +425,36 @@ test("cria a issue no Jira uma vez e mostra o link", async ({ page }) => {
   await expect(link).toHaveAttribute("href", /^https:\/\/jira\.exemplo\.dev\/browse\/LOJ-\d+$/);
   await expect(page.getByRole("button", { name: "Criar no Jira" })).toHaveCount(0);
 });
+
+test("a política de conteúdo (CSP) não bloqueia nada nas telas", async ({ page, context }) => {
+  const violacoes: string[] = [];
+  await context.addInitScript(() => {
+    document.addEventListener("securitypolicyviolation", (e) => console.error(`CSP: ${e.violatedDirective} ${e.blockedURI}`));
+  });
+  page.on("console", (m) => {
+    if (m.type() === "error" && /CSP|Content Security Policy/i.test(m.text())) violacoes.push(m.text());
+  });
+  page.on("pageerror", (e) => violacoes.push(String(e)));
+
+  const resposta = await page.goto("/");
+  expect(resposta?.headers()["content-security-policy"]).toContain("script-src 'self'");
+  await entrar(page);
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+  await page.getByLabel("Escolher imagens").setInputFiles({ name: "tela.png", mimeType: "image/png", buffer: png });
+  await gerar(page, "CSP: limitar cupons a 3 por pedido.");
+  await expect(page.locator(".issue h3", { hasText: "Dúvidas para o PO" })).toBeVisible();
+  await page.locator(".qualidade summary").click();
+  await page.getByRole("button", { name: "Criar link de leitura" }).click();
+  const link = await page.getByLabel("Link de compartilhamento").inputValue();
+  await page.getByRole("button", { name: "Histórico", exact: true }).click();
+  await page.getByRole("button", { name: "Administração" }).click();
+  await expect(page.getByRole("heading", { name: "Auditoria" })).toBeVisible();
+  await page.goto(link);
+  await expect(page.locator(".issue h1")).toBeVisible();
+  // O tema escolhido continua sendo aplicado antes da pintura (agora por /tema.js).
+  await page.evaluate(() => localStorage.setItem("idg:tema", "escuro"));
+  await page.goto("/");
+  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe("dark");
+
+  expect(violacoes).toEqual([]);
+});

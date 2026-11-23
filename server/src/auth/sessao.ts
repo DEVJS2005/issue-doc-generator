@@ -2,12 +2,15 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 /** O token leva só o e-mail; o perfil (admin, ativo) é relido do banco a cada pedido. */
 type Usuario = { email: string };
+/** O que a sessão diz: quem é e quando ela foi emitida (para derrubar sessões antigas). */
+type DadosSessao = Usuario & { emitidaEm: number };
 
 export const COOKIE_SESSAO = "idg_sessao";
 
 /**
- * Sessão sem estado: o cookie leva "email|expiraEm" assinado com HMAC-SHA256. Sem banco de
- * sessões; para invalidar todas as sessões, troque SEGREDO_SESSAO.
+ * Sessão sem estado: o cookie leva "email|expiraEm|emitidaEm" assinado com HMAC-SHA256. Sem banco
+ * de sessões: trocar a senha ou desativar alguém derruba as sessões emitidas antes disso (veja
+ * usuarioDaRequisicao); para invalidar as sessões de todos, troque SEGREDO_SESSAO.
  */
 export function criarSessoes(segredo: string, horas: number) {
   const chave = segredo || randomBytes(32).toString("hex");
@@ -39,20 +42,22 @@ export function criarSessoes(segredo: string, horas: number) {
     },
 
     criar(usuario: Usuario, agora = Date.now()): string {
-      const dados = Buffer.from(`${usuario.email}|${agora + horas * 3_600_000}`).toString("base64url");
+      const dados = Buffer.from(`${usuario.email}|${agora + horas * 3_600_000}|${agora}`).toString("base64url");
       return `${dados}.${assinar(dados)}`;
     },
 
-    ler(token: string | undefined, agora = Date.now()): Usuario | null {
+    ler(token: string | undefined, agora = Date.now()): DadosSessao | null {
       if (!token) return null;
       const [dados, assinatura] = token.split(".");
       if (!dados || !assinatura) return null;
       const esperada = Buffer.from(assinar(dados));
       const recebida = Buffer.from(assinatura);
       if (esperada.length !== recebida.length || !timingSafeEqual(esperada, recebida)) return null;
-      const [email, expira] = Buffer.from(dados, "base64url").toString("utf8").split("|");
+      const [email, expira, emitida] = Buffer.from(dados, "base64url").toString("utf8").split("|");
       if (!email || !(Number(expira) > agora)) return null;
-      return { email };
+      // Tokens de antes desta versão não têm a data de emissão: deduzida pela validade.
+      const emitidaEm = emitida ? Number(emitida) : Number(expira) - horas * 3_600_000;
+      return { email, emitidaEm };
     },
   };
 }

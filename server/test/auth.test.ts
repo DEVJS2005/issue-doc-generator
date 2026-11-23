@@ -95,7 +95,7 @@ describe("sessão assinada", () => {
   const s = criarSessoes("segredo-de-teste", 12);
 
   it("lê o token que criou", () => {
-    expect(s.ler(s.criar({ email: "a@x.dev" }))).toEqual({ email: "a@x.dev" });
+    expect(s.ler(s.criar({ email: "a@x.dev" }, 1_000), 2_000)).toEqual({ email: "a@x.dev", emitidaEm: 1_000 });
   });
 
   it("recusa token adulterado, de outro segredo ou vencido", () => {

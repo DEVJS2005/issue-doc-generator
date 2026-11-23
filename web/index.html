@@ -7,14 +7,7 @@
     <meta name="description" content="Gera issues completas e testáveis a partir de uma descrição curta, com técnicas do ISTQB." />
     <link rel="icon" type="image/svg+xml" href="/icone.svg" />
     <title>Issue Doc Generator</title>
-    <script>
-      // Aplica o tema salvo antes da primeira pintura (evita piscar claro antes do escuro).
-      try {
-        var t = localStorage.getItem("idg:tema");
-        if (t === "claro") document.documentElement.dataset.theme = "light";
-        if (t === "escuro") document.documentElement.dataset.theme = "dark";
-      } catch (e) {}
-    </script>
+    <script src="/tema.js"></script>
   </head>
   <body>
     <div id="raiz"></div>

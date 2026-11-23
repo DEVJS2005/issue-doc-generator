@@ -53,7 +53,8 @@ export function registrarLinks(
   });
 
   // Leitura pública: só o necessário para mostrar a issue (sem e-mails, sem a entrada original).
-  app.get("/api/publico/:token", async (request, reply) => {
+  // Sem login: limite por IP, para ninguém usar a rota pública para martelar o banco.
+  app.get("/api/publico/:token", { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } }, async (request, reply) => {
     reply.header("cache-control", "no-store").header("x-robots-tag", "noindex").header("referrer-policy", "no-referrer");
     const token = (request.params as { token: string }).token;
     const id = token.length <= 100 ? o.links.abrir(token) : null;

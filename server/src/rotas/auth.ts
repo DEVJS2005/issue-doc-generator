@@ -59,14 +59,18 @@ export function usuarioDaRequisicao(request: FastifyRequest, o: OpcoesAuth): Usu
   const sessao = o.sessoes.ler(lerCookie(request.headers.cookie, COOKIE_SESSAO));
   if (!sessao) return null;
   const u = o.usuarios.buscar(sessao.email);
-  return u && u.ativo ? { email: u.email, nome: u.nome, admin: u.admin } : null;
+  if (!u || !u.ativo) return null;
+  // Senha trocada (ou conta desativada) depois que esta sessão foi emitida: não vale mais.
+  if (sessao.emitidaEm < o.usuarios.sessoesValidasDesde(u.email)) return null;
+  return { email: u.email, nome: u.nome, admin: u.admin };
 }
 
 export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
   // 10 tentativas por IP a cada 15 minutos, para login e para a configuração inicial.
   const tentativas = new Limitador(10, 15 * 60_000);
 
-  app.addHook("preHandler", async (request, reply) => {
+  // onRequest: barra quem não tem sessão antes de ler o corpo (a geração aceita até 18 MB com prints).
+  app.addHook("onRequest", async (request, reply) => {
     const caminho = request.url.split("?")[0];
     if (!PROTEGIDAS.some((p) => caminho === p || caminho.startsWith(`${p}/`))) return;
     const usuario = usuarioDaRequisicao(request, o);
