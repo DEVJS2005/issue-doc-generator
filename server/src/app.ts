@@ -6,7 +6,7 @@ import Fastify, { type RouteOptions } from "fastify";
 import fastifyStatic from "@fastify/static";
 import rateLimit from "@fastify/rate-limit";
 import { Ajustes } from "./ajustes/ajustes.js";
-import { pareceApi } from "./auth/acesso.js";
+import { exigirAdmin, pareceApi } from "./auth/acesso.js";
 import { criarAutenticadorBanco, lerUsuariosDoEnv, type Autenticador } from "./auth/autenticador.js";
 import { criarProvedorOidc, type ProvedorSso } from "./auth/oidc.js";
 import { registrarSso } from "./rotas/sso.js";
@@ -173,7 +173,11 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   const clienteJira = opcoes.jira !== undefined ? opcoes.jira : config.jira ? criarClienteJira(config.jira) : null;
   if (clienteJira) app.log.info(`Jira ligado: ${clienteJira.url}`);
   registrarJira(app, { cliente: clienteJira, historico, jira: new RepositorioJira(banco), usuarios });
-  await registrarAdmin(app, { ajustes, usuarios, backups, auditoria });
+  // Rotas de admin num plugin encapsulado, com a checagem de admin própria dele.
+  await app.register(async (admin) => {
+    exigirAdmin(admin);
+    registrarAdmin(admin, { ajustes, usuarios, backups, auditoria });
+  });
 
   // Em produção o servidor também entrega o build do web/.
   const pastaWeb = opcoes.pastaWeb ?? pastaWebPadrao;

@@ -9,7 +9,7 @@ import type { RepositorioUsuarios } from "../banco/usuarios.js";
 import { ErroGeracao } from "../ia/erros.js";
 import { listarModelos } from "../ia/modelos.js";
 import type { NomeProvedor } from "../ia/tipos.js";
-import { exigirAdmin, usuarioObrigatorio } from "../auth/acesso.js";
+import { usuarioObrigatorio } from "../auth/acesso.js";
 
 function falhou(reply: FastifyReply, e: unknown) {
   if (e instanceof ErroValidacao) {
@@ -44,20 +44,15 @@ const FiltroAuditoria = z.object({
   limite: z.coerce.number().int().min(1).max(200).optional(),
 });
 
-type OpcoesAdmin = { ajustes: Ajustes; usuarios: RepositorioUsuarios; backups: Backups; auditoria: RepositorioAuditoria };
-
 /**
- * /api/admin/*: o hook geral de login já barra quem não é admin. Por defesa em profundidade, as
- * rotas ficam num plugin encapsulado com uma checagem própria de admin (exigirAdmin).
+ * /api/admin/*: o hook geral de login já barra quem não é admin. Por defesa em profundidade, o
+ * app.ts registra estas rotas num plugin encapsulado com uma checagem própria de admin
+ * (exigirAdmin, em auth/acesso.ts).
  */
-export async function registrarAdmin(app: FastifyInstance, o: OpcoesAdmin) {
-  await app.register(async (admin) => {
-    exigirAdmin(admin);
-    rotasAdmin(admin, o);
-  });
-}
-
-function rotasAdmin(app: FastifyInstance, o: OpcoesAdmin) {
+export function registrarAdmin(
+  app: FastifyInstance,
+  o: { ajustes: Ajustes; usuarios: RepositorioUsuarios; backups: Backups; auditoria: RepositorioAuditoria },
+) {
   // Auditoria: quem fez o quê, mais novo primeiro, com filtros e paginação por cursor.
   app.get("/api/admin/auditoria", async (request, reply) => {
     const filtro = FiltroAuditoria.safeParse(request.query);
