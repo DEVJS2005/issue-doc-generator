@@ -6,6 +6,18 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 ## [Não lançado]
 
+## [1.3.0] - 2026-11-23
+
+**Antes de atualizar**, confira a configuração:
+
+- `CONFIAR_PROXY=true` passa a confiar em **um** proxy na frente. Com mais de um (ex.: CDN e nginx),
+  informe o número de proxies ou a lista de IP/CIDR deles. No nginx, use
+  `proxy_set_header X-Forwarded-For $remote_addr;` (veja o guia de instalação).
+- `docker-compose.yml` publica a porta só em `127.0.0.1`. Sem proxy no mesmo servidor, ajuste a
+  linha da porta (veja o guia).
+- Para usar o Jira, liste em `JIRA_PROJETOS` as chaves dos projetos liberados (ou `*` para todos).
+  Vazio não libera nenhum.
+
 ### Adicionado
 
 - **Criar a issue no Jira**, direto do histórico: projeto e tipo escolhidos na tela, descrição
@@ -34,7 +46,6 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 - No celular, a aba Administração tinha rolagem horizontal na página inteira: os textos só para
   leitor de tela das tabelas escapavam da área de rolagem.
-
 
 ### Segurança
 
@@ -69,6 +80,11 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 - `SECURITY.md` (como relatar uma vulnerabilidade) e `CONTRIBUTING.md`.
 - README: seção de Segurança; Recursos, Como usar, Estrutura, Testes e "Subir num servidor"
   atualizados.
+- **Fila de PRs sem conflito:** cada PR descreve a mudança num arquivo em `changelog.d/`, juntado no
+  `CHANGELOG.md` e no ROADMAP pelo `npm run changelog` no release. O workflow `atualizar-prs.yml`
+  atualiza com a `main` as branches dos PRs abertos (com o segredo `ATUALIZAR_PRS_TOKEN`), e o CI
+  confere o formato dos fragmentos.
+
 ## [1.2.0] - 2026-11-17
 
 ### Adicionado
@@ -182,7 +198,8 @@ Primeira versão estável.
   imagem Docker.
 - JavaScript da tela dividido sob demanda (de 579 KB para 237 KB iniciais).
 
-[Não lançado]: https://github.com/DEVJS2005/issue-doc-generator/compare/v1.2.0...HEAD
+[Não lançado]: https://github.com/DEVJS2005/issue-doc-generator/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.3.0
 [1.2.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.2.0
 [1.1.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.1.0
 [1.0.0]: https://github.com/DEVJS2005/issue-doc-generator/releases/tag/v1.0.0
