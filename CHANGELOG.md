@@ -38,6 +38,7 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 ### Segurança
 
+- Autorização das rotas da API reforçada.
 - Refinar uma issue do histórico parte sempre da versão e da entrada guardadas no servidor. Se a
   tela estiver numa versão antiga (outra aba ou outra pessoa refinou antes), o servidor recusa e
   pede para abrir a issue de novo.

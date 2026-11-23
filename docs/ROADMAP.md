@@ -111,6 +111,7 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 
 | # | Item | Estado / estimativa |
 |---|---|---|
+| 31 | **Autorização das rotas da API reforçada:** regra pela rota registrada, negação por padrão (só uma lista explícita de rotas públicas), checagem própria de admin nas rotas de administração e testes que percorrem todas as rotas da API. | ✅ PR #34 |
 | 34 | **Refinar a partir do histórico:** com `historicoId`, a base é a versão atual e a entrada guardadas; versão antiga na tela dá 409. | Em revisão no PR #37 |
 
 Ficaram de fora nesta rodada:
@@ -172,7 +173,10 @@ Passo a passo completo em [INSTALACAO-DOCKER.md](INSTALACAO-DOCKER.md). Em resum
   - o PDF sai pela impressão do navegador, sem biblioteca nova;
   - a instalação para o DevOps passa a usar a imagem pronta do ghcr.io;
   - na revisão do fim do dia, entram os itens 27 a 30.
-
+- **23/11:**
+  - autorização das rotas da API pela rota registrada no servidor, com negação por padrão: rota nova
+    nasce exigindo login, e rota pública precisa entrar numa lista explícita;
+  - as rotas de administração ganham uma checagem própria de admin (defesa em profundidade).
 - **23/11, refinar:**
   - a base do refinamento de uma issue do histórico vem do banco, não do pedido;
   - a tela manda o número da versão; versão antiga recebe 409 e a pessoa abre a issue de novo.
