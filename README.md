@@ -98,7 +98,8 @@ issue-doc-generator/
 │   ├── scripts/           gerar-base-istqb.ts e teste-ia-real.ts (teste semanal com IA real)
 │   ├── src/
 │   │   ├── ajustes/       configuração em uso (.env + o que a administração salvou)
-│   │   ├── auth/          adaptador de login, senhas (scrypt), sessão assinada, limite de uso
+│   │   ├── auth/          adaptador de login, regras de acesso das rotas, senhas (scrypt),
+│   │   │                  sessão assinada, limite de uso
 │   │   ├── banco/         SQLite: migrações, usuários, configuração, histórico, links,
 │   │   │                  backups, auditoria e envios ao Jira
 │   │   ├── ia/            um arquivo por provedor, modelo reserva, lista de modelos, erros,
@@ -152,7 +153,7 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 
 | Comando | O que roda |
 |---|---|
-| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões, IP atrás de proxy, limite de login por IP e por conta, 1º admin, administração, usuários, modelo reserva, histórico, status, links, backup, auditoria, nota de qualidade, imagens, Jira, cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
+| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões, acesso de cada rota da API, IP atrás de proxy, limite de login por IP e por conta, 1º admin, administração, usuários, modelo reserva, histórico, status, links, backup, auditoria, nota de qualidade, imagens, Jira, cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
 | `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, status, CSV, link de leitura, idioma, administração, backup, auditoria, nota de qualidade, prints, Jira (falso), CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos |
 | `npm run typecheck` | TypeScript do servidor e da tela |
 | `npm run lint` | ESLint (TypeScript e regras dos hooks do React), sem tolerar avisos |
@@ -409,8 +410,10 @@ Resumo das proteções. Para relatar uma vulnerabilidade, veja o [SECURITY.md](S
   atrás de HTTPS), assinado com HMAC. Trocar a senha ou desativar alguém encerra as sessões abertas
   dessa pessoa. Login com limite de 10 tentativas a cada 15 minutos por IP e também por conta.
   Atrás de proxy, o IP real vem só dos proxies confiáveis (`CONFIAR_PROXY`).
-- **Acesso:** a sessão é conferida antes de ler o corpo do pedido; cada pessoa vê só as próprias
-  issues, e a administração exige perfil de admin. As credenciais (chaves de IA, Jira, OIDC) ficam
+- **Acesso:** toda rota da API exige login, menos uma lista curta de rotas públicas (saúde, login,
+  configuração inicial, SSO e leitura por link); a regra vale pela rota registrada, não pelo texto
+  da URL. A sessão é conferida antes de ler o corpo do pedido; cada pessoa vê só as próprias
+  issues, e a administração exige perfil de admin (conferido duas vezes). As credenciais (chaves de IA, Jira, OIDC) ficam
   só no servidor.
 - **Cabeçalhos** em todas as respostas: CSP só com a própria origem (sem script ou estilo embutido),
   `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy` e HSTS em HTTPS.

@@ -38,6 +38,7 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 ### Segurança
 
+- Autorização das rotas da API reforçada.
 - `CONFIAR_PROXY` aceita o número de proxies ou a lista de IP/CIDR deles; `true` passa a valer
   **um** proxy na frente. O guia do nginx troca `$proxy_add_x_forwarded_for` por `$remote_addr`.
 - Limite de tentativas de login também por conta, além do IP.

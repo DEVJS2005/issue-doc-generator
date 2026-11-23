@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
+import { ERRO_NAO_AUTENTICADO, ERRO_SEM_PERMISSAO, rotaExigeAdmin, rotaExigeLogin } from "../auth/acesso.js";
 import type { Autenticador, Usuario } from "../auth/autenticador.js";
 import { Limitador } from "../auth/limite.js";
 import { COOKIE_SESSAO, cookieSaida, cookieSessao, lerCookie, type Sessoes } from "../auth/sessao.js";
@@ -29,9 +30,6 @@ const CorpoConfigurar = z.object({
   email: z.string().trim().min(1, "Informe o e-mail.").max(200),
   senha: z.string().max(200),
 });
-
-/** Prefixos que exigem login; /api/admin exige também perfil de admin. */
-const PROTEGIDAS = ["/api/gerar", "/api/refinar", "/api/opcoes", "/api/historico", "/api/admin", "/api/jira"];
 
 function seguro(request: FastifyRequest) {
   return request.protocol === "https";
@@ -72,14 +70,15 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
   const porConta = new Limitador(10, 15 * 60_000);
 
   // onRequest: barra quem não tem sessão antes de ler o corpo (a geração aceita até 18 MB com prints).
+  // Decide pelo padrão da rota que o roteador escolheu, não pela URL recebida: assim o
+  // percent-encoding, as maiúsculas ou as barras extras não mudam a regra. Toda rota /api exige
+  // login, menos as públicas (auth/acesso.ts). Sem rota registrada, segue para o 404.
   app.addHook("onRequest", async (request, reply) => {
-    const caminho = request.url.split("?")[0];
-    if (!PROTEGIDAS.some((p) => caminho === p || caminho.startsWith(`${p}/`))) return;
+    const rota = request.routeOptions.url;
+    if (!rota || !rotaExigeLogin(rota)) return;
     const usuario = usuarioDaRequisicao(request, o);
-    if (!usuario) return reply.code(401).send(erro("nao_autenticado", "Entre com seu e-mail e senha para continuar."));
-    if (caminho.startsWith("/api/admin") && !usuario.admin) {
-      return reply.code(403).send(erro("sem_permissao", "Só administradores podem abrir esta área."));
-    }
+    if (!usuario) return reply.code(401).send({ erro: ERRO_NAO_AUTENTICADO });
+    if (rotaExigeAdmin(rota) && !usuario.admin) return reply.code(403).send({ erro: ERRO_SEM_PERMISSAO });
     request.usuario = usuario;
   });
 

@@ -4,6 +4,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { STATUS_ISSUE, type RepositorioHistorico, type StatusIssue } from "../banco/historico.js";
 import type { RepositorioUsuarios } from "../banco/usuarios.js";
+import { usuarioObrigatorio } from "../auth/acesso.js";
 
 const NAO_ENCONTRADA = { erro: { codigo: "nao_encontrado", mensagem: "Issue não encontrada.", podeTentarDeNovo: false } };
 
@@ -22,7 +23,9 @@ function statusDoFiltro(valor: string | undefined): StatusIssue | undefined {
 
 /** Cada pessoa vê as próprias issues; o admin vê as de todos. */
 export function podeVer(request: FastifyRequest, dono: string | null) {
-  return dono !== null && (request.usuario!.admin || dono === request.usuario!.email);
+  if (dono === null) return false;
+  const u = usuarioObrigatorio(request);
+  return u.admin || dono === u.email;
 }
 
 export function registrarHistorico(app: FastifyInstance, o: { historico: RepositorioHistorico; usuarios: RepositorioUsuarios }) {
@@ -42,7 +45,7 @@ export function registrarHistorico(app: FastifyInstance, o: { historico: Reposit
     if (de === null || ate === null) {
       return reply.code(400).send({ erro: { codigo: "entrada_invalida", mensagem: "Período inválido.", podeTentarDeNovo: false } });
     }
-    const u = request.usuario!;
+    const u = usuarioObrigatorio(request);
     const todos = u.admin && q.todos === "1";
     // O filtro do admin aceita o nome de usuário ou o e-mail; o histórico guarda o e-mail.
     const nomes = o.usuarios.nomesPorEmail();
@@ -76,8 +79,8 @@ export function registrarHistorico(app: FastifyInstance, o: { historico: Reposit
     if (!corpo.success) {
       return reply.code(400).send({ erro: { codigo: "entrada_invalida", mensagem: "Escolha um status válido.", podeTentarDeNovo: false } });
     }
-    const mudanca = o.historico.mudarStatus(id, corpo.data.status, request.usuario!.email);
-    if (mudanca) request.log.info({ evento: "issue_status", id, de: mudanca.de, para: mudanca.para, usuario: request.usuario!.email }, "histórico: status");
+    const mudanca = o.historico.mudarStatus(id, corpo.data.status, usuarioObrigatorio(request).email);
+    if (mudanca) request.log.info({ evento: "issue_status", id, de: mudanca.de, para: mudanca.para, usuario: usuarioObrigatorio(request).email }, "histórico: status");
     const nomes = o.usuarios.nomesPorEmail();
     return {
       status: corpo.data.status,
@@ -97,7 +100,7 @@ export function registrarHistorico(app: FastifyInstance, o: { historico: Reposit
     const id = Number((request.params as { id: string }).id);
     if (!Number.isInteger(id) || !podeVer(request, o.historico.dono(id))) return reply.code(404).send(NAO_ENCONTRADA);
     o.historico.apagar(id);
-    request.log.info({ evento: "issue_apagada", usuario: request.usuario!.email, id }, "histórico: issue apagada");
+    request.log.info({ evento: "issue_apagada", usuario: usuarioObrigatorio(request).email, id }, "histórico: issue apagada");
     return { ok: true };
   });
 }
