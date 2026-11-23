@@ -21,7 +21,7 @@ import { RepositorioHistorico } from "./banco/historico.js";
 import { RepositorioJira } from "./banco/jira.js";
 import { RepositorioLinks } from "./banco/links.js";
 import { RepositorioUsuarios } from "./banco/usuarios.js";
-import type { Config } from "./config.js";
+import { trustProxyDoFastify, type Config } from "./config.js";
 import { criarProvedor } from "./ia/index.js";
 import { criarClienteJira, type ClienteJira } from "./integracoes/jira.js";
 import type { Provedor } from "./ia/tipos.js";
@@ -58,7 +58,7 @@ export type OpcoesApp = {
 export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   const app = Fastify({
     logger: { level: process.env.NODE_ENV === "test" ? "silent" : "info" },
-    trustProxy: config.confiarProxy,
+    trustProxy: trustProxyDoFastify(config.confiarProxy),
   });
   if (opcoes.aoRegistrarRota) app.addHook("onRoute", opcoes.aoRegistrarRota);
   registrarCabecalhos(app);
