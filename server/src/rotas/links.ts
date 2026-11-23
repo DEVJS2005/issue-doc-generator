@@ -4,6 +4,7 @@ import type { RepositorioHistorico } from "../banco/historico.js";
 import { DIAS_LINK, type RepositorioLinks } from "../banco/links.js";
 import type { RepositorioUsuarios } from "../banco/usuarios.js";
 import { podeVer } from "./historico.js";
+import { usuarioObrigatorio } from "../auth/acesso.js";
 
 const NAO_ENCONTRADA = { erro: { codigo: "nao_encontrado", mensagem: "Issue não encontrada.", podeTentarDeNovo: false } };
 const LINK_INVALIDO = { erro: { codigo: "link_invalido", mensagem: "Este link não existe, venceu ou foi revogado.", podeTentarDeNovo: false } };
@@ -30,8 +31,8 @@ export function registrarLinks(
     if (!corpo.success) {
       return reply.code(400).send({ erro: { codigo: "entrada_invalida", mensagem: "Escolha a validade: 1, 7 ou 30 dias.", podeTentarDeNovo: false } });
     }
-    const { token, link } = o.links.criar(id, request.usuario!.email, corpo.data.dias);
-    request.log.info({ evento: "link_criado", id, link: link.id, dias: corpo.data.dias, usuario: request.usuario!.email }, "histórico: link criado");
+    const { token, link } = o.links.criar(id, usuarioObrigatorio(request).email, corpo.data.dias);
+    request.log.info({ evento: "link_criado", id, link: link.id, dias: corpo.data.dias, usuario: usuarioObrigatorio(request).email }, "histórico: link criado");
     return reply.code(201).send({ url: `/compartilhado/${token}`, link: { ...link, criadoPor: nome(link.criadoPor) } });
   });
 
@@ -48,7 +49,7 @@ export function registrarLinks(
     if (!Number.isInteger(linkId) || !o.links.revogar(id, linkId)) {
       return reply.code(404).send({ erro: { codigo: "nao_encontrado", mensagem: "Link não encontrado.", podeTentarDeNovo: false } });
     }
-    request.log.info({ evento: "link_revogado", id, link: linkId, usuario: request.usuario!.email }, "histórico: link revogado");
+    request.log.info({ evento: "link_revogado", id, link: linkId, usuario: usuarioObrigatorio(request).email }, "histórico: link revogado");
     return { ok: true };
   });
 
