@@ -47,7 +47,7 @@ describe("versões de uma issue", () => {
       method: "POST",
       url: "/api/refinar",
       headers: { cookie: comum },
-      payload: { entrada: ENTRADA, issue: issueExemplo(), ajuste: "Prioridade Alta", historicoId: id },
+      payload: { entrada: ENTRADA, issue: issueExemplo(), ajuste: "Prioridade Alta", historicoId: id, versao: 1 },
     });
 
     const v2 = (await a.inject({ method: "GET", url: `/api/historico/${id}/versoes/2`, headers: { cookie: comum } })).json().versao;

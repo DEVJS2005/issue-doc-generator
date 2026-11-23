@@ -236,7 +236,7 @@ describe("histórico de issues", () => {
           method: "POST",
           url: "/api/refinar",
           headers: { cookie: comum },
-          payload: { entrada: ENTRADA, issue: issueExemplo(), ajuste: "Prioridade Alta", historicoId: id },
+          payload: { entrada: ENTRADA, issue: issueExemplo(), ajuste: "Prioridade Alta", historicoId: id, versao: 1 },
         })
       ).body,
     );
