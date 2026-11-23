@@ -111,7 +111,7 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 
 | # | Item | Estado / estimativa |
 |---|---|---|
-| 34 | **Refinar a partir do histórico:** com `historicoId`, a base é a versão atual e a entrada guardadas; versão antiga na tela dá 409. | Em revisão (PR aberto) |
+| 34 | **Refinar a partir do histórico:** com `historicoId`, a base é a versão atual e a entrada guardadas; versão antiga na tela dá 409. | Em revisão no PR #37 |
 
 Ficaram de fora nesta rodada:
 - cenários em Gherkin;
