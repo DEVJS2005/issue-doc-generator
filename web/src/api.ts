@@ -44,6 +44,9 @@ export type IssuePublica = {
   autor: string;
   markdown: string;
 };
+/** Resposta da senha certa: entrou, ou falta o segundo fator (com o desafio para mandar junto). */
+export type RespostaEntrada = { usuario: Usuario; precisaMfa?: boolean; mfa?: undefined } | { mfa: true; desafio: string; usuario?: undefined };
+export type EstadoMfa = { ativo: boolean; codigosRestantes: number; exigido: boolean };
 export type SessaoAberta = { id: number; criadaEm: number; ultimoUso: number; ip: string | null; navegador: string | null; atual: boolean };
 export type InfoBackup = { nome: string; bytes: number; criadoEm: number };
 export type ProjetoJira = { chave: string; nome: string };
@@ -68,7 +71,10 @@ export type AcaoAuditoria =
   | "sair"
   | "encerrar_sessao"
   | "encerrar_todas"
-  | "login_travado";
+  | "login_travado"
+  | "mfa_ativado"
+  | "mfa_desativado"
+  | "mfa_codigos";
 export type EventoAuditoria = {
   id: number;
   quando: number;
@@ -159,7 +165,7 @@ export type ValoresAjustes = {
 export type InfoProvedor = { nome: NomeProvedor; rotulo: string; disponivel: boolean; motivo: string | null; modeloPadrao: string };
 export type Alteracao = { quando: number; quem: string; chave: string; de: unknown; para: unknown };
 export type EstadoAdmin = { valores: ValoresAjustes; provedores: InfoProvedor[]; alteracoes: Alteracao[] };
-export type UsuarioAdmin = { id: number; nome: string; email: string; admin: boolean; ativo: boolean; criadoEm: number; atualizadoEm: number };
+export type UsuarioAdmin = { id: number; nome: string; email: string; admin: boolean; ativo: boolean; criadoEm: number; atualizadoEm: number; mfa?: boolean };
 
 const ERRO_GENERICO: ErroTela = { codigo: "desconhecido", mensagem: "Algo deu errado. Tente de novo.", podeTentarDeNovo: true };
 
@@ -190,19 +196,31 @@ function chamar<T>(metodo: "GET" | "PUT" | "PATCH" | "DELETE", url: string, corp
  * Sessão: o 401 diz se o banco ainda não tem usuário (`precisaConfigurar`) e qual é o botão de
  * login único, se houver (`sso`).
  */
-export async function lerSessao(): Promise<{ usuario: Usuario | null; precisaConfigurar: boolean; sso: string | null }> {
+export async function lerSessao(): Promise<{ usuario: Usuario | null; precisaMfa: boolean; precisaConfigurar: boolean; sso: string | null }> {
   const r = await fetch("/api/sessao");
   const corpo = await r.json().catch(() => ({}));
   return r.ok
-    ? { usuario: corpo.usuario, precisaConfigurar: false, sso: null }
-    : { usuario: null, precisaConfigurar: Boolean(corpo.precisaConfigurar), sso: corpo.sso ?? null };
+    ? { usuario: corpo.usuario, precisaMfa: Boolean(corpo.precisaMfa), precisaConfigurar: false, sso: null }
+    : { usuario: null, precisaMfa: false, precisaConfigurar: Boolean(corpo.precisaConfigurar), sso: corpo.sso ?? null };
 }
 
 export const api = {
   /** `usuario` é o nome de usuário ou o e-mail. */
-  entrar: (usuario: string, senha: string) => postar("/api/login", { usuario, senha }).then((r) => lerJson<{ usuario: Usuario }>(r)),
+  entrar: (usuario: string, senha: string) => postar("/api/login", { usuario, senha }).then((r) => lerJson<RespostaEntrada>(r)),
+  /** Segundo fator: código do aplicativo ou de recuperação, com o desafio da senha certa. */
+  entrarComCodigo: (desafio: string, codigo: string) =>
+    postar("/api/login/mfa", { desafio, codigo }).then((r) => lerJson<{ usuario: Usuario; precisaMfa: boolean }>(r)),
+  mfa: () => chamar<EstadoMfa>("GET", "/api/mfa"),
+  iniciarMfa: () => postar("/api/mfa/iniciar", {}).then((r) => lerJson<{ segredo: string; uri: string; qr: string }>(r)),
+  ativarMfa: (codigo: string) => postar("/api/mfa/ativar", { codigo }).then((r) => lerJson<{ codigos: string[] }>(r)),
+  novosCodigosMfa: () => postar("/api/mfa/codigos", {}).then((r) => lerJson<{ codigos: string[] }>(r)),
+  desativarMfa: () => postar("/api/mfa/desativar", {}).then((r) => lerJson<{ ok: true }>(r)),
+  /** Admin desliga o MFA de alguém que perdeu o celular e os códigos de recuperação. */
+  desligarMfaDe: (id: number) => postar(`/api/admin/usuarios/${id}/mfa/desligar`, {}).then((r) => lerJson<{ ok: true }>(r)),
+  /** Confirma a senha de novo para as ações sensíveis (vale 5 minutos). */
+  reautenticar: (senha: string) => postar("/api/reautenticar", { senha }).then((r) => lerJson<{ ok: true }>(r)),
   configurar: (codigo: string, nome: string, email: string, senha: string) =>
-    postar("/api/configurar", { codigo, nome, email, senha }).then((r) => lerJson<{ usuario: Usuario }>(r)),
+    postar("/api/configurar", { codigo, nome, email, senha }).then((r) => lerJson<{ usuario: Usuario; precisaMfa?: boolean }>(r)),
   sair: () => postar("/api/sair", {}).then((r) => lerJson<{ ok: true }>(r)),
   sessoes: () => chamar<{ sessoes: SessaoAberta[] }>("GET", "/api/sessoes"),
   encerrarSessao: (id: number) => chamar<{ ok: true; atual: boolean }>("DELETE", `/api/sessoes/${id}`),
@@ -234,6 +252,12 @@ export const api = {
     return chamar<{ eventos: EventoAuditoria[]; proximo: number | null }>("GET", `/api/admin/auditoria${p.size ? `?${p}` : ""}`);
   },
   fazerBackup: () => postar("/api/admin/backups", {}).then((r) => lerJson<{ backup: InfoBackup }>(r)),
+  /** Baixa um backup como arquivo (pelo fetch, para tratar o pedido de confirmar a senha). */
+  baixarBackup: async (nome: string) => {
+    const r = await fetch(`/api/admin/backups/${encodeURIComponent(nome)}`);
+    if (!r.ok) await lerJson(r);
+    return r.blob();
+  },
   apagarIssue: (id: number) => chamar<{ ok: true }>("DELETE", `/api/historico/${id}`),
   versao: (id: number, numero: number) => chamar<{ versao: Versao & { markdown: string } }>("GET", `/api/historico/${id}/versoes/${numero}`),
 

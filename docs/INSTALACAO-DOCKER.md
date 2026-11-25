@@ -176,7 +176,20 @@ issues.suaempresa.com.br {
 
 Rode **uma instância só**. O banco é um arquivo SQLite, e o limite por hora fica na memória.
 
-## 8. Login único (opcional)
+## 8. Verificação em duas etapas (MFA)
+
+Cada pessoa pode ligar, em **Segurança** (no topo), a verificação em duas etapas com um aplicativo
+autenticador (Google Authenticator, Microsoft Authenticator, 1Password…). Com
+`ADMIN_EXIGE_MFA=true` no `.env`, todo administrador precisa ligar antes de usar o sistema.
+
+- Quem perder o celular entra com um dos **códigos de recuperação** (aparecem uma vez, ao ligar).
+  Sem eles, um admin desliga o MFA da pessoa na Administração, e ela liga de novo.
+- **Não troque o `SEGREDO_SESSAO` sem avisar:** os segredos do MFA ficam cifrados com uma chave
+  derivada dele. Trocado, os códigos do aplicativo param de valer para todos; os códigos de
+  recuperação continuam funcionando, e cada pessoa liga o MFA de novo (ou um admin desliga para ela).
+- Baixar backup e criar ou promover admin pedem a senha de novo (vale por 5 minutos).
+
+## 9. Login único (opcional)
 
 Para o time entrar com a conta da empresa (Microsoft Entra ID, Google Workspace, Keycloak, Okta…),
 preencha estas variáveis no `.env` e recrie o container:
@@ -189,7 +202,7 @@ preencha estas variáveis no `.env` e recrie o container:
 
 Os detalhes estão na seção "Login único (SSO)" do README.
 
-## 9. Jira (opcional)
+## 10. Jira (opcional)
 
 Para o botão **Criar no Jira**, preencha `JIRA_URL`, `JIRA_EMAIL` e `JIRA_TOKEN` no `.env` (no
 Jira Data Center, deixe `JIRA_EMAIL` vazio e use um token de acesso pessoal), liste em

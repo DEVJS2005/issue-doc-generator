@@ -54,7 +54,7 @@ describe("configuração inicial (banco sem usuários)", () => {
 
     const ok = await a.inject({ method: "POST", url: "/api/configurar", payload: { codigo: CODIGO, email: "Admin@Exemplo.dev", senha: "senha-forte-1" } });
     expect(ok.statusCode).toBe(200);
-    expect(ok.json()).toEqual({ usuario: { email: "admin@exemplo.dev", nome: "admin", admin: true } });
+    expect(ok.json()).toEqual({ usuario: { email: "admin@exemplo.dev", nome: "admin", admin: true }, precisaMfa: false });
     expect(String(ok.headers["set-cookie"])).toContain("HttpOnly");
 
     const denovo = await a.inject({ method: "POST", url: "/api/configurar", payload: { codigo: CODIGO, email: "outro@exemplo.dev", senha: "senha-forte-2" } });

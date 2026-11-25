@@ -56,6 +56,11 @@ const ROTAS: Record<string, Registro> = {
   "PATCH /api/admin/usuarios/:id": { acao: "alterar_usuario", alvo: param("id"), detalhe: camposAlterados },
   "POST /api/admin/backups": { acao: "backup" },
   "GET /api/admin/backups/:nome": { acao: "baixar_backup", alvo: param("nome") },
+  "POST /api/login/mfa": { acao: "login", statusErro: [401], detalhe: () => ({ segundoFator: true }) },
+  "POST /api/mfa/ativar": { acao: "mfa_ativado" },
+  "POST /api/mfa/desativar": { acao: "mfa_desativado" },
+  "POST /api/admin/usuarios/:id/mfa/desligar": { acao: "mfa_desativado", alvo: param("id"), detalhe: () => ({ porAdmin: true }) },
+  "POST /api/mfa/codigos": { acao: "mfa_codigos" },
   "POST /api/sair": { acao: "sair" },
   "DELETE /api/sessoes/:id": { acao: "encerrar_sessao", alvo: param("id") },
   "POST /api/sessoes/encerrar-todas": { acao: "encerrar_todas" },
@@ -72,6 +77,8 @@ export function registrarAuditoria(app: FastifyInstance, auditoria: RepositorioA
     if (!regra) return;
     const status = reply.statusCode;
     if (status >= 400 && !regra.statusErro?.includes(status)) return;
+    // Senha certa com MFA ligado ainda não é entrada: o login só conta quando o código passa.
+    if (regra.acao === "login" && status < 400 && !request.usuario) return;
     try {
       const falhouLogin = regra.acao === "login" && status === 401;
       auditoria.registrar({
