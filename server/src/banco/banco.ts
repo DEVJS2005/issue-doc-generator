@@ -97,6 +97,19 @@ export const MIGRACAO_SESSOES_REVOGAVEIS = `
   CREATE INDEX sessoes_por_expiracao ON sessoes (expira_em);
 `;
 
+/**
+ * Falhas de login por conta (o texto digitado, normalizado), com a espera progressiva. Fica no
+ * banco para o limite não zerar quando o servidor reinicia.
+ */
+export const MIGRACAO_TRAVAS_LOGIN = `
+  CREATE TABLE travas_login (
+    conta TEXT PRIMARY KEY,
+    falhas INTEGER NOT NULL,
+    ultima_falha INTEGER NOT NULL,
+    travada_ate INTEGER NOT NULL DEFAULT 0
+  );
+`;
+
 // Um arquivo SQLite (node:sqlite, sem dependência nativa) guarda a configuração da IA, os usuários
 // e o histórico de issues. Cada item da lista é uma migração; a versão aplicada fica em
 // PRAGMA user_version. Nunca edite uma migração já publicada: acrescente outra no fim.
@@ -158,6 +171,7 @@ const MIGRACOES: string[] = [
   MIGRACAO_JIRA,
   MIGRACAO_SESSOES,
   MIGRACAO_SESSOES_REVOGAVEIS,
+  MIGRACAO_TRAVAS_LOGIN,
 ];
 
 export type Banco = DatabaseSync;
