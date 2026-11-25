@@ -1,5 +1,5 @@
 categoria: Documentação
-pr: 0
+pr: 59
 ---
 - README (seção Segurança) e SECURITY.md atualizados com o reforço da Fase 1: senha de novo nas
   ações sensíveis, subchaves por HKDF, cadeia de suprimentos e uma lista do que configurar ao
