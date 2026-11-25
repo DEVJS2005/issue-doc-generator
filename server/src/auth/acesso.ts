@@ -12,6 +12,8 @@ export const ROTAS_PUBLICAS: readonly string[] = [
   "/api/saude",
   "/api/login",
   "/api/login/mfa",
+  "/api/login/chave/iniciar",
+  "/api/login/chave/concluir",
   "/api/sair",
   "/api/sessao",
   "/api/configurar",

@@ -143,6 +143,7 @@ Um PR por item. Ao terminar, a seção Segurança do README e o `SECURITY.md` s�
 | 43 | **Subchaves por HKDF** a partir do `SEGREDO_SESSAO` (sessão, estado do SSO, MFA), sem derrubar as sessões válidas na troca, se for viável; senão, aviso no CHANGELOG. | ~2 h |
 | 44 | **Cadeia de suprimentos no CI:** Actions fixadas por SHA (o Dependabot segue atualizando), imagem base com digest, Trivy na imagem (falha em CRITICAL/HIGH com correção), SBOM e proveniência no build, assinatura com cosign na publicação, gitleaks em todo PR, OpenSSF Scorecard semanal e `permissions:` mínimas por job. | ~5 h |
 | 45 | **Prompt injection:** `sistema.md` deixa claro que descrição, contexto e texto de imagens são dados, não instruções; teste com descrição maliciosa que tenta fechar as tags e mudar a saída, e conferência da conversão para o Jira contra links `javascript:` e marcação que quebra o formato. | ~2 h |
+| 46 | **Chave de acesso (passkey):** login sem senha por WebAuthn, com biometria ou PIN, que vale como segunda etapa (também para o admin com `ADMIN_EXIGE_MFA=true`). Liga com `URL_PUBLICA`; cadastrar e remover pedem a senha de novo. | ~6 h |
 
 ## Para o DevOps
 

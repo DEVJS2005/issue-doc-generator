@@ -40,7 +40,8 @@ Mudanças por versão: [CHANGELOG.md](CHANGELOG.md).
   diário do banco.
 - **Login** por nome de usuário (ou e-mail) e senha, ou **SSO** (OpenID Connect: Entra ID, Google Workspace, Keycloak, Okta).
   Em **Segurança**, no topo, cada pessoa liga a **verificação em duas etapas** (aplicativo
-  autenticador, com códigos de recuperação), vê onde a conta está conectada, encerra o que não
+  autenticador, com códigos de recuperação) ou cadastra uma **chave de acesso** para entrar sem
+  senha (digital, rosto ou PIN), vê onde a conta está conectada, encerra o que não
   reconhece ou sai de todos os dispositivos.
 - **Pronto para produção:** imagem Docker pronta no ghcr.io, SQLite, logs JSON sem dados pessoais
   (LGPD), cabeçalhos de segurança com CSP, CI com Vitest, Playwright, CodeQL e teste semanal com IA
@@ -159,8 +160,8 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 
 | Comando | O que roda |
 |---|---|
-| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões revogáveis (lista, encerrar, sair de todos, cookie `__Host-`), verificação em duas etapas (TOTP da RFC 6238, códigos de recuperação, admin obrigado, senha de novo nas ações sensíveis), acesso de cada rota da API, IP atrás de proxy, limite de login por IP e trava por conta com espera progressiva (no banco, também depois de reiniciar), 1º admin, administração, usuários, modelo reserva, backup criptografado e restauração, histórico, refinar a partir da versão guardada, saúde mínima sem login, entrada maliciosa para a IA (tags e resposta fora do schema), status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
-| `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, status, CSV, link de leitura, idioma, administração, backup, auditoria, nota de qualidade, prints, Jira (falso), CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos |
+| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões revogáveis (lista, encerrar, sair de todos, cookie `__Host-`), verificação em duas etapas (TOTP da RFC 6238, códigos de recuperação, admin obrigado, senha de novo nas ações sensíveis), chave de acesso (cadastro, login sem senha, site falso e desafio repetido recusados), acesso de cada rota da API, IP atrás de proxy, limite de login por IP e trava por conta com espera progressiva (no banco, também depois de reiniciar), 1º admin, administração, usuários, modelo reserva, backup criptografado e restauração, histórico, refinar a partir da versão guardada, saúde mínima sem login, entrada maliciosa para a IA (tags e resposta fora do schema), status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
+| `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, status, CSV, link de leitura, idioma, administração, backup, auditoria, nota de qualidade, prints, Jira (falso), sessões, verificação em duas etapas, chave de acesso (aparelho virtual do Chromium), CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos |
 | `npm run typecheck` | TypeScript do servidor e da tela |
 | `npm run lint` | ESLint (TypeScript e regras dos hooks do React), sem tolerar avisos |
 
@@ -255,6 +256,9 @@ fica no banco).
   ligado, depois da senha o login pede o código. Com `ADMIN_EXIGE_MFA=true`, todo admin liga antes
   de usar o sistema. Um admin desliga o MFA de quem perdeu o celular e os códigos. No login único
   (SSO), o segundo fator fica com o provedor de identidade.
+- **Chave de acesso (passkey):** com `URL_PUBLICA`, cada pessoa cadastra em **Segurança** uma
+  chave e entra sem senha, com a digital, o rosto ou o PIN do aparelho. Ela vale como segunda
+  etapa, também para o admin com `ADMIN_EXIGE_MFA=true`. Cadastrar e remover pedem a senha de novo.
 - **Senha de novo:** baixar backup, criar ou promover admin, gerar códigos novos e desligar o MFA
   pedem a senha confirmada nos últimos 5 minutos.
 - **Sessão:** guardada no servidor, válida por `SESSAO_HORAS`. O cookie (`HttpOnly`,
@@ -449,6 +453,9 @@ Resumo das proteções. Para relatar uma vulnerabilidade, veja o [SECURITY.md](S
   `SEGREDO_SESSAO`), os códigos de recuperação só como hash, e o mesmo código não vale duas vezes.
   Erros de código contam na trava da conta. Baixar backup, criar ou promover admin e mexer no MFA
   pedem a senha de novo.
+- **Chave de acesso:** WebAuthn com biometria ou PIN obrigatórios, presa ao domínio de
+  `URL_PUBLICA` (um site falso não consegue usar). O banco guarda só a chave pública; o desafio
+  vale 5 minutos e uma vez.
 - **Jira:** só os projetos de `JIRA_PROJETOS`, conferidos no servidor; a URL do Jira só aparece
   para o admin.
 - **Acesso:** toda rota da API exige login, menos uma lista curta de rotas públicas (saúde, login,
@@ -488,6 +495,7 @@ Só segredos e infraestrutura. Provedor, modelo, limites, usuários e retenção
 | `SEGREDO_SESSAO` | (vazio = temporário) | Origem das subchaves do servidor (HKDF, uma por uso), como a que assina o estado do login único (SSO). A sessão de login fica no banco. |
 | `SESSAO_HORAS` | `12` | Duração da sessão. |
 | `ADMIN_EXIGE_MFA` | `false` | `true` = administradores só usam o sistema depois de ligar a verificação em duas etapas. |
+| `URL_PUBLICA` | (vazio) | Endereço do sistema (https com domínio; http só com localhost). Liga a chave de acesso. |
 | `BACKUP_CHAVE` | (vazio) | Chave de 32 bytes (hex ou base64) para criptografar os backups (AES-256-GCM). Guarde uma cópia fora do servidor. |
 | `PORTA` | `3000` | Porta HTTP. |
 | `CONFIAR_PROXY` | `false` | Proxy reverso com HTTPS na frente: `true` (1 proxy), o número de proxies ou a lista de IP/CIDR deles. |

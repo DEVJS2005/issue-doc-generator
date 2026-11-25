@@ -89,6 +89,34 @@ const esquema = z.object({
       return chave;
     }),
   SESSAO_HORAS: z.coerce.number().positive().default(12),
+  // Endereço público do sistema (ex.: https://issues.empresa.com). A chave de acesso (passkey) fica
+  // presa a esse domínio; vazio = chave de acesso desligada.
+  URL_PUBLICA: z
+    .string()
+    .default("")
+    .transform((v, ctx) => {
+      const t = v.trim().replace(/\/+$/, "");
+      if (!t) return null;
+      let url: URL;
+      try {
+        url = new URL(t);
+      } catch {
+        ctx.addIssue({
+          code: "custom",
+          message: "URL_PUBLICA: use o endereço completo, ex.: https://issues.empresa.com",
+        });
+        return z.NEVER;
+      }
+      const ip = /^\d{1,3}(\.\d{1,3}){3}$/.test(url.hostname) || url.hostname.startsWith("[");
+      if (!["http:", "https:"].includes(url.protocol) || ip || (url.protocol === "http:" && url.hostname !== "localhost")) {
+        ctx.addIssue({
+          code: "custom",
+          message: "URL_PUBLICA: use https com um nome de domínio (http só com localhost; IP não serve para chave de acesso).",
+        });
+        return z.NEVER;
+      }
+      return { origem: url.origin, dominio: url.hostname };
+    }),
   // Admin precisa de verificação em duas etapas (aplicativo autenticador ou chave de acesso).
   ADMIN_EXIGE_MFA: booleano("false"),
   CONFIAR_PROXY: z
@@ -149,6 +177,8 @@ export type Config = {
   /** Chave AES-256 dos backups; null = backup sem criptografia. */
   backupChave: Buffer | null;
   sessaoHoras: number;
+  /** Endereço público: origem e domínio da chave de acesso (null = desligada). */
+  urlPublica: { origem: string; dominio: string } | null;
   /** Admin só usa o sistema depois de ligar o MFA. */
   adminExigeMfa: boolean;
   confiarProxy: ConfiancaProxy;
@@ -194,6 +224,7 @@ export function carregarConfig(env: NodeJS.ProcessEnv = process.env): Config {
     backupChave: e.BACKUP_CHAVE,
     sessaoHoras: e.SESSAO_HORAS,
     adminExigeMfa: e.ADMIN_EXIGE_MFA,
+    urlPublica: e.URL_PUBLICA,
     confiarProxy: e.CONFIAR_PROXY,
     precoPorMtok: lerPreco(e.PRECO_POR_MTOK),
   };

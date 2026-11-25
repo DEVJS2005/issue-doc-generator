@@ -524,3 +524,37 @@ test("verificação em duas etapas: liga com o código do aplicativo, entra com 
   await page.getByRole("dialog", { name: "Desligar a verificação em duas etapas?" }).getByRole("button", { name: "Desligar" }).click();
   await expect(page.getByRole("dialog", { name: "Segurança" }).getByRole("button", { name: "Ligar a verificação em duas etapas" })).toBeVisible();
 });
+
+test("chave de acesso: cadastra no aparelho, sai e entra sem senha", async ({ page }) => {
+  // Aparelho virtual do Chromium, com biometria que sempre confirma.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("WebAuthn.enable");
+  await cdp.send("WebAuthn.addVirtualAuthenticator", {
+    options: { protocol: "ctap2", transport: "internal", hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true },
+  });
+
+  // A chave vale só no endereço de URL_PUBLICA; em 127.0.0.1 a tela nem oferece.
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Entrar com chave de acesso" })).toHaveCount(0);
+  await page.goto("http://localhost:3555/");
+  await page.getByLabel("Usuário ou e-mail").fill("comum@exemplo.dev");
+  await page.getByLabel("Senha").fill("senha-comum");
+  await page.getByRole("button", { name: "Entrar", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "O que está errado ou o que queremos" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Segurança" }).click();
+  const dialogo = page.getByRole("dialog", { name: "Segurança" });
+  await dialogo.getByRole("button", { name: "Adicionar chave de acesso" }).click();
+  await expect(dialogo.getByRole("list", { name: "Chaves de acesso" }).getByText("ainda não usada")).toBeVisible();
+  await dialogo.getByRole("button", { name: "Fechar" }).click();
+
+  await page.getByRole("button", { name: "Sair" }).click();
+  await page.getByRole("button", { name: "Entrar com chave de acesso" }).click();
+  await expect(page.getByRole("heading", { name: "O que está errado ou o que queremos" })).toBeVisible();
+
+  // Remove, para não afetar os outros testes.
+  await page.getByRole("button", { name: "Segurança" }).click();
+  await dialogo.getByRole("list", { name: "Chaves de acesso" }).getByRole("button", { name: "Remover" }).click();
+  await page.getByRole("dialog", { name: "Remover a chave de acesso?" }).getByRole("button", { name: "Remover" }).click();
+  await expect(dialogo.getByRole("list", { name: "Chaves de acesso" })).toHaveCount(0);
+});

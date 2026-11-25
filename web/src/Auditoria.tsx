@@ -25,6 +25,8 @@ export const ROTULO_ACAO: Record<AcaoAuditoria, string> = {
   mfa_ativado: "Ligou a verificação em duas etapas",
   mfa_desativado: "Desligou a verificação em duas etapas",
   mfa_codigos: "Gerou novos códigos de recuperação",
+  chave_acesso_criada: "Cadastrou uma chave de acesso",
+  chave_acesso_removida: "Removeu uma chave de acesso",
 };
 
 /** Detalhe em uma linha legível. Os campos vêm do servidor, já sem senhas nem tokens. */

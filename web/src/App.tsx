@@ -1,6 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   api,
+  cancelouChave,
+  navegadorTemChaveAcesso,
   ErroApi,
   lerSessao,
   transmitir,
@@ -33,6 +35,7 @@ const Admin = lazy(() => import("./Admin").then((m) => ({ default: m.Admin })));
 const Versoes = lazy(() => import("./Versoes").then((m) => ({ default: m.Versoes })));
 const Sessoes = lazy(() => import("./Sessoes").then((m) => ({ default: m.Sessoes })));
 const SecaoMfa = lazy(() => import("./Mfa").then((m) => ({ default: m.SecaoMfa })));
+const SecaoChavesAcesso = lazy(() => import("./ChavesAcesso").then((m) => ({ default: m.SecaoChavesAcesso })));
 const Compartilhado = lazy(() => import("./Compartilhado").then((m) => ({ default: m.Compartilhado })));
 const Carregando = () => <p className="carregando">Carregando…</p>;
 
@@ -85,6 +88,7 @@ function Principal() {
   const [usuario, setUsuario] = useState<Usuario | null | undefined>(undefined);
   const [precisaConfigurar, setPrecisaConfigurar] = useState(false);
   const [rotuloSso, setRotuloSso] = useState<string | null>(null);
+  const [chaveAcesso, setChaveAcesso] = useState(false);
   const [pagina, setPagina] = useState<Pagina>("gerar");
   const [verSessoes, setVerSessoes] = useState(false);
   // ADMIN_EXIGE_MFA: admin que ainda não ligou o MFA só vê a tela de ligar.
@@ -99,6 +103,7 @@ function Principal() {
       setPrecisaMfa(s.precisaMfa);
       setPrecisaConfigurar(s.precisaConfigurar);
       setRotuloSso(s.sso);
+      setChaveAcesso(s.chaveAcesso);
     });
   }, []);
 
@@ -202,16 +207,25 @@ function Principal() {
               </section>
             )}
             {!precisaConfigurar && (
-              <Login aoEntrar={entrou} rotuloSso={rotuloSso} erroSso={ERROS_SSO[new URLSearchParams(window.location.search).get("sso") ?? ""] ?? null} />
+              <Login
+                aoEntrar={entrou}
+                rotuloSso={rotuloSso}
+                chaveAcesso={chaveAcesso}
+                erroSso={ERROS_SSO[new URLSearchParams(window.location.search).get("sso") ?? ""] ?? null}
+              />
             )}
           </div>
         )}
         {usuario && precisaMfa && (
           <section className="cartao login">
             <h2>Ligue a verificação em duas etapas</h2>
-            <p className="legenda">Este servidor exige, para administradores, um código do aplicativo autenticador além da senha.</p>
+            <p className="legenda">
+              Este servidor exige, para administradores, uma segunda etapa além da senha: o código do aplicativo autenticador ou uma chave de acesso.
+            </p>
             <Suspense fallback={<Carregando />}>
               <SecaoMfa conta={usuario.email} aoLigar={() => setPrecisaMfa(false)} aoSair={expirou} />
+              <h3>Ou use uma chave de acesso</h3>
+              <SecaoChavesAcesso aoSair={expirou} aoCadastrar={() => setPrecisaMfa(false)} />
             </Suspense>
           </section>
         )}
@@ -319,7 +333,17 @@ function Configurar({ codigo, aoEntrar }: { codigo: string; aoEntrar: (u: Usuari
   );
 }
 
-function Login({ aoEntrar, rotuloSso, erroSso }: { aoEntrar: (u: Usuario, precisaMfa?: boolean) => void; rotuloSso: string | null; erroSso: string | null }) {
+function Login({
+  aoEntrar,
+  rotuloSso,
+  chaveAcesso,
+  erroSso,
+}: {
+  aoEntrar: (u: Usuario, precisaMfa?: boolean) => void;
+  rotuloSso: string | null;
+  chaveAcesso: boolean;
+  erroSso: string | null;
+}) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   // Senha certa com MFA ligado: falta o código (o desafio vale 5 minutos).
@@ -328,6 +352,19 @@ function Login({ aoEntrar, rotuloSso, erroSso }: { aoEntrar: (u: Usuario, precis
   const [erro, setErro] = useState<string | null>(erroSso);
   const [enviando, setEnviando] = useState(false);
   const v = useValidacao();
+
+  async function entrarComChave() {
+    setEnviando(true);
+    setErro(null);
+    try {
+      const r = await api.entrarComChave();
+      aoEntrar(r.usuario, r.precisaMfa);
+    } catch (err) {
+      if (!cancelouChave(err)) setErro(err instanceof ErroApi ? err.message : "Não foi possível entrar com a chave de acesso. Tente de novo.");
+    } finally {
+      setEnviando(false);
+    }
+  }
 
   async function enviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -421,9 +458,14 @@ function Login({ aoEntrar, rotuloSso, erroSso }: { aoEntrar: (u: Usuario, precis
       <button type="submit" disabled={enviando}>
         {enviando ? "Entrando…" : "Entrar"}
       </button>
+      {((chaveAcesso && navegadorTemChaveAcesso()) || rotuloSso) && <p className="separador">ou</p>}
+      {chaveAcesso && navegadorTemChaveAcesso() && (
+        <button type="button" className="secundario" disabled={enviando} onClick={entrarComChave}>
+          Entrar com chave de acesso
+        </button>
+      )}
       {rotuloSso && (
         <>
-          <p className="separador">ou</p>
           {/* Navegação de página inteira: o provedor de identidade não abre dentro de um fetch. */}
           <a className="botao-sso" href="/api/sso/iniciar">
             {rotuloSso}

@@ -61,6 +61,13 @@ const ROTAS: Record<string, Registro> = {
   "POST /api/mfa/desativar": { acao: "mfa_desativado" },
   "POST /api/admin/usuarios/:id/mfa/desligar": { acao: "mfa_desativado", alvo: param("id"), detalhe: () => ({ porAdmin: true }) },
   "POST /api/mfa/codigos": { acao: "mfa_codigos" },
+  "POST /api/login/chave/concluir": {
+    acao: "login",
+    statusErro: [401],
+    detalhe: () => ({ chaveAcesso: true }),
+  },
+  "POST /api/chaves-acesso/registro/concluir": { acao: "chave_acesso_criada" },
+  "DELETE /api/chaves-acesso/:id": { acao: "chave_acesso_removida" },
   "POST /api/sair": { acao: "sair" },
   "DELETE /api/sessoes/:id": { acao: "encerrar_sessao", alvo: param("id") },
   "POST /api/sessoes/encerrar-todas": { acao: "encerrar_todas" },
