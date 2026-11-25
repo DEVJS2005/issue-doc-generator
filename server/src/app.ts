@@ -10,6 +10,7 @@ import { exigirAdmin, pareceApi } from "./auth/acesso.js";
 import { criarAutenticadorBanco, lerUsuariosDoEnv, type Autenticador } from "./auth/autenticador.js";
 import { criarProvedorOidc, type ProvedorSso } from "./auth/oidc.js";
 import { registrarSso } from "./rotas/sso.js";
+import { criarChaves } from "./auth/chaves.js";
 import { criarSessoes } from "./auth/sessao.js";
 import { registrarAuditoria } from "./auditoria.js";
 import { registrarCabecalhos, registrarErros } from "./seguranca.js";
@@ -95,9 +96,10 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     }
   }
 
-  const sessoes = criarSessoes(config.segredoSessao, config.sessaoHoras);
+  const chaves = criarChaves(config.segredoSessao);
+  const sessoes = criarSessoes(chaves.chave("sso-estado"), config.sessaoHoras);
   const sessoesBanco = new RepositorioSessoes(banco, config.sessaoHoras * 3_600_000);
-  if (sessoes.segredoTemporario) {
+  if (chaves.segredoTemporario) {
     app.log.warn("SEGREDO_SESSAO vazio: usando um segredo temporário; um login único (SSO) em andamento falha se o servidor reiniciar.");
   }
   if (!ajustes.provedor()) {

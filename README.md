@@ -102,7 +102,7 @@ issue-doc-generator/
 │   ├── src/
 │   │   ├── ajustes/       configuração em uso (.env + o que a administração salvou)
 │   │   ├── auth/          adaptador de login, regras de acesso das rotas, senhas (scrypt),
-│   │   │                  cookie da sessão, selo assinado do SSO, limite de uso
+│   │   │                  cookie da sessão, subchaves (HKDF), selo do SSO, limite de uso
 │   │   ├── banco/         SQLite: migrações, usuários, configuração, histórico, links,
 │   │   │                  backups, auditoria e envios ao Jira
 │   │   ├── ia/            um arquivo por provedor, modelo reserva, lista de modelos, erros,
@@ -454,7 +454,7 @@ Só segredos e infraestrutura. Provedor, modelo, limites, usuários e retenção
 |---|---|---|
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` | (vazio) | Chaves dos provedores que podem ser escolhidos. Ficam só no servidor. |
 | `OPENAI_BASE_URL` | (vazio) | URL base do servidor compatível com a OpenAI. |
-| `SEGREDO_SESSAO` | (vazio = temporário) | Assina o estado do login único (SSO). A sessão de login fica no banco. |
+| `SEGREDO_SESSAO` | (vazio = temporário) | Origem das subchaves do servidor (HKDF, uma por uso), como a que assina o estado do login único (SSO). A sessão de login fica no banco. |
 | `SESSAO_HORAS` | `12` | Duração da sessão. |
 | `PORTA` | `3000` | Porta HTTP. |
 | `CONFIAR_PROXY` | `false` | Proxy reverso com HTTPS na frente: `true` (1 proxy), o número de proxies ou a lista de IP/CIDR deles. |
