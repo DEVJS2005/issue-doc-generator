@@ -91,27 +91,28 @@ describe("login", () => {
   });
 });
 
-describe("sessão assinada", () => {
+describe("selo assinado (estado do login único)", () => {
   const s = criarSessoes("segredo-de-teste", 12);
 
-  it("lê o token que criou", () => {
-    expect(s.ler(s.criar({ email: "a@x.dev" }, 1_000), 2_000)).toEqual({ email: "a@x.dev", emitidaEm: 1_000 });
+  it("abre o que selou, dentro da validade", () => {
+    expect(s.abrir(s.selar({ nonce: "n1" }, 60_000, 1_000), 2_000)).toEqual({ nonce: "n1" });
   });
 
-  it("recusa token adulterado, de outro segredo ou vencido", () => {
-    const token = s.criar({ email: "a@x.dev" });
-    const [dados, assinatura] = token.split(".");
-    const outroDado = Buffer.from("admin@x.dev|9999999999999").toString("base64url");
-    expect(s.ler(`${outroDado}.${assinatura}`)).toBeNull();
-    expect(criarSessoes("outro-segredo", 12).ler(token)).toBeNull();
-    expect(s.ler(`${dados}.${assinatura}`, Date.now() + 13 * 3_600_000)).toBeNull();
-    expect(s.ler("lixo")).toBeNull();
-    expect(s.ler(undefined)).toBeNull();
+  it("recusa selo adulterado, de outro segredo ou vencido", () => {
+    const selo = s.selar({ nonce: "n1" }, 60_000, 1_000);
+    const [, assinatura] = selo.split(".");
+    const outro = Buffer.from(JSON.stringify({ d: { nonce: "n2" }, e: 9_999_999_999_999 })).toString("base64url");
+    expect(s.abrir(`${outro}.${assinatura}`, 2_000)).toBeNull();
+    expect(criarSessoes("outro-segredo", 12).abrir(selo, 2_000)).toBeNull();
+    expect(s.abrir(selo, 62_000)).toBeNull();
+    expect(s.abrir("lixo")).toBeNull();
+    expect(s.abrir(undefined)).toBeNull();
   });
 
-  it("lê cookie do cabeçalho", () => {
+  it("lê cookie do cabeçalho e ignora cookie malformado", () => {
     expect(lerCookie("a=1; idg_sessao=abc%2E1; b=2", "idg_sessao")).toBe("abc.1");
     expect(lerCookie(undefined, "idg_sessao")).toBeUndefined();
+    expect(lerCookie("idg_sessao=%E0%A4%A", "idg_sessao")).toBeUndefined();
   });
 });
 

@@ -458,3 +458,32 @@ test("a política de conteúdo (CSP) não bloqueia nada nas telas", async ({ pag
 
   expect(violacoes).toEqual([]);
 });
+
+test("sessões: a lista mostra este dispositivo, encerra a outra sessão e sai de todos", async ({ page, browser }) => {
+  // O outro navegador tem um nome próprio, para achá-lo na lista (outros testes deixam sessões abertas).
+  const outro = await browser.newContext({ userAgent: "Navegador do outro teste" });
+  const outraPagina = await outro.newPage();
+  await entrar(outraPagina);
+  await entrar(page);
+
+  await page.getByRole("button", { name: "Sessões" }).click();
+  const dialogo = page.getByRole("dialog", { name: "Sessões abertas" });
+  await expect(dialogo).toBeVisible();
+  await expect(dialogo.getByRole("listitem").filter({ hasText: "este dispositivo" })).toHaveCount(1);
+  const doOutro = dialogo.getByRole("listitem").filter({ hasText: "Navegador do outro teste" });
+  await expect(doOutro).toHaveCount(1);
+
+  // Encerra a sessão do outro navegador: lá, a próxima carga volta para o login.
+  await doOutro.getByRole("button", { name: "Encerrar" }).click();
+  await expect(doOutro).toHaveCount(0);
+  await outraPagina.reload();
+  await expect(outraPagina.getByRole("heading", { name: "Entrar" })).toBeVisible();
+
+  // Sair de todos pede confirmação e leva este também ao login.
+  await dialogo.getByRole("button", { name: "Sair de todos os dispositivos" }).click();
+  await page.getByRole("dialog", { name: "Sair de todos os dispositivos?" }).getByRole("button", { name: "Sair de todos" }).click();
+  await expect(page.getByRole("heading", { name: "Entrar" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Entrar" })).toBeVisible();
+  await outro.close();
+});

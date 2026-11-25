@@ -78,6 +78,25 @@ export const MIGRACAO_SESSOES = `
   ALTER TABLE usuarios ADD COLUMN sessoes_desde INTEGER NOT NULL DEFAULT 0;
 `;
 
+/**
+ * Sessões guardadas no servidor (revogáveis): o cookie leva um id aleatório; o banco guarda só o
+ * hash dele. Encerrar uma sessão é apagar a linha.
+ */
+export const MIGRACAO_SESSOES_REVOGAVEIS = `
+  CREATE TABLE sessoes (
+    id INTEGER PRIMARY KEY,
+    hash TEXT NOT NULL UNIQUE,
+    usuario TEXT NOT NULL,
+    criada_em INTEGER NOT NULL,
+    ultimo_uso INTEGER NOT NULL,
+    expira_em INTEGER NOT NULL,
+    ip TEXT,
+    navegador TEXT
+  );
+  CREATE INDEX sessoes_por_usuario ON sessoes (usuario, ultimo_uso DESC);
+  CREATE INDEX sessoes_por_expiracao ON sessoes (expira_em);
+`;
+
 // Um arquivo SQLite (node:sqlite, sem dependência nativa) guarda a configuração da IA, os usuários
 // e o histórico de issues. Cada item da lista é uma migração; a versão aplicada fica em
 // PRAGMA user_version. Nunca edite uma migração já publicada: acrescente outra no fim.
@@ -138,6 +157,7 @@ const MIGRACOES: string[] = [
   MIGRACAO_AUDITORIA,
   MIGRACAO_JIRA,
   MIGRACAO_SESSOES,
+  MIGRACAO_SESSOES_REVOGAVEIS,
 ];
 
 export type Banco = DatabaseSync;

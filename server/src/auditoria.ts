@@ -56,6 +56,9 @@ const ROTAS: Record<string, Registro> = {
   "PATCH /api/admin/usuarios/:id": { acao: "alterar_usuario", alvo: param("id"), detalhe: camposAlterados },
   "POST /api/admin/backups": { acao: "backup" },
   "GET /api/admin/backups/:nome": { acao: "baixar_backup", alvo: param("nome") },
+  "POST /api/sair": { acao: "sair" },
+  "DELETE /api/sessoes/:id": { acao: "encerrar_sessao", alvo: param("id") },
+  "POST /api/sessoes/encerrar-todas": { acao: "encerrar_todas" },
   "POST /api/historico/:id/jira": { acao: "criar_jira", alvo: param("id"), detalhe: (r) => ({ projeto: texto(corpo(r).projeto, 50) }) },
 };
 
