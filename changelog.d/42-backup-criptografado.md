@@ -1,4 +1,5 @@
 categoria: Segurança
+pr: 49
 roadmap: 42
 decisao: backup criptografado opcional com `BACKUP_CHAVE` (AES-256-GCM, IV novo por arquivo, cabeçalho autenticado); sem a chave, o backup continua como antes
 decisao: a restauração usa um script que já vem no container (`server/dist/restaurar-backup.js`) e nunca sobrescreve arquivo
