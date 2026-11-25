@@ -1,4 +1,5 @@
 categoria: Segurança
+pr: 46
 roadmap: 37
 decisao: sessões guardadas no banco (migração 7): o cookie leva um id aleatório de 256 bits e o banco guarda só o SHA-256 dele
 decisao: as sessões do formato antigo não são aproveitadas na atualização (um cookie antigo roubado continuaria valendo sem poder ser revogado); cada pessoa entra de novo uma vez
