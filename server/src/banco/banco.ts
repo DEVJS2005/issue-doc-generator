@@ -110,6 +110,30 @@ export const MIGRACAO_TRAVAS_LOGIN = `
   );
 `;
 
+/**
+ * MFA: segredo TOTP de cada pessoa (cifrado com a subchave "mfa"), códigos de recuperação (só o
+ * hash) e, na sessão, se ela passou pelo segundo fator e quando a senha foi confirmada de novo.
+ */
+export const MIGRACAO_MFA = `
+  CREATE TABLE mfa_totp (
+    usuario TEXT PRIMARY KEY,
+    segredo TEXT NOT NULL,
+    ativo INTEGER NOT NULL DEFAULT 0,
+    criado_em INTEGER NOT NULL,
+    ativado_em INTEGER,
+    ultimo_passo INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE TABLE mfa_recuperacao (
+    id INTEGER PRIMARY KEY,
+    usuario TEXT NOT NULL,
+    hash TEXT NOT NULL,
+    usado_em INTEGER
+  );
+  CREATE INDEX mfa_recuperacao_por_usuario ON mfa_recuperacao (usuario);
+  ALTER TABLE sessoes ADD COLUMN mfa INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE sessoes ADD COLUMN reautenticada_em INTEGER NOT NULL DEFAULT 0;
+`;
+
 // Um arquivo SQLite (node:sqlite, sem dependência nativa) guarda a configuração da IA, os usuários
 // e o histórico de issues. Cada item da lista é uma migração; a versão aplicada fica em
 // PRAGMA user_version. Nunca edite uma migração já publicada: acrescente outra no fim.
@@ -172,6 +196,7 @@ const MIGRACOES: string[] = [
   MIGRACAO_SESSOES,
   MIGRACAO_SESSOES_REVOGAVEIS,
   MIGRACAO_TRAVAS_LOGIN,
+  MIGRACAO_MFA,
 ];
 
 export type Banco = DatabaseSync;
