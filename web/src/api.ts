@@ -67,7 +67,8 @@ export type AcaoAuditoria =
   | "criar_jira"
   | "sair"
   | "encerrar_sessao"
-  | "encerrar_todas";
+  | "encerrar_todas"
+  | "login_travado";
 export type EventoAuditoria = {
   id: number;
   quando: number;

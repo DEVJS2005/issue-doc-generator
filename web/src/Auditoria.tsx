@@ -21,6 +21,7 @@ export const ROTULO_ACAO: Record<AcaoAuditoria, string> = {
   sair: "Saiu",
   encerrar_sessao: "Encerrou uma sessão",
   encerrar_todas: "Saiu de todos os dispositivos",
+  login_travado: "Conta travada (muitas tentativas)",
 };
 
 /** Detalhe em uma linha legível. Os campos vêm do servidor, já sem senhas nem tokens. */
@@ -30,6 +31,8 @@ export function descreverDetalhe(e: Pick<EventoAuditoria, "acao" | "detalhe">): 
   switch (e.acao) {
     case "login_falhou":
       return `tentou como “${String(d.tentativa ?? "")}”`;
+    case "login_travado":
+      return `“${String(d.conta ?? "")}” · ${String(d.falhas ?? "")} falhas · espera de ${String(d.minutos ?? "")} min`;
     case "gerar":
       return [d.tipo, d.produto, d.idioma && d.idioma !== "pt-BR" ? d.idioma : null].filter(Boolean).join(" · ");
     case "status":
@@ -145,7 +148,7 @@ export function Auditoria({ aoFalhar }: { aoFalhar: (e: unknown) => void }) {
             </thead>
             <tbody>
               {eventos.map((e) => (
-                <tr key={e.id} className={e.acao === "login_falhou" ? "evento-alerta" : undefined}>
+                <tr key={e.id} className={e.acao === "login_falhou" || e.acao === "login_travado" ? "evento-alerta" : undefined}>
                   <td>{dataHora(e.quando)}</td>
                   <td>{e.quem}</td>
                   <td>{ROTULO_ACAO[e.acao] ?? e.acao}</td>

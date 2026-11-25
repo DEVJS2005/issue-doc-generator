@@ -102,7 +102,7 @@ issue-doc-generator/
 │   ├── src/
 │   │   ├── ajustes/       configuração em uso (.env + o que a administração salvou)
 │   │   ├── auth/          adaptador de login, regras de acesso das rotas, senhas (scrypt),
-│   │   │                  cookie da sessão, selo assinado do SSO, limite de uso
+│   │   │                  cookie da sessão, subchaves (HKDF), selo do SSO, limite de uso
 │   │   ├── banco/         SQLite: migrações, usuários, configuração, histórico, links,
 │   │   │                  backups, auditoria e envios ao Jira
 │   │   ├── ia/            um arquivo por provedor, modelo reserva, lista de modelos, erros,
@@ -115,7 +115,8 @@ issue-doc-generator/
 │   │   │                  administração e Jira
 │   │   ├── auditoria.ts   registro de quem fez o quê (hook no fim de cada resposta)
 │   │   ├── seguranca.ts   cabeçalhos de segurança (CSP) e tratador de erros
-│   │   └── custo.ts       estimativa de custo por chamada
+│   │   ├── custo.ts       estimativa de custo por chamada
+│   │   └── restaurar-backup.ts  abre um backup criptografado (roda também no container)
 │   └── test/              Vitest (+ servidor do teste de ponta a ponta)
 ├── web/                   React + Vite: login, gerar, histórico, administração (+ test/, Vitest)
 ├── data/                  banco SQLite (criado na 1ª subida; fora do git)
@@ -157,7 +158,7 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 
 | Comando | O que roda |
 |---|---|
-| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões revogáveis (lista, encerrar, sair de todos, cookie `__Host-`), acesso de cada rota da API, IP atrás de proxy, limite de login por IP e por conta, 1º admin, administração, usuários, modelo reserva, histórico, refinar a partir da versão guardada, status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
+| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões revogáveis (lista, encerrar, sair de todos, cookie `__Host-`), acesso de cada rota da API, IP atrás de proxy, limite de login por IP e trava por conta com espera progressiva (no banco, também depois de reiniciar), 1º admin, administração, usuários, modelo reserva, backup criptografado e restauração, histórico, refinar a partir da versão guardada, saúde mínima sem login, entrada maliciosa para a IA (tags e resposta fora do schema), status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
 | `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, status, CSV, link de leitura, idioma, administração, backup, auditoria, nota de qualidade, prints, Jira (falso), CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos |
 | `npm run typecheck` | TypeScript do servidor e da tela |
 | `npm run lint` | ESLint (TypeScript e regras dos hooks do React), sem tolerar avisos |
@@ -235,7 +236,8 @@ O guia completo é o [docs/INSTALACAO-DOCKER.md](docs/INSTALACAO-DOCKER.md). Em 
    do servidor. Os logs saem em JSON no stdout, sem o texto das descrições.
 
 Rode **uma instância só**: o banco é um arquivo SQLite local, e o limite por hora e as tentativas
-de login ficam na memória do processo (reiniciar zera as contagens).
+de login por IP ficam na memória do processo (reiniciar zera essas contagens; a trava por conta
+fica no banco).
 
 ## Usuários, administração e histórico
 
@@ -261,7 +263,9 @@ de login ficam na memória do processo (reiniciar zera as contagens).
   o admin vê todas. Issues sem atividade há mais que a retenção configurada (padrão 180 dias) são
   apagadas sozinhas (na subida e a cada 6 horas). Como o histórico guarda a descrição, vale o aviso
   da tela: nada de dados pessoais reais.
-- Login: até 10 tentativas por IP a cada 15 minutos.
+- Login: até 10 tentativas por IP a cada 15 minutos. Por conta, a 10ª falha seguida trava o
+  login por 15 minutos (até com a senha certa), e cada falha depois disso dobra a espera, até 60
+  minutos. A trava fica no banco, não zera ao reiniciar, e aparece na Auditoria.
 - **Auditoria** (Administração → Auditoria): quem fez o quê, com data, IP e filtros por pessoa, ação
   e período. Registra logins (inclusive os recusados), gerações, refinamentos, mudança de status,
   links criados e revogados, issues apagadas, ajustes, usuários criados e alterados e backups feitos
@@ -429,7 +433,8 @@ Resumo das proteções. Para relatar uma vulnerabilidade, veja o [SECURITY.md](S
   (`HttpOnly`, `SameSite=Strict` e, em HTTPS, `Secure` com o prefixo `__Host-`) leva um id
   aleatório, e o banco guarda só o hash. "Sair" encerra a sessão no servidor; cada pessoa vê as
   próprias sessões e pode sair de todos os dispositivos. Trocar a senha ou desativar alguém encerra
-  as sessões abertas dessa pessoa. Login com limite de 10 tentativas a cada 15 minutos por IP e também por conta.
+  as sessões abertas dessa pessoa. Login com limite de 10 tentativas a cada 15 minutos por IP e, por conta, trava com espera
+  progressiva (15, 30 e 60 minutos) guardada no banco.
   Atrás de proxy, o IP real vem só dos proxies confiáveis (`CONFIAR_PROXY`).
 - **Jira:** só os projetos de `JIRA_PROJETOS`, conferidos no servidor; a URL do Jira só aparece
   para o admin.
@@ -440,11 +445,18 @@ Resumo das proteções. Para relatar uma vulnerabilidade, veja o [SECURITY.md](S
   só no servidor.
 - **Cabeçalhos** em todas as respostas: CSP só com a própria origem (sem script ou estilo embutido),
   `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy` e HSTS em HTTPS.
+- **Entrada para a IA:** descrição, contexto e texto das imagens vão entre tags e são tratados
+  como dados, não como instruções (`server/prompts/sistema.md`); as nossas tags são removidas do
+  texto da pessoa antes do envio, e a resposta só vira issue se passar pelo schema.
 - **Conteúdo:** o Markdown da IA passa por `rehype-sanitize` antes de virar HTML; o CSV protege
   contra fórmulas; as imagens anexadas têm o formato conferido pelo conteúdo, não pela extensão.
   A API aceita só JSON.
+- **Saúde** (`/api/saude`): sem login responde só `{"ok":true}`; o provedor e o modelo de IA em
+  uso aparecem só para admin logado.
 - **Erros** internos respondem uma mensagem genérica; o detalhe vai só para o log, que não traz o
   texto das descrições.
+- **Backup:** com `BACKUP_CHAVE`, cada backup sai criptografado (AES-256-GCM, arquivo `.db.enc`)
+  e só abre com a chave; o container traz o script de restauração (veja o guia do Docker).
 - **Links de leitura:** token aleatório de 192 bits, guardado só como hash, com validade, revogação
   e limite de pedidos por IP.
 - **Container:** roda como usuário sem privilégio, sem capacidades do kernel e sem escalada de
@@ -460,8 +472,9 @@ Só segredos e infraestrutura. Provedor, modelo, limites, usuários e retenção
 |---|---|---|
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` | (vazio) | Chaves dos provedores que podem ser escolhidos. Ficam só no servidor. |
 | `OPENAI_BASE_URL` | (vazio) | URL base do servidor compatível com a OpenAI. |
-| `SEGREDO_SESSAO` | (vazio = temporário) | Assina o estado do login único (SSO). A sessão de login fica no banco. |
+| `SEGREDO_SESSAO` | (vazio = temporário) | Origem das subchaves do servidor (HKDF, uma por uso), como a que assina o estado do login único (SSO). A sessão de login fica no banco. |
 | `SESSAO_HORAS` | `12` | Duração da sessão. |
+| `BACKUP_CHAVE` | (vazio) | Chave de 32 bytes (hex ou base64) para criptografar os backups (AES-256-GCM). Guarde uma cópia fora do servidor. |
 | `PORTA` | `3000` | Porta HTTP. |
 | `CONFIAR_PROXY` | `false` | Proxy reverso com HTTPS na frente: `true` (1 proxy), o número de proxies ou a lista de IP/CIDR deles. |
 | `ARQUIVO_BANCO` | `data/issue-doc-generator.db` (Docker: `/app/data/issue-doc-generator.db`) | Arquivo do banco SQLite. |
