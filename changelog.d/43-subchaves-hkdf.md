@@ -1,4 +1,5 @@
 categoria: Segurança
+pr: 52
 roadmap: 43
 decisao: subchaves por HKDF-SHA256 a partir do `SEGREDO_SESSAO`, uma por uso (`sso-estado` agora, `mfa` para o item 41); como a sessão de login já fica no banco, a troca não derruba nenhuma sessão
 ---
