@@ -1,6 +1,6 @@
 # Imagem única: o servidor Fastify entrega a API e o build do web/.
 
-FROM node:26-alpine AS build
+FROM node:26-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY server/package.json server/
@@ -9,13 +9,19 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:26-alpine
+FROM node:26-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 COPY server/package.json server/
 COPY web/package.json web/
-RUN npm ci --omit=dev --workspace server && npm cache clean --force
+# Depois de instalar as dependências, o npm, o npx, o corepack e o yarn da imagem base saem: o
+# container só roda `node`, e eles traziam pacotes próprios (com vulnerabilidades apontadas pelo
+# Trivy) que nunca são usados aqui.
+RUN npm ci --omit=dev --workspace server && npm cache clean --force \
+  && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg \
+    /root/.npm
 COPY --from=build /app/server/dist server/dist
 COPY --from=build /app/server/prompts server/prompts
 COPY --from=build /app/web/dist web/dist
