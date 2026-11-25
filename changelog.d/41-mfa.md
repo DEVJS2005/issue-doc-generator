@@ -1,4 +1,5 @@
 categoria: Segurança
+pr: 55
 roadmap: 41
 decisao: MFA por TOTP (RFC 6238) escrito no projeto, com o QR code gerado no servidor pelo pacote `qrcode`; o segredo fica cifrado com a subchave `mfa`, e o desafio entre a senha e o código usa outra subchave (`mfa-desafio`)
 decisao: com `ADMIN_EXIGE_MFA=true`, a sessão de admin sem segundo fator fica restrita às rotas de ligar o MFA; no SSO, o segundo fator é do provedor de identidade
