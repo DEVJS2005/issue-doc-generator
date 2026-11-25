@@ -1,4 +1,5 @@
 categoria: Segurança
+pr: 48
 roadmap: 44
 decisao: Actions fixadas por SHA e imagem base com digest, atualizados pelo Dependabot; `permissions: {}` no topo de cada workflow
 decisao: o Trivy roda no CI do PR (antes de publicar) e falha só em CRITICAL/HIGH com correção publicada
