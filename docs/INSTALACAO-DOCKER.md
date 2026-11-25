@@ -255,5 +255,6 @@ docker compose up -d
 | `docker version` mostra só o cliente (Windows) | Falta o WSL 2 ou o Docker Desktop ainda está iniciando. Veja o passo 1. |
 | "O provedor de IA está instável" | O provedor está sobrecarregado (erro 503). Tente de novo ou configure um modelo reserva. |
 | A geração para no meio quando passa pelo proxy | Faltam `proxy_buffering off` e um `proxy_read_timeout` maior no proxy (passo 7). |
-| Todos precisam entrar de novo a cada reinício | O `SEGREDO_SESSAO` está vazio no `.env`. |
+| Todos precisam entrar de novo logo depois de atualizar | É esperado uma vez, na versão em que as sessões passaram a ficar no banco: as do formato antigo não valem mais (veja o CHANGELOG). |
+| Todos precisam entrar de novo a cada reinício | O volume do banco (`/app/data`) não está montado, e o banco é criado do zero a cada subida. Confira o `volumes:` do `docker-compose.yml`. |
 | `ExperimentalWarning: SQLite is an experimental feature` no log | É só um aviso do Node e pode ser ignorado. |

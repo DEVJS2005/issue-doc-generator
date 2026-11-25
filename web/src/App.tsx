@@ -31,6 +31,7 @@ const Markdown = lazy(() => import("./Markdown").then((m) => ({ default: m.Markd
 const Historico = lazy(() => import("./Historico").then((m) => ({ default: m.Historico })));
 const Admin = lazy(() => import("./Admin").then((m) => ({ default: m.Admin })));
 const Versoes = lazy(() => import("./Versoes").then((m) => ({ default: m.Versoes })));
+const Sessoes = lazy(() => import("./Sessoes").then((m) => ({ default: m.Sessoes })));
 const Compartilhado = lazy(() => import("./Compartilhado").then((m) => ({ default: m.Compartilhado })));
 const Carregando = () => <p className="carregando">Carregando…</p>;
 
@@ -84,6 +85,7 @@ function Principal() {
   const [precisaConfigurar, setPrecisaConfigurar] = useState(false);
   const [rotuloSso, setRotuloSso] = useState<string | null>(null);
   const [pagina, setPagina] = useState<Pagina>("gerar");
+  const [verSessoes, setVerSessoes] = useState(false);
   // Issue aberta do histórico (ou usada como base de uma nova); a chave remonta o Gerador com ela.
   const [aberta, setAberta] = useState<{ chave: number; item: IssueGuardada | null; base: Entrada | null }>({ chave: 0, item: null, base: null });
   const codigo = new URLSearchParams(window.location.search).get("codigo");
@@ -107,8 +109,15 @@ function Principal() {
 
   async function sair() {
     await api.sair().catch(() => undefined);
+    setVerSessoes(false);
     setUsuario(null);
   }
+
+  /** A sessão deste dispositivo foi encerrada pela lista de sessões: volta ao login. */
+  const saiuPelaLista = useCallback(() => {
+    setVerSessoes(false);
+    setUsuario(null);
+  }, []);
 
   function abrirDoHistorico(item: IssueGuardada) {
     setAberta((a) => ({ chave: a.chave + 1, item, base: null }));
@@ -142,6 +151,9 @@ function Principal() {
             <div className="conta">
               <strong title={usuario.email}>{usuario.nome}</strong>
               {usuario.admin && <span className="selo">admin</span>}
+              <button type="button" className="botao-texto" onClick={() => setVerSessoes(true)}>
+                Sessões
+              </button>
               <button type="button" className="botao-texto" onClick={sair}>
                 Sair
               </button>
@@ -150,6 +162,11 @@ function Principal() {
           <SeletorTema />
         </div>
       </header>
+      {usuario && verSessoes && (
+        <Suspense fallback={null}>
+          <Sessoes aoFechar={() => setVerSessoes(false)} aoSair={saiuPelaLista} />
+        </Suspense>
+      )}
       {usuario && (
         <nav className="abas" aria-label="Seções">
           <button type="button" aria-current={pagina === "gerar" ? "page" : undefined} onClick={() => setPagina("gerar")}>
