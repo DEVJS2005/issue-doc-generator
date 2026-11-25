@@ -8,7 +8,7 @@
 // A chave vem de BACKUP_CHAVE (a mesma do servidor que fez o backup). O arquivo de saída não pode
 // existir: o script não sobrescreve nada.
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { carregarConfig } from "./config.js";
 import { abrirBackup, ErroBackup } from "./banco/backup.js";
 
@@ -19,8 +19,6 @@ function sair(mensagem: string): never {
 
 const [entrada, saida] = process.argv.slice(2);
 if (!entrada || !saida) sair("Uso: restaurar-backup <arquivo.db.enc> <saida.db>");
-if (!existsSync(entrada)) sair(`Arquivo não encontrado: ${entrada}`);
-if (existsSync(saida)) sair(`O arquivo de saída já existe: ${saida}. Escolha outro nome.`);
 
 let chave: Buffer | null;
 try {
@@ -30,9 +28,18 @@ try {
 }
 if (!chave) sair("Defina BACKUP_CHAVE com a mesma chave do servidor que fez o backup.");
 
+let arquivo: Buffer;
 try {
-  writeFileSync(saida, abrirBackup(readFileSync(entrada), chave), { mode: 0o600, flag: "wx" });
+  arquivo = readFileSync(entrada);
+} catch {
+  sair(`Arquivo não encontrado ou sem permissão de leitura: ${entrada}`);
+}
+
+try {
+  // "wx": cria o arquivo e falha se ele já existir, numa operação só (sem conferir antes).
+  writeFileSync(saida, abrirBackup(arquivo, chave), { mode: 0o600, flag: "wx" });
   console.warn(`Backup aberto: ${saida}. Para restaurar, pare o servidor e troque o arquivo do banco por este.`);
 } catch (e) {
+  if ((e as NodeJS.ErrnoException).code === "EEXIST") sair(`O arquivo de saída já existe: ${saida}. Escolha outro nome.`);
   sair(e instanceof ErroBackup ? e.message : `Não foi possível abrir o backup: ${String(e)}`);
 }

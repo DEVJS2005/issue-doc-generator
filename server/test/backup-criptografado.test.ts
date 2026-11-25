@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -132,7 +132,8 @@ describe("script de restauração", () => {
     const saida = path.join(pasta, "restaurado.db");
     expect(rodar([enc, saida], { BACKUP_CHAVE: "" })).toMatchObject({ codigo: 1, saida: expect.stringContaining("Defina BACKUP_CHAVE") });
     expect(rodar([enc, saida], { BACKUP_CHAVE: randomBytes(32).toString("hex") })).toMatchObject({ codigo: 1, saida: expect.stringContaining("chave está errada") });
-    expect(existsSync(saida)).toBe(false);
+    expect(rodar([path.join(pasta, "nao-existe.db.enc"), saida], { BACKUP_CHAVE: CHAVE_HEX })).toMatchObject({ codigo: 1, saida: expect.stringContaining("não encontrado") });
+    expect(readdirSync(pasta)).toEqual([]);
     writeFileSync(saida, "já existe");
     expect(rodar([enc, saida], { BACKUP_CHAVE: CHAVE_HEX })).toMatchObject({ codigo: 1, saida: expect.stringContaining("já existe") });
     expect(readFileSync(saida, "utf8")).toBe("já existe");
