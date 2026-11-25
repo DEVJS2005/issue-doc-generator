@@ -95,7 +95,7 @@ describe("administração", () => {
     expect(ok.json().alteracoes.map((x: { chave: string; quem: string }) => `${x.quem}:${x.chave}`).sort()).toEqual(
       [`${EMAIL_TESTE}:esforco`, `${EMAIL_TESTE}:modelo`, `${EMAIL_TESTE}:provedor`].sort(),
     );
-    expect((await a.inject({ method: "GET", url: "/api/saude" })).json()).toEqual({ ok: true, provedor: "gemini", modelo: "gemini-teste" });
+    expect((await a.inject({ method: "GET", url: "/api/saude", headers: { cookie } })).json()).toEqual({ ok: true, provedor: "gemini", modelo: "gemini-teste" });
 
     await a.inject({ method: "POST", url: "/api/gerar", headers: { cookie }, payload: ENTRADA });
     expect(chamadas.at(-1)).toBe("gemini/gemini-teste");

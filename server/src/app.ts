@@ -28,7 +28,7 @@ import { criarClienteJira, type ClienteJira } from "./integracoes/jira.js";
 import type { Provedor } from "./ia/tipos.js";
 import { TIPOS_ISSUE } from "./issue/schema.js";
 import { registrarAdmin } from "./rotas/admin.js";
-import { registrarAuth } from "./rotas/auth.js";
+import { registrarAuth, sessaoDaRequisicao } from "./rotas/auth.js";
 import { LIMITE_CONTEXTO, LIMITE_DESCRICAO, registrarRotaGerar } from "./rotas/gerar.js";
 import { registrarHistorico } from "./rotas/historico.js";
 import { registrarJira } from "./rotas/jira.js";
@@ -130,7 +130,11 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     banco.close();
   });
 
-  app.get("/api/saude", async () => {
+  // Pública (HEALTHCHECK, proxy, monitoramento): só diz que está de pé. O provedor e o modelo em
+  // uso aparecem só para admin logado, para não contar a quem passa qual IA o servidor usa.
+  app.get("/api/saude", async (request) => {
+    const sessao = sessaoDaRequisicao(request, { sessoes: sessoesBanco, usuarios });
+    if (!sessao?.usuario.admin) return { ok: true };
     const c = ajustes.config();
     return { ok: true, provedor: c.provedor, modelo: c.modelo };
   });

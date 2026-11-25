@@ -70,7 +70,9 @@ docker compose ps
 curl http://localhost:3000/api/saude
 ```
 
-O container passa a "healthy" em alguns segundos, porque o `HEALTHCHECK` chama `/api/saude`.
+O `curl` responde `{"ok":true}`. O container passa a "healthy" em alguns segundos, porque o
+`HEALTHCHECK` chama `/api/saude`. O provedor e o modelo de IA em uso só aparecem nessa rota para um
+admin logado (na Administração eles também aparecem).
 
 A imagem tem cerca de 400 MB. Com ela baixada, o container sobe em segundos.
 
