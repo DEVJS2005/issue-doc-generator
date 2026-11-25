@@ -12,7 +12,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prompt:istqb": "tsx scripts/gerar-base-istqb.ts",
     "teste:ia-real": "tsx --env-file-if-exists=../.env scripts/teste-ia-real.ts",
-    "changelog": "tsx scripts/changelog.ts"
+    "changelog": "tsx scripts/changelog.ts",
+    "backup:abrir": "tsx --env-file-if-exists=../.env src/restaurar-backup.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.12.0",

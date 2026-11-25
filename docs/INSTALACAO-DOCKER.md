@@ -209,12 +209,55 @@ Com `VERSAO_IMAGEM` fixa, troque o número pela versão nova antes do `pull`.
 
 As migrações do banco rodam sozinhas ao subir, e o volume `dados` é mantido.
 
+### Conferir a assinatura da imagem (opcional)
+
+As imagens publicadas depois da 1.3.0 são assinadas pelo próprio workflow de publicação (cosign,
+sem chave guardada) e trazem a lista de pacotes (SBOM) e a proveniência do build. Para conferir
+antes de subir, com o [cosign](https://docs.sigstore.dev/cosign/system_config/installation/)
+instalado (troque `X.Y.Z` pela versão):
+
+```bash
+cosign verify ghcr.io/devjs2005/issue-doc-generator:X.Y.Z \
+  --certificate-identity-regexp '^https://github.com/DEVJS2005/issue-doc-generator/\.github/workflows/publicar\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+Se a assinatura não bater, não suba a imagem e avise pelo relato privado do `SECURITY.md`.
+
 ## Backup e restauração
 
 O servidor faz sozinho um backup por dia, na pasta `backups` dentro do volume, e guarda as cópias
 mais novas (7 por padrão; o número muda na Administração). Na Administração dá para fazer um backup
 na hora e baixar qualquer um. O arquivo tem os usuários (senhas só como hash) e o histórico:
 guarde-o com cuidado.
+
+### Backup criptografado (recomendado)
+
+Com `BACKUP_CHAVE` no `.env`, cada backup sai criptografado (AES-256-GCM), com o nome terminado em
+`.db.enc`. Sem a chave, ninguém lê o arquivo, nem quem copiar a pasta `backups` ou baixar o backup.
+
+1. Gere a chave e ponha no `.env`:
+   ```bash
+   docker run --rm node:24-alpine node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+   `BACKUP_CHAVE=<o valor gerado>`, e depois `docker compose up -d`.
+2. **Guarde uma cópia da chave fora do servidor** (cofre de senhas da equipe). Sem ela, os backups
+   criptografados não abrem.
+3. Os backups antigos, sem criptografia, continuam na pasta até a poda; apague-os se quiser.
+
+Para restaurar um backup criptografado, abra-o com o script do próprio container (ele usa a
+`BACKUP_CHAVE` do `.env` e não sobrescreve arquivo nenhum):
+
+```bash
+docker compose exec app node server/dist/restaurar-backup.js \
+  /app/data/backups/issue-doc-generator-AAAA-MM-DD-HHmmssSSS.db.enc /app/data/restaurado.db
+docker compose stop app
+docker run --rm -v issue-doc-generator-dados:/dados alpine \
+  sh -c "cp /dados/issue-doc-generator.db /dados/antes-de-restaurar.db && mv /dados/restaurado.db /dados/issue-doc-generator.db"
+docker compose start app
+```
+
+Se a chave estiver errada ou o arquivo tiver sido alterado, o script avisa e não grava nada.
 
 Para uma cópia manual do arquivo inteiro:
 
