@@ -144,6 +144,12 @@ Um PR por item. Ao terminar, a seção Segurança do README e o `SECURITY.md` s�
 | 44 | **Cadeia de suprimentos no CI:** Actions fixadas por SHA (o Dependabot segue atualizando), imagem base com digest, Trivy na imagem (falha em CRITICAL/HIGH com correção), SBOM e proveniência no build, assinatura com cosign na publicação, gitleaks em todo PR, OpenSSF Scorecard semanal e `permissions:` mínimas por job. | ~5 h |
 | 45 | **Prompt injection:** `sistema.md` deixa claro que descrição, contexto e texto de imagens são dados, não instruções; teste com descrição maliciosa que tenta fechar as tags e mudar a saída, e conferência da conversão para o Jira contra links `javascript:` e marcação que quebra o formato. | ~2 h |
 
+## Entre a Fase 1 e a Fase 2: contexto do usuário (escolhido em 25/11, ~6 h)
+
+| # | Item | Estado / estimativa |
+|---|---|---|
+| 47 | **Meu contexto:** cada pessoa descreve o sistema dela (produto, termos, regras, telas) em "Meu contexto", no diálogo do topo, que passa a se chamar "Minha conta" (Meu contexto, Segurança e Sessões). No primeiro acesso, um aviso convida a preencher ("Agora não" fecha). Ao salvar, a IA gera uma versão compacta (uma chamada só), que a pessoa vê e ajusta antes de valer; nas gerações vai só a versão compacta, num bloco que o cache de prompt reaproveita, com limite de tamanho. Sem contexto próprio, segue como hoje (sem contexto padrão do servidor). | ~6 h |
+
 ## Para o DevOps
 
 Passo a passo completo em [INSTALACAO-DOCKER.md](INSTALACAO-DOCKER.md). Em resumo:
