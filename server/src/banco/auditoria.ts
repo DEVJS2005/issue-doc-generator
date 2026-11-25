@@ -20,6 +20,7 @@ export const ACOES_AUDITORIA = [
   "sair",
   "encerrar_sessao",
   "encerrar_todas",
+  "login_travado",
 ] as const;
 export type AcaoAuditoria = (typeof ACOES_AUDITORIA)[number];
 

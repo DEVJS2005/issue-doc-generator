@@ -3,11 +3,14 @@
  * gerações por usuário por hora e para frear tentativas de login. Reiniciar o servidor zera as
  * contagens; com mais de uma instância, cada uma conta separado.
  */
-/** Acima de tantas chaves, as vencidas são descartadas (o Map não cresce sem limite). */
+/** Acima de tantas chaves, as vencidas são descartadas na hora (o Map não cresce sem limite). */
 const PODAR_ACIMA_DE = 10_000;
+/** Além disso, as vencidas saem a cada tanto tempo, mesmo com poucas chaves. */
+const PODAR_A_CADA_MS = 10 * 60_000;
 
 export class Limitador {
   private readonly registros = new Map<string, number[]>();
+  private ultimaPoda = 0;
 
   constructor(
     private maximo: number,
@@ -21,7 +24,7 @@ export class Limitador {
 
   /** Registra uma tentativa se ainda houver cota. */
   tentar(chave: string, agora = Date.now()): { ok: true; restam: number } | { ok: false; liberaEm: number } {
-    if (this.registros.size > PODAR_ACIMA_DE) this.podar(agora);
+    if (this.registros.size > PODAR_ACIMA_DE || agora - this.ultimaPoda >= PODAR_A_CADA_MS) this.podar(agora);
     const recentes = (this.registros.get(chave) ?? []).filter((t) => t > agora - this.janelaMs);
     if (recentes.length >= this.maximo) {
       this.registros.set(chave, recentes);
@@ -43,6 +46,7 @@ export class Limitador {
 
   /** Descarta as chaves sem tentativa dentro da janela. */
   podar(agora = Date.now()) {
+    this.ultimaPoda = agora;
     for (const [chave, tempos] of this.registros) {
       if (!tempos.some((t) => t > agora - this.janelaMs)) this.registros.delete(chave);
     }
