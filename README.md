@@ -168,6 +168,12 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
   exemplo, `feat: ...` ou `fix(admin): ...`) ao abrir o PR e também quando o título é editado.
 - **CodeQL** (`.github/workflows/codeql.yml`): análise de segurança em cada PR e uma vez por
   semana.
+- **Cadeia de suprimentos:** Actions fixadas por SHA (com a versão no comentário) e imagem base
+  com digest, que o Dependabot continua atualizando; `permissions` vazias no topo de cada workflow
+  e só o necessário por job; **gitleaks** (segredos) em todo PR; **Trivy** na imagem do CI (falha
+  em CRITICAL/HIGH com correção); a publicação gera **SBOM** e **proveniência** e **assina** a
+  imagem com cosign (veja como conferir no guia do Docker); **OpenSSF Scorecard** semanal
+  (`.github/workflows/scorecard.yml`).
 - **Dependabot** (`.github/dependabot.yml`): PRs semanais de atualização de npm, Actions e Docker,
   que passam pelo mesmo CI. As Actions vêm agrupadas num PR só.
 - **IA real** (`.github/workflows/ia-real.yml`): toda segunda-feira (ou pelo botão "Run workflow"),

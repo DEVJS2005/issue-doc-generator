@@ -17,6 +17,8 @@ updates:
         dependency-type: development
         update-types: [minor, patch]
 
+  # As Actions ficam fixadas por SHA (com a versão no comentário); o Dependabot troca o SHA e o
+  # comentário juntos. O mesmo vale para o digest da imagem base no Dockerfile.
   - package-ecosystem: github-actions
     directory: /
     schedule:

@@ -11,8 +11,8 @@ on:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
+# Nada por padrão; cada job pede só o que usa.
+permissions: {}
 
 concurrency:
   group: atualizar-prs
@@ -22,6 +22,8 @@ jobs:
   atualizar:
     name: Atualiza as branches dos PRs com a main
     runs-on: ubuntu-latest
+    # Usa o token próprio (ATUALIZAR_PRS_TOKEN), não o do Actions.
+    permissions: {}
     timeout-minutes: 5
     steps:
       - name: Atualiza os PRs que estão atrás da main
