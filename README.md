@@ -39,6 +39,8 @@ Mudanças por versão: [CHANGELOG.md](CHANGELOG.md).
   **administração** sem reiniciar o servidor, modelo reserva automático, **auditoria** e backup
   diário do banco.
 - **Login** por nome de usuário (ou e-mail) e senha, ou **SSO** (OpenID Connect: Entra ID, Google Workspace, Keycloak, Okta).
+  Em **Sessões**, no topo, cada pessoa vê onde a conta está conectada, encerra o que não reconhece
+  ou sai de todos os dispositivos.
 - **Pronto para produção:** imagem Docker pronta no ghcr.io, SQLite, logs JSON sem dados pessoais
   (LGPD), cabeçalhos de segurança com CSP, CI com Vitest, Playwright, CodeQL e teste semanal com IA
   real. Veja [Segurança](#segurança).
@@ -100,7 +102,7 @@ issue-doc-generator/
 │   ├── src/
 │   │   ├── ajustes/       configuração em uso (.env + o que a administração salvou)
 │   │   ├── auth/          adaptador de login, regras de acesso das rotas, senhas (scrypt),
-│   │   │                  sessão assinada, limite de uso
+│   │   │                  cookie da sessão, selo assinado do SSO, limite de uso
 │   │   ├── banco/         SQLite: migrações, usuários, configuração, histórico, links,
 │   │   │                  backups, auditoria e envios ao Jira
 │   │   ├── ia/            um arquivo por provedor, modelo reserva, lista de modelos, erros,
@@ -155,7 +157,7 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 
 | Comando | O que roda |
 |---|---|
-| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões, acesso de cada rota da API, IP atrás de proxy, limite de login por IP e por conta, 1º admin, administração, usuários, modelo reserva, histórico, refinar a partir da versão guardada, status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
+| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões revogáveis (lista, encerrar, sair de todos, cookie `__Host-`), acesso de cada rota da API, IP atrás de proxy, limite de login por IP e por conta, 1º admin, administração, usuários, modelo reserva, histórico, refinar a partir da versão guardada, status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
 | `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, status, CSV, link de leitura, idioma, administração, backup, auditoria, nota de qualidade, prints, Jira (falso), CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos |
 | `npm run typecheck` | TypeScript do servidor e da tela |
 | `npm run lint` | ESLint (TypeScript e regras dos hooks do React), sem tolerar avisos |
@@ -245,9 +247,11 @@ de login ficam na memória do processo (reiniciar zera as contagens).
   ativo: o servidor recusa tirar o último.
 - **Login** por nome de usuário (ou e-mail) e senha (`server/src/auth/autenticador.ts`) e, opcionalmente, por **SSO**
   (veja abaixo). O perfil de admin vem sempre do banco.
-- **Sessão:** cookie `HttpOnly` e `SameSite=Strict` assinado com HMAC (`SEGREDO_SESSAO`), válido
-  por `SESSAO_HORAS`. O usuário é relido do banco a cada pedido: desativar alguém ou tirar o
-  admin vale na hora.
+- **Sessão:** guardada no servidor, válida por `SESSAO_HORAS`. O cookie (`HttpOnly`,
+  `SameSite=Strict`) leva um id aleatório; o banco guarda só o hash dele, com data, último uso, IP e
+  navegador. "Sair" encerra a sessão no servidor, e o link **Sessões** lista as sessões abertas, com
+  "Encerrar" em cada uma e "Sair de todos os dispositivos". O usuário é relido do banco a cada
+  pedido: desativar alguém ou tirar o admin vale na hora.
 - **Acesso:**
   - sem login, as rotas da IA, do histórico e da administração respondem **401**;
   - sem perfil de admin, `/api/admin/*` responde **403**.
@@ -421,9 +425,11 @@ deixa mais rápido.
 
 Resumo das proteções. Para relatar uma vulnerabilidade, veja o [SECURITY.md](SECURITY.md).
 
-- **Senhas** com hash scrypt e sal; **sessão** em cookie `HttpOnly`, `SameSite=Strict` (e `Secure`
-  atrás de HTTPS), assinado com HMAC. Trocar a senha ou desativar alguém encerra as sessões abertas
-  dessa pessoa. Login com limite de 10 tentativas a cada 15 minutos por IP e também por conta.
+- **Senhas** com hash scrypt e sal; **sessão** guardada no servidor e revogável: o cookie
+  (`HttpOnly`, `SameSite=Strict` e, em HTTPS, `Secure` com o prefixo `__Host-`) leva um id
+  aleatório, e o banco guarda só o hash. "Sair" encerra a sessão no servidor; cada pessoa vê as
+  próprias sessões e pode sair de todos os dispositivos. Trocar a senha ou desativar alguém encerra
+  as sessões abertas dessa pessoa. Login com limite de 10 tentativas a cada 15 minutos por IP e também por conta.
   Atrás de proxy, o IP real vem só dos proxies confiáveis (`CONFIAR_PROXY`).
 - **Jira:** só os projetos de `JIRA_PROJETOS`, conferidos no servidor; a URL do Jira só aparece
   para o admin.
@@ -454,7 +460,7 @@ Só segredos e infraestrutura. Provedor, modelo, limites, usuários e retenção
 |---|---|---|
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` | (vazio) | Chaves dos provedores que podem ser escolhidos. Ficam só no servidor. |
 | `OPENAI_BASE_URL` | (vazio) | URL base do servidor compatível com a OpenAI. |
-| `SEGREDO_SESSAO` | (vazio = temporário) | Assina o cookie de sessão. |
+| `SEGREDO_SESSAO` | (vazio = temporário) | Assina o estado do login único (SSO). A sessão de login fica no banco. |
 | `SESSAO_HORAS` | `12` | Duração da sessão. |
 | `PORTA` | `3000` | Porta HTTP. |
 | `CONFIAR_PROXY` | `false` | Proxy reverso com HTTPS na frente: `true` (1 proxy), o número de proxies ou a lista de IP/CIDR deles. |

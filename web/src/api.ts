@@ -44,6 +44,7 @@ export type IssuePublica = {
   autor: string;
   markdown: string;
 };
+export type SessaoAberta = { id: number; criadaEm: number; ultimoUso: number; ip: string | null; navegador: string | null; atual: boolean };
 export type InfoBackup = { nome: string; bytes: number; criadoEm: number };
 export type ProjetoJira = { chave: string; nome: string };
 export type TipoJira = { id: string; nome: string };
@@ -63,7 +64,10 @@ export type AcaoAuditoria =
   | "alterar_usuario"
   | "backup"
   | "baixar_backup"
-  | "criar_jira";
+  | "criar_jira"
+  | "sair"
+  | "encerrar_sessao"
+  | "encerrar_todas";
 export type EventoAuditoria = {
   id: number;
   quando: number;
@@ -199,6 +203,9 @@ export const api = {
   configurar: (codigo: string, nome: string, email: string, senha: string) =>
     postar("/api/configurar", { codigo, nome, email, senha }).then((r) => lerJson<{ usuario: Usuario }>(r)),
   sair: () => postar("/api/sair", {}).then((r) => lerJson<{ ok: true }>(r)),
+  sessoes: () => chamar<{ sessoes: SessaoAberta[] }>("GET", "/api/sessoes"),
+  encerrarSessao: (id: number) => chamar<{ ok: true; atual: boolean }>("DELETE", `/api/sessoes/${id}`),
+  encerrarTodas: () => postar("/api/sessoes/encerrar-todas", {}).then((r) => lerJson<{ encerradas: number }>(r)),
   opcoes: () => fetch("/api/opcoes").then((r) => lerJson<Opcoes>(r)),
 
   historico: (busca: BuscaHistorico) => {
