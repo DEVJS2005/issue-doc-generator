@@ -88,7 +88,7 @@ export function registrarAdmin(
     if (!arquivo) return reply.code(404).send({ erro: { codigo: "nao_encontrado", mensagem: "Backup não encontrado.", podeTentarDeNovo: false } });
     request.log.info({ evento: "backup_baixado", nome, usuario: usuarioObrigatorio(request).email }, "administração: backup baixado");
     return reply
-      .header("content-type", "application/vnd.sqlite3")
+      .header("content-type", nome.endsWith(".enc") ? "application/octet-stream" : "application/vnd.sqlite3")
       .header("content-disposition", `attachment; filename="${nome}"`)
       .header("cache-control", "no-store")
       .send(createReadStream(arquivo));
