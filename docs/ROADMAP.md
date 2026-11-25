@@ -1,6 +1,6 @@
 # Roadmap
 
-Atualizado em 23/11/2026. As estimativas são de tempo de implementação com testes, sem contar a
+Atualizado em 25/11/2026. As estimativas são de tempo de implementação com testes, sem contar a
 revisão.
 
 ## Onde estamos
@@ -127,6 +127,22 @@ Ficaram de fora nesta rodada:
 | # | Item | Estado / estimativa |
 |---|---|---|
 | 36 | **Fila de PRs sem conflito:** changelog e roadmap por fragmento (`changelog.d/`, juntados no release) e workflow que atualiza as branches dos PRs com a `main`. | ✅ PR #39 |
+
+## Fase 1: reforço de segurança (escolhida em 22/11, ~30 h)
+
+Um PR por item. Ao terminar, a seção Segurança do README e o `SECURITY.md` são revisados.
+
+| # | Item | Estado / estimativa |
+|---|---|---|
+| 37 | **Sessões revogáveis:** tabela de sessões (id aleatório no cookie, só o hash no banco, criada em, último uso, IP e navegador), "Sair" que encerra no servidor, "Sair de todos os dispositivos" e lista de sessões do usuário. Trocar a senha ou desativar a conta continua derrubando tudo. Cookie `__Host-` em HTTPS. Migração nova. | ~6 h |
+| 38 | **Limite de login guardado no banco:** espera progressiva por conta, contagens no SQLite (não zeram ao reiniciar) e registro na auditoria quando a conta trava. O limite por conta em memória e a poda do `Limitador` já existem (#35). | ~3 h |
+| 39 | **`CONFIAR_PROXY` com IP/CIDR:** repassado ao `trustProxy`, `true`/`false` mantidos, docs do risco de expor a porta 3000 e porta só em `127.0.0.1` no `docker-compose.yml`. | ✅ PR #35 (entregue na Fase 0.5) |
+| 40 | **`/api/saude` mínima:** pública responde só `{ok:true}`; provedor e modelo só para admin logado. A tela e o teste do Docker no CI continuam funcionando. | ~1 h |
+| 41 | **MFA TOTP:** opcional por usuário e obrigatório para admin com `ADMIN_EXIGE_MFA=true`; QR code gerado no servidor, códigos de recuperação com hash. Senha de novo para baixar backup e para criar ou promover admin. | ~8 h |
+| 42 | **Backup criptografado:** opcional, AES-256-GCM com a chave em `BACKUP_CHAVE`, e script e guia de restauração. | ~3 h |
+| 43 | **Subchaves por HKDF** a partir do `SEGREDO_SESSAO` (sessão, estado do SSO, MFA), sem derrubar as sessões válidas na troca, se for viável; senão, aviso no CHANGELOG. | ~2 h |
+| 44 | **Cadeia de suprimentos no CI:** Actions fixadas por SHA (o Dependabot segue atualizando), imagem base com digest, Trivy na imagem (falha em CRITICAL/HIGH com correção), SBOM e proveniência no build, assinatura com cosign na publicação, gitleaks em todo PR, OpenSSF Scorecard semanal e `permissions:` mínimas por job. | ~5 h |
+| 45 | **Prompt injection:** `sistema.md` deixa claro que descrição, contexto e texto de imagens são dados, não instruções; teste com descrição maliciosa que tenta fechar as tags e mudar a saída, e conferência da conversão para o Jira contra links `javascript:` e marcação que quebra o formato. | ~2 h |
 
 ## Para o DevOps
 

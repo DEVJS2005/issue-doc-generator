@@ -20,6 +20,7 @@ import { RepositorioConfiguracao } from "./banco/configuracao.js";
 import { RepositorioHistorico } from "./banco/historico.js";
 import { RepositorioJira } from "./banco/jira.js";
 import { RepositorioLinks } from "./banco/links.js";
+import { RepositorioSessoes } from "./banco/sessoes.js";
 import { RepositorioUsuarios } from "./banco/usuarios.js";
 import { trustProxyDoFastify, type Config } from "./config.js";
 import { criarProvedor } from "./ia/index.js";
@@ -33,6 +34,7 @@ import { registrarHistorico } from "./rotas/historico.js";
 import { registrarJira } from "./rotas/jira.js";
 import { registrarLinks } from "./rotas/links.js";
 import { LIMITE_AJUSTE, registrarRotaRefinar } from "./rotas/refinar.js";
+import { registrarSessoes } from "./rotas/sessoes.js";
 
 const pastaWebPadrao = fileURLToPath(new URL("../../web/dist", import.meta.url));
 const EXPURGO_A_CADA_MS = 6 * 3_600_000;
@@ -94,8 +96,9 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   }
 
   const sessoes = criarSessoes(config.segredoSessao, config.sessaoHoras);
+  const sessoesBanco = new RepositorioSessoes(banco, config.sessaoHoras * 3_600_000);
   if (sessoes.segredoTemporario) {
-    app.log.warn("SEGREDO_SESSAO vazio: usando um segredo temporário; as sessões caem quando o servidor reinicia.");
+    app.log.warn("SEGREDO_SESSAO vazio: usando um segredo temporário; um login único (SSO) em andamento falha se o servidor reiniciar.");
   }
   if (!ajustes.provedor()) {
     app.log.warn("Nenhum provedor de IA pronto: confira a chave no .env e o provedor e o modelo na administração.");
@@ -114,6 +117,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     const apagadas = historico.expurgar(ajustes.valores().retencaoDias);
     if (apagadas) app.log.info({ evento: "expurgo", apagadas }, `histórico: ${apagadas} issue(s) antiga(s) apagada(s)`);
     auditoria.expurgar(ajustes.valores().retencaoDias);
+    sessoesBanco.expurgar();
     try {
       const feito = backups.diario(ajustes.valores().backupCopias);
       if (feito) app.log.info({ evento: "backup", nome: feito.nome, bytes: feito.bytes }, `backup: ${feito.nome}`);
@@ -142,7 +146,8 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   // Login primeiro: o hook dele bloqueia (401/403) as rotas protegidas.
   registrarAuth(app, {
     autenticador: opcoes.autenticador ?? criarAutenticadorBanco(usuarios),
-    sessoes,
+    sessoes: sessoesBanco,
+    maxAgeSegundos: sessoes.maxAgeSegundos,
     usuarios,
     codigoConfiguracao,
     rotuloSso: sso?.rotulo ?? null,
@@ -150,6 +155,8 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   registrarSso(app, {
     sso,
     sessoes,
+    sessoesBanco,
+    maxAgeSegundos: sessoes.maxAgeSegundos,
     usuarios,
     urlRetorno: config.oidc?.urlRetorno ?? `http://localhost:${config.porta}/api/sso/retorno`,
   });
@@ -163,6 +170,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   registrarRotaGerar(app, opcoesGeracao);
   registrarRotaRefinar(app, opcoesGeracao);
   registrarHistorico(app, { historico, usuarios });
+  registrarSessoes(app, { sessoes: sessoesBanco, usuarios });
   // Limite de pedidos só nas rotas que pedem (config.rateLimit), com o erro no formato da API.
   await app.register(rateLimit, {
     global: false,
