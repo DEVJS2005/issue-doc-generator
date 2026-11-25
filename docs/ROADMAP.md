@@ -128,7 +128,7 @@ Ficaram de fora nesta rodada:
 |---|---|---|
 | 36 | **Fila de PRs sem conflito:** changelog e roadmap por fragmento (`changelog.d/`, juntados no release) e workflow que atualiza as branches dos PRs com a `main`. | ✅ PR #39 |
 
-## Fase 1: reforço de segurança (escolhida em 22/11, ~30 h)
+## Fase 1: reforço de segurança (escolhida em 22/11, ~36 h com a chave de acesso)
 
 Um PR por item. Ao terminar, a seção Segurança do README e o `SECURITY.md` são revisados.
 
@@ -143,6 +143,7 @@ Um PR por item. Ao terminar, a seção Segurança do README e o `SECURITY.md` s�
 | 43 | **Subchaves por HKDF** a partir do `SEGREDO_SESSAO` (sessão, estado do SSO, MFA), sem derrubar as sessões válidas na troca, se for viável; senão, aviso no CHANGELOG. | ~2 h |
 | 44 | **Cadeia de suprimentos no CI:** Actions fixadas por SHA (o Dependabot segue atualizando), imagem base com digest, Trivy na imagem (falha em CRITICAL/HIGH com correção), SBOM e proveniência no build, assinatura com cosign na publicação, gitleaks em todo PR, OpenSSF Scorecard semanal e `permissions:` mínimas por job. | ~5 h |
 | 45 | **Prompt injection:** `sistema.md` deixa claro que descrição, contexto e texto de imagens são dados, não instruções; teste com descrição maliciosa que tenta fechar as tags e mudar a saída, e conferência da conversão para o Jira contra links `javascript:` e marcação que quebra o formato. | ~2 h |
+| 46 | **Chave de acesso (passkey, WebAuthn):** login sem senha pelo botão "Entrar com chave de acesso", que também vale como MFA para o `ADMIN_EXIGE_MFA`; cadastrar e remover chaves no diálogo "Segurança"; a senha continua valendo. Biblioteca `@simplewebauthn/server` e variável nova com o endereço público (a chave fica presa ao domínio). Depois do item 41. | ~6 h |
 
 ## Entre a Fase 1 e a Fase 2: contexto do usuário (escolhido em 25/11, ~6 h)
 
