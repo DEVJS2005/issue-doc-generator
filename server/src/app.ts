@@ -106,7 +106,10 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
 
   // Retenção do histórico e backup diário do banco: agora e a cada 6 horas. O backup só roda se o
   // último tiver mais de 24 h; falha no backup vira aviso no log e não derruba o servidor.
-  const backups = new Backups(banco, config.arquivoBanco);
+  const backups = new Backups(banco, config.arquivoBanco, config.backupChave);
+  if (backups.disponivel) {
+    app.log.info(config.backupChave ? "backup: criptografado (BACKUP_CHAVE)" : "backup: sem criptografia (defina BACKUP_CHAVE para criptografar)");
+  }
   const expurgar = () => {
     const apagadas = historico.expurgar(ajustes.valores().retencaoDias);
     if (apagadas) app.log.info({ evento: "expurgo", apagadas }, `histórico: ${apagadas} issue(s) antiga(s) apagada(s)`);
