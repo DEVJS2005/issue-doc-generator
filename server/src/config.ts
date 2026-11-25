@@ -73,6 +73,21 @@ const esquema = z.object({
   PORTA: z.coerce.number().int().positive().default(3000),
   REGISTRAR_DESCRICAO: booleano("false"),
   SEGREDO_SESSAO: z.string().default(""),
+  // Chave de 32 bytes (64 caracteres hex ou base64) para criptografar os backups. Vazio = backup
+  // sem criptografia, como antes.
+  BACKUP_CHAVE: z
+    .string()
+    .default("")
+    .transform((v, ctx) => {
+      const t = v.trim();
+      if (!t) return null;
+      const chave = /^[0-9a-f]{64}$/i.test(t) ? Buffer.from(t, "hex") : /^[A-Za-z0-9+/_-]{43}=?$/.test(t) ? Buffer.from(t, "base64") : null;
+      if (chave?.length !== 32) {
+        ctx.addIssue({ code: "custom", message: "BACKUP_CHAVE: use 32 bytes aleatórios em hex (64 caracteres) ou em base64. Veja o .env.example." });
+        return z.NEVER;
+      }
+      return chave;
+    }),
   SESSAO_HORAS: z.coerce.number().positive().default(12),
   CONFIAR_PROXY: z
     .string()
@@ -129,6 +144,8 @@ export type Config = {
   porta: number;
   registrarDescricao: boolean;
   segredoSessao: string;
+  /** Chave AES-256 dos backups; null = backup sem criptografia. */
+  backupChave: Buffer | null;
   sessaoHoras: number;
   confiarProxy: ConfiancaProxy;
   precoPorMtok: Preco | null;
@@ -170,6 +187,7 @@ export function carregarConfig(env: NodeJS.ProcessEnv = process.env): Config {
     porta: e.PORTA,
     registrarDescricao: e.REGISTRAR_DESCRICAO,
     segredoSessao: e.SEGREDO_SESSAO,
+    backupChave: e.BACKUP_CHAVE,
     sessaoHoras: e.SESSAO_HORAS,
     confiarProxy: e.CONFIAR_PROXY,
     precoPorMtok: lerPreco(e.PRECO_POR_MTOK),
