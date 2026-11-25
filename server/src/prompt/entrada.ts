@@ -20,11 +20,22 @@ export type Exemplo = {
   saida: Issue;
 };
 
-const TAGS = /<\/?\s*(tipo|produto|descricao|contexto|idioma|imagens|issue_atual|ajuste)\s*>/gi;
+// Nossas tags, também escritas com "<", ">" e "/" de largura total ou pequenos (que a IA pode ler
+// como os comuns) e com espaços no meio.
+const TAGS = /[<＜﹤]\s*[/／]?\s*(tipo|produto|descricao|contexto|idioma|imagens|issue_atual|ajuste)\s*[>＞﹥]/gi;
 
-/** Remove tags nossas de dentro do texto do usuário, para ele não fechar a tag antes da hora. */
-function limpar(texto: string): string {
-  return texto.replace(/\r\n/g, "\n").replace(TAGS, "").trim();
+/**
+ * Remove tags nossas de dentro do texto do usuário, para ele não fechar a tag antes da hora nem
+ * abrir outra. Repete até não sobrar nenhuma: "</desc</descricao>ricao>" vira "</descricao>"
+ * depois de uma passada só.
+ */
+export function limpar(texto: string): string {
+  let atual = texto.replace(/\r\n/g, "\n");
+  for (let anterior = ""; anterior !== atual; ) {
+    anterior = atual;
+    atual = atual.replace(TAGS, "");
+  }
+  return atual.trim();
 }
 
 /**

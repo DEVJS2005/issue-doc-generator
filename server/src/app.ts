@@ -21,6 +21,7 @@ import { RepositorioHistorico } from "./banco/historico.js";
 import { RepositorioJira } from "./banco/jira.js";
 import { RepositorioLinks } from "./banco/links.js";
 import { RepositorioSessoes } from "./banco/sessoes.js";
+import { RepositorioTravasLogin } from "./banco/travas.js";
 import { RepositorioUsuarios } from "./banco/usuarios.js";
 import { trustProxyDoFastify, type Config } from "./config.js";
 import { criarProvedor } from "./ia/index.js";
@@ -28,7 +29,7 @@ import { criarClienteJira, type ClienteJira } from "./integracoes/jira.js";
 import type { Provedor } from "./ia/tipos.js";
 import { TIPOS_ISSUE } from "./issue/schema.js";
 import { registrarAdmin } from "./rotas/admin.js";
-import { registrarAuth } from "./rotas/auth.js";
+import { registrarAuth, sessaoDaRequisicao } from "./rotas/auth.js";
 import { LIMITE_CONTEXTO, LIMITE_DESCRICAO, registrarRotaGerar } from "./rotas/gerar.js";
 import { registrarHistorico } from "./rotas/historico.js";
 import { registrarJira } from "./rotas/jira.js";
@@ -97,6 +98,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
 
   const sessoes = criarSessoes(config.segredoSessao, config.sessaoHoras);
   const sessoesBanco = new RepositorioSessoes(banco, config.sessaoHoras * 3_600_000);
+  const travas = new RepositorioTravasLogin(banco);
   if (sessoes.segredoTemporario) {
     app.log.warn("SEGREDO_SESSAO vazio: usando um segredo temporário; um login único (SSO) em andamento falha se o servidor reiniciar.");
   }
@@ -109,12 +111,16 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
 
   // Retenção do histórico e backup diário do banco: agora e a cada 6 horas. O backup só roda se o
   // último tiver mais de 24 h; falha no backup vira aviso no log e não derruba o servidor.
-  const backups = new Backups(banco, config.arquivoBanco);
+  const backups = new Backups(banco, config.arquivoBanco, config.backupChave);
+  if (backups.disponivel) {
+    app.log.info(config.backupChave ? "backup: criptografado (BACKUP_CHAVE)" : "backup: sem criptografia (defina BACKUP_CHAVE para criptografar)");
+  }
   const expurgar = () => {
     const apagadas = historico.expurgar(ajustes.valores().retencaoDias);
     if (apagadas) app.log.info({ evento: "expurgo", apagadas }, `histórico: ${apagadas} issue(s) antiga(s) apagada(s)`);
     auditoria.expurgar(ajustes.valores().retencaoDias);
     sessoesBanco.expurgar();
+    travas.expurgar();
     try {
       const feito = backups.diario(ajustes.valores().backupCopias);
       if (feito) app.log.info({ evento: "backup", nome: feito.nome, bytes: feito.bytes }, `backup: ${feito.nome}`);
@@ -130,7 +136,11 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     banco.close();
   });
 
-  app.get("/api/saude", async () => {
+  // Pública (HEALTHCHECK, proxy, monitoramento): só diz que está de pé. O provedor e o modelo em
+  // uso aparecem só para admin logado, para não contar a quem passa qual IA o servidor usa.
+  app.get("/api/saude", async (request) => {
+    const sessao = sessaoDaRequisicao(request, { sessoes: sessoesBanco, usuarios });
+    if (!sessao?.usuario.admin) return { ok: true };
     const c = ajustes.config();
     return { ok: true, provedor: c.provedor, modelo: c.modelo };
   });
@@ -146,6 +156,8 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     sessoes: sessoesBanco,
     maxAgeSegundos: sessoes.maxAgeSegundos,
     usuarios,
+    travas,
+    auditoria,
     codigoConfiguracao,
     rotuloSso: sso?.rotulo ?? null,
   });

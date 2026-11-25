@@ -12,5 +12,6 @@ describe("auditoria na tela", () => {
     expect(descreverDetalhe({ acao: "gerar", detalhe: { tipo: "Melhoria", produto: "Loja", idioma: "pt-BR" } })).toBe("Melhoria · Loja");
     expect(descreverDetalhe({ acao: "gerar", detalhe: { tipo: "Melhoria", produto: "Loja", idioma: "en" } })).toBe("Melhoria · Loja · en");
     expect(descreverDetalhe({ acao: "backup", detalhe: null })).toBe("");
+    expect(descreverDetalhe({ acao: "login_travado", detalhe: { conta: "ana", falhas: 10, minutos: 15 } })).toBe("“ana” · 10 falhas · espera de 15 min");
   });
 });
