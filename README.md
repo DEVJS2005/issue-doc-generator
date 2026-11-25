@@ -162,9 +162,10 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 
 ### Proteções no GitHub
 
-- **CI** (`.github/workflows/ci.yml`), a cada PR e push na `main`: título do PR no padrão
-  Conventional Commits (por exemplo, `feat: ...` ou `fix(admin): ...`), lint, typecheck, testes
+- **CI** (`.github/workflows/ci.yml`), a cada PR e push na `main`: lint, typecheck, testes
   unitários, `npm audit` das dependências de produção, ponta a ponta e o teste da imagem Docker.
+- **Título do PR** (`.github/workflows/titulo.yml`): confere o padrão Conventional Commits (por
+  exemplo, `feat: ...` ou `fix(admin): ...`) ao abrir o PR e também quando o título é editado.
 - **CodeQL** (`.github/workflows/codeql.yml`): análise de segurança em cada PR e uma vez por
   semana.
 - **Dependabot** (`.github/dependabot.yml`): PRs semanais de atualização de npm, Actions e Docker,
