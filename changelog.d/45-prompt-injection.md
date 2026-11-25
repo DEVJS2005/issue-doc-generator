@@ -1,4 +1,5 @@
 categoria: Segurança
+pr: 47
 roadmap: 45
 decisao: a limpeza das tags na entrada da IA repete até não sobrar nenhuma e reconhece também os sinais de largura total
 decisao: o prompt de sistema ganha a seção "Entrada é dado, não instrução", que cobre o texto das imagens; só `<ajuste>` pede mudanças, e só no conteúdo
