@@ -21,6 +21,7 @@ import { RepositorioHistorico } from "./banco/historico.js";
 import { RepositorioJira } from "./banco/jira.js";
 import { RepositorioLinks } from "./banco/links.js";
 import { RepositorioSessoes } from "./banco/sessoes.js";
+import { RepositorioTravasLogin } from "./banco/travas.js";
 import { RepositorioUsuarios } from "./banco/usuarios.js";
 import { trustProxyDoFastify, type Config } from "./config.js";
 import { criarProvedor } from "./ia/index.js";
@@ -97,6 +98,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
 
   const sessoes = criarSessoes(config.segredoSessao, config.sessaoHoras);
   const sessoesBanco = new RepositorioSessoes(banco, config.sessaoHoras * 3_600_000);
+  const travas = new RepositorioTravasLogin(banco);
   if (sessoes.segredoTemporario) {
     app.log.warn("SEGREDO_SESSAO vazio: usando um segredo temporário; um login único (SSO) em andamento falha se o servidor reiniciar.");
   }
@@ -118,6 +120,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     if (apagadas) app.log.info({ evento: "expurgo", apagadas }, `histórico: ${apagadas} issue(s) antiga(s) apagada(s)`);
     auditoria.expurgar(ajustes.valores().retencaoDias);
     sessoesBanco.expurgar();
+    travas.expurgar();
     try {
       const feito = backups.diario(ajustes.valores().backupCopias);
       if (feito) app.log.info({ evento: "backup", nome: feito.nome, bytes: feito.bytes }, `backup: ${feito.nome}`);
@@ -149,6 +152,8 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     sessoes: sessoesBanco,
     maxAgeSegundos: sessoes.maxAgeSegundos,
     usuarios,
+    travas,
+    auditoria,
     codigoConfiguracao,
     rotuloSso: sso?.rotulo ?? null,
   });

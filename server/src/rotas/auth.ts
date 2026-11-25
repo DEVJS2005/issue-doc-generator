@@ -6,7 +6,9 @@ import type { Autenticador, Usuario } from "../auth/autenticador.js";
 import { Limitador } from "../auth/limite.js";
 import { cookieSaida, cookieSessao, tokenDaSessao } from "../auth/sessao.js";
 import { ErroValidacao } from "../banco/banco.js";
+import type { RepositorioAuditoria } from "../banco/auditoria.js";
 import type { RepositorioSessoes } from "../banco/sessoes.js";
+import type { RepositorioTravasLogin } from "../banco/travas.js";
 import type { RepositorioUsuarios } from "../banco/usuarios.js";
 
 declare module "fastify" {
@@ -48,6 +50,10 @@ export type OpcoesAuth = {
   /** Validade do cookie da sessão, em segundos. */
   maxAgeSegundos: number;
   usuarios: RepositorioUsuarios;
+  /** Falhas de login por conta, com espera progressiva (no banco). */
+  travas: RepositorioTravasLogin;
+  /** Para registrar quando uma conta trava (a auditoria das rotas só vê o pedido). */
+  auditoria: RepositorioAuditoria;
   /** Código de uso único para criar o 1º admin; null quando já existe usuário. */
   codigoConfiguracao: { atual: string | null };
   /** Texto do botão de login único; null quando o SSO está desligado. */
@@ -77,10 +83,15 @@ export function abrirSessao(request: FastifyRequest, o: Pick<OpcoesAuth, "sessoe
 }
 
 export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
-  // 10 tentativas por IP a cada 15 minutos, para login e para a configuração inicial. O login tem
-  // também 10 por conta (nome ou e-mail), que valem mesmo quando os pedidos vêm de IPs diferentes.
+  // 10 tentativas por IP a cada 15 minutos, para login e para a configuração inicial (em memória).
+  // Por conta (nome ou e-mail digitado), a trava fica no banco, com espera progressiva
+  // (banco/travas.ts), e vale mesmo quando os pedidos vêm de IPs diferentes.
   const tentativas = new Limitador(10, 15 * 60_000);
-  const porConta = new Limitador(10, 15 * 60_000);
+  const muitasTentativas = (reply: FastifyReply, liberaEm: number) =>
+    reply
+      .code(429)
+      .header("retry-after", String(Math.max(1, Math.ceil((liberaEm - Date.now()) / 1000))))
+      .send(erro("muitas_tentativas", "Muitas tentativas de login. Aguarde alguns minutos.", true));
 
   // onRequest: barra quem não tem sessão antes de ler o corpo (a geração aceita até 18 MB com prints).
   // Decide pelo padrão da rota que o roteador escolheu, não pela URL recebida: assim o
@@ -109,17 +120,35 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
     const corpo = CorpoLogin.safeParse(request.body);
     if (!corpo.success) return reply.code(400).send(erro("entrada_invalida", corpo.error.issues[0]?.message ?? "Entrada inválida."));
     const conta = corpo.data.login.normalize("NFKC").toLowerCase();
-    if (!porConta.tentar(conta).ok) {
-      request.log.warn({ evento: "login_conta_limitada" }, "login: limite de tentativas da conta");
-      return reply.code(429).send(erro("muitas_tentativas", "Muitas tentativas de login. Aguarde alguns minutos.", true));
+    // Conta travada: recusa antes de conferir a senha (nem a senha certa entra até a espera acabar).
+    const travadaAte = o.travas.travadaAte(conta);
+    if (travadaAte) {
+      request.log.warn({ evento: "login_conta_limitada" }, "login: conta travada por muitas tentativas");
+      return muitasTentativas(reply, travadaAte);
     }
     const usuario = await o.autenticador.autenticar(corpo.data.login, corpo.data.senha);
     if (!usuario) {
       request.log.info({ evento: "login_falhou" }, "login: usuário ou senha incorretos");
+      const falha = o.travas.registrarFalha(conta);
+      if (falha.travouAgora && falha.travadaAte) {
+        const minutos = Math.round((falha.travadaAte - Date.now()) / 60_000);
+        request.log.warn({ evento: "login_conta_travada", falhas: falha.falhas, minutos }, "login: conta travada");
+        try {
+          o.auditoria.registrar({
+            quem: "(desconhecido)",
+            acao: "login_travado",
+            alvo: null,
+            detalhe: { conta: corpo.data.login.slice(0, 200), falhas: falha.falhas, minutos },
+            ip: request.ip ?? null,
+          });
+        } catch (e) {
+          request.log.warn({ evento: "auditoria_falhou", detalhe: String(e) }, "auditoria: não foi possível registrar");
+        }
+      }
       return reply.code(401).send(erro("credenciais_invalidas", "Usuário ou senha incorretos.", true));
     }
     tentativas.limpar(request.ip);
-    porConta.limpar(conta);
+    o.travas.limpar(conta);
     request.log.info({ evento: "login", usuario: usuario.email }, "login: ok");
     return entrar(request, reply, usuario);
   });
