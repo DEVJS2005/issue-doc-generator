@@ -1,5 +1,5 @@
 categoria: Segurança
-pr: 0
+pr: 57
 roadmap: 46
 decisao: chave de acesso (passkey, WebAuthn) com a biblioteca `@simplewebauthn` (servidor e navegador); liga só com `URL_PUBLICA`, porque a chave fica presa ao domínio e não funciona por IP
 decisao: a chave pede biometria ou PIN e vale como segunda etapa: o login com ela não pede o código do aplicativo e cumpre o `ADMIN_EXIGE_MFA=true`
