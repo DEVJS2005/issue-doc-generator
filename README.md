@@ -158,7 +158,7 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 
 | Comando | O que roda |
 |---|---|
-| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões revogáveis (lista, encerrar, sair de todos, cookie `__Host-`), acesso de cada rota da API, IP atrás de proxy, limite de login por IP e trava por conta com espera progressiva (no banco, também depois de reiniciar), 1º admin, administração, usuários, modelo reserva, backup criptografado e restauração, histórico, refinar a partir da versão guardada, entrada maliciosa para a IA (tags e resposta fora do schema), status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
+| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões revogáveis (lista, encerrar, sair de todos, cookie `__Host-`), acesso de cada rota da API, IP atrás de proxy, limite de login por IP e trava por conta com espera progressiva (no banco, também depois de reiniciar), 1º admin, administração, usuários, modelo reserva, backup criptografado e restauração, histórico, refinar a partir da versão guardada, saúde mínima sem login, entrada maliciosa para a IA (tags e resposta fora do schema), status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
 | `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, status, CSV, link de leitura, idioma, administração, backup, auditoria, nota de qualidade, prints, Jira (falso), CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos |
 | `npm run typecheck` | TypeScript do servidor e da tela |
 | `npm run lint` | ESLint (TypeScript e regras dos hooks do React), sem tolerar avisos |
@@ -451,6 +451,8 @@ Resumo das proteções. Para relatar uma vulnerabilidade, veja o [SECURITY.md](S
 - **Conteúdo:** o Markdown da IA passa por `rehype-sanitize` antes de virar HTML; o CSV protege
   contra fórmulas; as imagens anexadas têm o formato conferido pelo conteúdo, não pela extensão.
   A API aceita só JSON.
+- **Saúde** (`/api/saude`): sem login responde só `{"ok":true}`; o provedor e o modelo de IA em
+  uso aparecem só para admin logado.
 - **Erros** internos respondem uma mensagem genérica; o detalhe vai só para o log, que não traz o
   texto das descrições.
 - **Backup:** com `BACKUP_CHAVE`, cada backup sai criptografado (AES-256-GCM, arquivo `.db.enc`)

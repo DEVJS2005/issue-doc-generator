@@ -17,7 +17,8 @@ docker compose pull && docker compose up -d
 Inclua o que for possível:
 
 - o que acontece e o impacto (quem pode explorar e o que consegue);
-- passos para reproduzir, com a versão (`/api/saude` e a página de Releases);
+- passos para reproduzir, com a versão (a tag da imagem, por exemplo `1.3.0`, ou a página de
+  Releases);
 - se for o caso, uma sugestão de correção.
 
 Resposta inicial em até 5 dias úteis. Depois da correção publicada, o relato pode ser divulgado,

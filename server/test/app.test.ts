@@ -41,12 +41,24 @@ describe("configuração", () => {
 });
 
 describe("rotas básicas", () => {
-  it("responde a saúde sem expor a chave", async () => {
+  it("responde a saúde sem login só com ok, sem provedor, modelo nem chave", async () => {
     const app = await montarApp(carregarConfig({ ANTHROPIC_API_KEY: "sk-teste-segredo" }));
     const r = await app.inject({ method: "GET", url: "/api/saude" });
     expect(r.statusCode).toBe(200);
-    expect(r.json()).toEqual({ ok: true, provedor: "anthropic", modelo: "claude-opus-5-5" });
-    expect(r.body).not.toContain("sk-teste-segredo");
+    expect(r.json()).toEqual({ ok: true });
+    expect(r.body).not.toMatch(/sk-teste-segredo|anthropic|claude/);
+  });
+
+  it("a saúde mostra provedor e modelo só para admin logado", async () => {
+    const app = await montarApp(carregarConfig({ ANTHROPIC_API_KEY: "sk-teste-segredo", USUARIOS_PERMITIDOS: `${USUARIO_TESTE},comum@exemplo.dev:senha-do-comum` }));
+    const admin = await entrar(app);
+    const comum = await entrar(app, "comum@exemplo.dev", "senha-do-comum");
+    const deAdmin = await app.inject({ method: "GET", url: "/api/saude", headers: { cookie: admin } });
+    expect(deAdmin.json()).toEqual({ ok: true, provedor: "anthropic", modelo: "claude-opus-5-5" });
+    expect(deAdmin.body).not.toContain("sk-teste-segredo");
+    expect((await app.inject({ method: "GET", url: "/api/saude", headers: { cookie: comum } })).json()).toEqual({ ok: true });
+    expect((await app.inject({ method: "GET", url: "/api/saude", headers: { cookie: "idg_sessao=invalida" } })).json()).toEqual({ ok: true });
+    await app.close();
   });
 
   it("as opções trazem tipos e limites, sem lista de produtos", async () => {
