@@ -10,6 +10,8 @@ import { ErroGeracao } from "../ia/erros.js";
 import { listarModelos } from "../ia/modelos.js";
 import type { NomeProvedor } from "../ia/tipos.js";
 import { usuarioObrigatorio } from "../auth/acesso.js";
+import { exigirReautenticacao } from "./mfa.js";
+import type { RepositorioMfa } from "../banco/mfa.js";
 
 function falhou(reply: FastifyReply, e: unknown) {
   if (e instanceof ErroValidacao) {
@@ -51,7 +53,7 @@ const FiltroAuditoria = z.object({
  */
 export function registrarAdmin(
   app: FastifyInstance,
-  o: { ajustes: Ajustes; usuarios: RepositorioUsuarios; backups: Backups; auditoria: RepositorioAuditoria },
+  o: { ajustes: Ajustes; usuarios: RepositorioUsuarios; backups: Backups; auditoria: RepositorioAuditoria; mfa: RepositorioMfa },
 ) {
   // Auditoria: quem fez o quê, mais novo primeiro, com filtros e paginação por cursor.
   app.get("/api/admin/auditoria", async (request, reply) => {
@@ -83,6 +85,8 @@ export function registrarAdmin(
   });
 
   app.get("/api/admin/backups/:nome", limite, async (request, reply) => {
+    // O backup traz os hashes das senhas e o histórico inteiro: pede a senha de novo.
+    if (!exigirReautenticacao(request, reply)) return;
     const nome = (request.params as { nome: string }).nome;
     const arquivo = o.backups.caminho(nome);
     if (!arquivo) return reply.code(404).send({ erro: { codigo: "nao_encontrado", mensagem: "Backup não encontrado.", podeTentarDeNovo: false } });
@@ -122,11 +126,25 @@ export function registrarAdmin(
     }
   });
 
-  app.get("/api/admin/usuarios", async () => ({ usuarios: o.usuarios.listar() }));
+  app.get("/api/admin/usuarios", async () => ({ usuarios: o.usuarios.listar().map((u) => ({ ...u, mfa: o.mfa.ativo(u.email) })) }));
+
+  // Quem perdeu o celular e os códigos de recuperação: um admin desliga o MFA da pessoa, que entra
+  // só com a senha e liga de novo. Pede a senha do admin de novo.
+  app.post("/api/admin/usuarios/:id/mfa/desligar", async (request, reply) => {
+    const id = Number((request.params as { id: string }).id);
+    const alvo = Number.isInteger(id) ? o.usuarios.listar().find((u) => u.id === id) : undefined;
+    if (!alvo) return falhou(reply, new ErroValidacao("Usuário não encontrado.", "nao_encontrado"));
+    if (!exigirReautenticacao(request, reply)) return;
+    o.mfa.desativar(alvo.email);
+    request.log.info({ evento: "mfa_desativado", por: usuarioObrigatorio(request).email, usuario: alvo.email }, "administração: MFA desligado");
+    return { ok: true };
+  });
 
   app.post("/api/admin/usuarios", async (request, reply) => {
     const corpo = CorpoNovoUsuario.safeParse(request.body);
     if (!corpo.success) return falhou(reply, new ErroValidacao("Dados do usuário inválidos."));
+    // Criar admin pede a senha de novo.
+    if (corpo.data.admin && !exigirReautenticacao(request, reply)) return;
     try {
       const usuario = o.usuarios.criar(corpo.data.email, corpo.data.senha, corpo.data.admin, { nome: corpo.data.nome });
       request.log.info({ evento: "usuario_criado", por: usuarioObrigatorio(request).email, usuario: usuario.email, admin: usuario.admin }, "administração: usuário criado");
@@ -140,6 +158,8 @@ export function registrarAdmin(
     const id = Number((request.params as { id: string }).id);
     const corpo = CorpoAlterarUsuario.safeParse(request.body);
     if (!Number.isInteger(id) || !corpo.success) return falhou(reply, new ErroValidacao("Dados do usuário inválidos."));
+    // Promover alguém a admin pede a senha de novo.
+    if (corpo.data.admin === true && !exigirReautenticacao(request, reply)) return;
     try {
       const usuario = o.usuarios.atualizar(id, corpo.data);
       request.log.info(

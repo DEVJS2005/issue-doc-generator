@@ -23,6 +23,7 @@ import { RepositorioJira } from "./banco/jira.js";
 import { RepositorioLinks } from "./banco/links.js";
 import { RepositorioSessoes } from "./banco/sessoes.js";
 import { RepositorioTravasLogin } from "./banco/travas.js";
+import { RepositorioMfa } from "./banco/mfa.js";
 import { RepositorioUsuarios } from "./banco/usuarios.js";
 import { trustProxyDoFastify, type Config } from "./config.js";
 import { criarProvedor } from "./ia/index.js";
@@ -37,6 +38,7 @@ import { registrarJira } from "./rotas/jira.js";
 import { registrarLinks } from "./rotas/links.js";
 import { LIMITE_AJUSTE, registrarRotaRefinar } from "./rotas/refinar.js";
 import { registrarSessoes } from "./rotas/sessoes.js";
+import { registrarMfa } from "./rotas/mfa.js";
 
 const pastaWebPadrao = fileURLToPath(new URL("../../web/dist", import.meta.url));
 const EXPURGO_A_CADA_MS = 6 * 3_600_000;
@@ -101,6 +103,8 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   const sessoes = criarSessoes(chaves.chave("sso-estado"), config.sessaoHoras);
   const sessoesBanco = new RepositorioSessoes(banco, config.sessaoHoras * 3_600_000);
   const travas = new RepositorioTravasLogin(banco);
+  const mfa = new RepositorioMfa(banco, chaves.chave("mfa"));
+  const seloDesafio = criarSessoes(chaves.chave("mfa-desafio"), config.sessaoHoras);
   if (chaves.segredoTemporario) {
     app.log.warn("SEGREDO_SESSAO vazio: usando um segredo temporário; um login único (SSO) em andamento falha se o servidor reiniciar.");
   }
@@ -160,6 +164,9 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     usuarios,
     travas,
     auditoria,
+    mfa,
+    seloDesafio,
+    adminExigeMfa: config.adminExigeMfa,
     codigoConfiguracao,
     rotuloSso: sso?.rotulo ?? null,
   });
@@ -182,6 +189,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   registrarRotaRefinar(app, opcoesGeracao);
   registrarHistorico(app, { historico, usuarios });
   registrarSessoes(app, { sessoes: sessoesBanco, usuarios });
+  registrarMfa(app, { mfa, sessoes: sessoesBanco, usuarios, travas, adminExigeMfa: config.adminExigeMfa });
   // Limite de pedidos só nas rotas que pedem (config.rateLimit), com o erro no formato da API.
   await app.register(rateLimit, {
     global: false,
@@ -203,7 +211,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   // Rotas de admin num plugin encapsulado, com a checagem de admin própria dele.
   await app.register(async (admin) => {
     exigirAdmin(admin);
-    registrarAdmin(admin, { ajustes, usuarios, backups, auditoria });
+    registrarAdmin(admin, { ajustes, usuarios, backups, auditoria, mfa });
   });
 
   // Em produção o servidor também entrega o build do web/.

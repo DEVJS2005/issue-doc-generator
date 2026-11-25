@@ -39,8 +39,9 @@ Mudanças por versão: [CHANGELOG.md](CHANGELOG.md).
   **administração** sem reiniciar o servidor, modelo reserva automático, **auditoria** e backup
   diário do banco.
 - **Login** por nome de usuário (ou e-mail) e senha, ou **SSO** (OpenID Connect: Entra ID, Google Workspace, Keycloak, Okta).
-  Em **Sessões**, no topo, cada pessoa vê onde a conta está conectada, encerra o que não reconhece
-  ou sai de todos os dispositivos.
+  Em **Segurança**, no topo, cada pessoa liga a **verificação em duas etapas** (aplicativo
+  autenticador, com códigos de recuperação), vê onde a conta está conectada, encerra o que não
+  reconhece ou sai de todos os dispositivos.
 - **Pronto para produção:** imagem Docker pronta no ghcr.io, SQLite, logs JSON sem dados pessoais
   (LGPD), cabeçalhos de segurança com CSP, CI com Vitest, Playwright, CodeQL e teste semanal com IA
   real. Veja [Segurança](#segurança).
@@ -158,7 +159,7 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 
 | Comando | O que roda |
 |---|---|
-| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões revogáveis (lista, encerrar, sair de todos, cookie `__Host-`), acesso de cada rota da API, IP atrás de proxy, limite de login por IP e trava por conta com espera progressiva (no banco, também depois de reiniciar), 1º admin, administração, usuários, modelo reserva, backup criptografado e restauração, histórico, refinar a partir da versão guardada, saúde mínima sem login, entrada maliciosa para a IA (tags e resposta fora do schema), status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
+| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões revogáveis (lista, encerrar, sair de todos, cookie `__Host-`), verificação em duas etapas (TOTP da RFC 6238, códigos de recuperação, admin obrigado, senha de novo nas ações sensíveis), acesso de cada rota da API, IP atrás de proxy, limite de login por IP e trava por conta com espera progressiva (no banco, também depois de reiniciar), 1º admin, administração, usuários, modelo reserva, backup criptografado e restauração, histórico, refinar a partir da versão guardada, saúde mínima sem login, entrada maliciosa para a IA (tags e resposta fora do schema), status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
 | `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, status, CSV, link de leitura, idioma, administração, backup, auditoria, nota de qualidade, prints, Jira (falso), CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos |
 | `npm run typecheck` | TypeScript do servidor e da tela |
 | `npm run lint` | ESLint (TypeScript e regras dos hooks do React), sem tolerar avisos |
@@ -249,9 +250,16 @@ fica no banco).
   ativo: o servidor recusa tirar o último.
 - **Login** por nome de usuário (ou e-mail) e senha (`server/src/auth/autenticador.ts`) e, opcionalmente, por **SSO**
   (veja abaixo). O perfil de admin vem sempre do banco.
+- **Verificação em duas etapas (MFA):** em **Segurança**, cada pessoa liga com um aplicativo
+  autenticador (QR code gerado no próprio servidor) e recebe 10 códigos de recuperação. Com MFA
+  ligado, depois da senha o login pede o código. Com `ADMIN_EXIGE_MFA=true`, todo admin liga antes
+  de usar o sistema. Um admin desliga o MFA de quem perdeu o celular e os códigos. No login único
+  (SSO), o segundo fator fica com o provedor de identidade.
+- **Senha de novo:** baixar backup, criar ou promover admin, gerar códigos novos e desligar o MFA
+  pedem a senha confirmada nos últimos 5 minutos.
 - **Sessão:** guardada no servidor, válida por `SESSAO_HORAS`. O cookie (`HttpOnly`,
   `SameSite=Strict`) leva um id aleatório; o banco guarda só o hash dele, com data, último uso, IP e
-  navegador. "Sair" encerra a sessão no servidor, e o link **Sessões** lista as sessões abertas, com
+  navegador. "Sair" encerra a sessão no servidor, e o link **Segurança** lista as sessões abertas, com
   "Encerrar" em cada uma e "Sair de todos os dispositivos". O usuário é relido do banco a cada
   pedido: desativar alguém ou tirar o admin vale na hora.
 - **Acesso:**
@@ -436,6 +444,11 @@ Resumo das proteções. Para relatar uma vulnerabilidade, veja o [SECURITY.md](S
   as sessões abertas dessa pessoa. Login com limite de 10 tentativas a cada 15 minutos por IP e, por conta, trava com espera
   progressiva (15, 30 e 60 minutos) guardada no banco.
   Atrás de proxy, o IP real vem só dos proxies confiáveis (`CONFIAR_PROXY`).
+- **Verificação em duas etapas:** TOTP (RFC 6238) opcional, obrigatório para admin com
+  `ADMIN_EXIGE_MFA=true`. O segredo fica cifrado no banco (AES-256-GCM, com uma subchave do
+  `SEGREDO_SESSAO`), os códigos de recuperação só como hash, e o mesmo código não vale duas vezes.
+  Erros de código contam na trava da conta. Baixar backup, criar ou promover admin e mexer no MFA
+  pedem a senha de novo.
 - **Jira:** só os projetos de `JIRA_PROJETOS`, conferidos no servidor; a URL do Jira só aparece
   para o admin.
 - **Acesso:** toda rota da API exige login, menos uma lista curta de rotas públicas (saúde, login,
@@ -474,6 +487,7 @@ Só segredos e infraestrutura. Provedor, modelo, limites, usuários e retenção
 | `OPENAI_BASE_URL` | (vazio) | URL base do servidor compatível com a OpenAI. |
 | `SEGREDO_SESSAO` | (vazio = temporário) | Origem das subchaves do servidor (HKDF, uma por uso), como a que assina o estado do login único (SSO). A sessão de login fica no banco. |
 | `SESSAO_HORAS` | `12` | Duração da sessão. |
+| `ADMIN_EXIGE_MFA` | `false` | `true` = administradores só usam o sistema depois de ligar a verificação em duas etapas. |
 | `BACKUP_CHAVE` | (vazio) | Chave de 32 bytes (hex ou base64) para criptografar os backups (AES-256-GCM). Guarde uma cópia fora do servidor. |
 | `PORTA` | `3000` | Porta HTTP. |
 | `CONFIAR_PROXY` | `false` | Proxy reverso com HTTPS na frente: `true` (1 proxy), o número de proxies ou a lista de IP/CIDR deles. |

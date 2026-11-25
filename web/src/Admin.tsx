@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { api, ErroApi, type EstadoAdmin, type InfoBackup, type UsuarioAdmin, type ValoresAjustes } from "./api";
 import { Auditoria } from "./Auditoria";
+import { comConfirmacaoDeSenha } from "./confirmarSenha";
 import { useDialogo } from "./Dialogo";
 import { ERRO_NOME, PADRAO_NOME, useValidacao } from "./Formulario";
 import { dataHora } from "./Historico";
@@ -100,9 +101,30 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
   async function alterarUsuario(u: UsuarioAdmin, mudancas: { nome?: string; admin?: boolean; ativo?: boolean; senha?: string }, sucesso: string) {
     setMensagem(null);
     try {
-      const { usuario } = await api.alterarUsuario(u.id, mudancas);
-      setUsuarios((lista) => lista.map((x) => (x.id === usuario.id ? usuario : x)));
+      // Promover a admin pede a senha de novo (o servidor avisa quando precisa).
+      const r = await comConfirmacaoDeSenha(dialogo, () => api.alterarUsuario(u.id, mudancas));
+      if (!r) return;
+      const { usuario } = r;
+      setUsuarios((lista) => lista.map((x) => (x.id === usuario.id ? { ...x, ...usuario } : x)));
       setMensagem({ tipo: "ok", texto: sucesso });
+    } catch (e) {
+      falhou(e);
+    }
+  }
+
+  async function desligarMfa(u: UsuarioAdmin) {
+    const ok = await dialogo.confirmar({
+      titulo: `Desligar a verificação em duas etapas de ${u.nome}?`,
+      mensagem: "Use quando a pessoa perdeu o celular e os códigos de recuperação. Ela entra só com a senha e pode ligar de novo.",
+      acao: "Desligar",
+      perigo: true,
+    });
+    if (!ok) return;
+    setMensagem(null);
+    try {
+      if (!(await comConfirmacaoDeSenha(dialogo, () => api.desligarMfaDe(u.id)))) return;
+      setUsuarios((lista) => lista.map((x) => (x.id === u.id ? { ...x, mfa: false } : x)));
+      setMensagem({ tipo: "ok", texto: `Verificação em duas etapas de ${u.nome} desligada.` });
     } catch (e) {
       falhou(e);
     }
@@ -285,7 +307,10 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
                     {u.email === usuarioAtual && <span className="legenda"> (você)</span>}
                   </td>
                   <td className="secundaria">{u.email}</td>
-                  <td>{u.admin ? "Administrador" : "Usuário"}</td>
+                  <td>
+                    {u.admin ? "Administrador" : "Usuário"}
+                    {u.mfa && <span className="selo">MFA</span>}
+                  </td>
                   <td>{u.ativo ? "Ativo" : "Desativado"}</td>
                   <td className="acoes-linha">
                     <button
@@ -302,6 +327,11 @@ export function Admin({ usuarioAtual, aoSessaoExpirar }: { usuarioAtual: string;
                     >
                       {u.ativo ? "Desativar" : "Reativar"}
                     </button>
+                    {u.mfa && (
+                      <button type="button" className="botao-texto" onClick={() => desligarMfa(u)}>
+                        Desligar MFA
+                      </button>
+                    )}
                     <button type="button" className="botao-texto" onClick={() => trocarNome(u)}>
                       Trocar nome
                     </button>
@@ -342,12 +372,28 @@ function tamanho(bytes: number) {
 
 /** Backup do banco: um por dia, sozinho; aqui dá para fazer um agora e baixar qualquer um. */
 function Backups({ aoFalhar }: { aoFalhar: (e: unknown) => void }) {
+  const dialogo = useDialogo();
   const [estado, setEstado] = useState<{ disponivel: boolean; copias: number; backups: InfoBackup[] } | null>(null);
   const [fazendo, setFazendo] = useState(false);
 
   const carregar = useCallback(() => {
     api.backups().then(setEstado).catch(aoFalhar);
   }, [aoFalhar]);
+
+  async function baixar(nome: string) {
+    try {
+      const arquivo = await comConfirmacaoDeSenha(dialogo, () => api.baixarBackup(nome));
+      if (!arquivo) return;
+      const url = URL.createObjectURL(arquivo);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nome;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      aoFalhar(e);
+    }
+  }
 
   useEffect(() => {
     carregar();
@@ -393,7 +439,15 @@ function Backups({ aoFalhar }: { aoFalhar: (e: unknown) => void }) {
                   <span>
                     {dataHora(b.criadoEm)} · {tamanho(b.bytes)}
                   </span>
-                  <a href={`/api/admin/backups/${encodeURIComponent(b.nome)}`} download>
+                  <a
+                    href={`/api/admin/backups/${encodeURIComponent(b.nome)}`}
+                    download
+                    onClick={(e) => {
+                      // Pelo fetch: o backup pede a senha de novo, e o link direto baixaria o erro.
+                      e.preventDefault();
+                      void baixar(b.nome);
+                    }}
+                  >
                     Baixar
                   </a>
                 </li>
@@ -407,6 +461,7 @@ function Backups({ aoFalhar }: { aoFalhar: (e: unknown) => void }) {
 }
 
 function NovoUsuario({ aoCriar, aoFalhar }: { aoCriar: (u: UsuarioAdmin) => void; aoFalhar: (e: unknown) => void }) {
+  const dialogo = useDialogo();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -417,7 +472,10 @@ function NovoUsuario({ aoCriar, aoFalhar }: { aoCriar: (u: UsuarioAdmin) => void
     e.preventDefault();
     if (!v.validar(e.currentTarget)) return;
     try {
-      aoCriar((await api.criarUsuario(nome, email, senha, admin)).usuario);
+      // Criar admin pede a senha de novo (o servidor avisa quando precisa).
+      const r = await comConfirmacaoDeSenha(dialogo, () => api.criarUsuario(nome, email, senha, admin));
+      if (!r) return;
+      aoCriar(r.usuario);
       setNome("");
       setEmail("");
       setSenha("");

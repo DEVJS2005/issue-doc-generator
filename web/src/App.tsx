@@ -32,6 +32,7 @@ const Historico = lazy(() => import("./Historico").then((m) => ({ default: m.His
 const Admin = lazy(() => import("./Admin").then((m) => ({ default: m.Admin })));
 const Versoes = lazy(() => import("./Versoes").then((m) => ({ default: m.Versoes })));
 const Sessoes = lazy(() => import("./Sessoes").then((m) => ({ default: m.Sessoes })));
+const SecaoMfa = lazy(() => import("./Mfa").then((m) => ({ default: m.SecaoMfa })));
 const Compartilhado = lazy(() => import("./Compartilhado").then((m) => ({ default: m.Compartilhado })));
 const Carregando = () => <p className="carregando">Carregando…</p>;
 
@@ -86,6 +87,8 @@ function Principal() {
   const [rotuloSso, setRotuloSso] = useState<string | null>(null);
   const [pagina, setPagina] = useState<Pagina>("gerar");
   const [verSessoes, setVerSessoes] = useState(false);
+  // ADMIN_EXIGE_MFA: admin que ainda não ligou o MFA só vê a tela de ligar.
+  const [precisaMfa, setPrecisaMfa] = useState(false);
   // Issue aberta do histórico (ou usada como base de uma nova); a chave remonta o Gerador com ela.
   const [aberta, setAberta] = useState<{ chave: number; item: IssueGuardada | null; base: Entrada | null }>({ chave: 0, item: null, base: null });
   const codigo = new URLSearchParams(window.location.search).get("codigo");
@@ -93,6 +96,7 @@ function Principal() {
   useEffect(() => {
     lerSessao().then((s) => {
       setUsuario(s.usuario);
+      setPrecisaMfa(s.precisaMfa);
       setPrecisaConfigurar(s.precisaConfigurar);
       setRotuloSso(s.sso);
     });
@@ -100,7 +104,8 @@ function Principal() {
 
   const expirou = useCallback(() => setUsuario(null), []);
 
-  function entrou(u: Usuario) {
+  function entrou(u: Usuario, exigeMfa = false) {
+    setPrecisaMfa(exigeMfa);
     if (window.location.search) window.history.replaceState(null, "", window.location.pathname);
     setPrecisaConfigurar(false);
     setPagina("gerar");
@@ -151,9 +156,11 @@ function Principal() {
             <div className="conta">
               <strong title={usuario.email}>{usuario.nome}</strong>
               {usuario.admin && <span className="selo">admin</span>}
-              <button type="button" className="botao-texto" onClick={() => setVerSessoes(true)}>
-                Sessões
-              </button>
+              {!precisaMfa && (
+                <button type="button" className="botao-texto" onClick={() => setVerSessoes(true)}>
+                  Segurança
+                </button>
+              )}
               <button type="button" className="botao-texto" onClick={sair}>
                 Sair
               </button>
@@ -164,10 +171,10 @@ function Principal() {
       </header>
       {usuario && verSessoes && (
         <Suspense fallback={null}>
-          <Sessoes aoFechar={() => setVerSessoes(false)} aoSair={saiuPelaLista} />
+          <Sessoes conta={usuario.email} aoFechar={() => setVerSessoes(false)} aoSair={saiuPelaLista} />
         </Suspense>
       )}
-      {usuario && (
+      {usuario && !precisaMfa && (
         <nav className="abas" aria-label="Seções">
           <button type="button" aria-current={pagina === "gerar" ? "page" : undefined} onClick={() => setPagina("gerar")}>
             Gerar
@@ -199,15 +206,24 @@ function Principal() {
             )}
           </div>
         )}
-        {usuario && (
+        {usuario && precisaMfa && (
+          <section className="cartao login">
+            <h2>Ligue a verificação em duas etapas</h2>
+            <p className="legenda">Este servidor exige, para administradores, um código do aplicativo autenticador além da senha.</p>
+            <Suspense fallback={<Carregando />}>
+              <SecaoMfa conta={usuario.email} aoLigar={() => setPrecisaMfa(false)} aoSair={expirou} />
+            </Suspense>
+          </section>
+        )}
+        {usuario && !precisaMfa && (
           // O Gerador fica montado ao trocar de aba, para não perder uma geração em andamento.
           <div hidden={pagina !== "gerar"}>
             <Gerador key={aberta.chave} pessoa={usuario.nome} aberta={aberta.item} base={aberta.base} aoNova={novaIssue} aoSessaoExpirar={expirou} />
           </div>
         )}
         <Suspense fallback={<Carregando />}>
-          {usuario && pagina === "historico" && <Historico podeVerTodos={usuario.admin} aoAbrir={abrirDoHistorico} aoUsarComoBase={usarComoBase} aoSessaoExpirar={expirou} />}
-          {usuario?.admin && pagina === "admin" && <Admin usuarioAtual={usuario.email} aoSessaoExpirar={expirou} />}
+          {usuario && !precisaMfa && pagina === "historico" && <Historico podeVerTodos={usuario.admin} aoAbrir={abrirDoHistorico} aoUsarComoBase={usarComoBase} aoSessaoExpirar={expirou} />}
+          {usuario?.admin && !precisaMfa && pagina === "admin" && <Admin usuarioAtual={usuario.email} aoSessaoExpirar={expirou} />}
         </Suspense>
       </main>
       <Rodape />
@@ -239,7 +255,7 @@ function Apresentacao() {
   );
 }
 
-function Configurar({ codigo, aoEntrar }: { codigo: string; aoEntrar: (u: Usuario) => void }) {
+function Configurar({ codigo, aoEntrar }: { codigo: string; aoEntrar: (u: Usuario, precisaMfa?: boolean) => void }) {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -253,7 +269,8 @@ function Configurar({ codigo, aoEntrar }: { codigo: string; aoEntrar: (u: Usuari
     if (senha !== confirmacao) return v.definir("confirmacao", "As senhas não são iguais.");
     setErro(null);
     try {
-      aoEntrar((await api.configurar(codigo, nome, email, senha)).usuario);
+      const r = await api.configurar(codigo, nome, email, senha);
+      aoEntrar(r.usuario, r.precisaMfa);
     } catch (err) {
       setErro(err instanceof ErroApi ? err.message : "Não foi possível concluir. Tente de novo.");
     }
@@ -302,9 +319,12 @@ function Configurar({ codigo, aoEntrar }: { codigo: string; aoEntrar: (u: Usuari
   );
 }
 
-function Login({ aoEntrar, rotuloSso, erroSso }: { aoEntrar: (u: Usuario) => void; rotuloSso: string | null; erroSso: string | null }) {
+function Login({ aoEntrar, rotuloSso, erroSso }: { aoEntrar: (u: Usuario, precisaMfa?: boolean) => void; rotuloSso: string | null; erroSso: string | null }) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  // Senha certa com MFA ligado: falta o código (o desafio vale 5 minutos).
+  const [desafio, setDesafio] = useState<string | null>(null);
+  const [codigo, setCodigo] = useState("");
   const [erro, setErro] = useState<string | null>(erroSso);
   const [enviando, setEnviando] = useState(false);
   const v = useValidacao();
@@ -315,12 +335,69 @@ function Login({ aoEntrar, rotuloSso, erroSso }: { aoEntrar: (u: Usuario) => voi
     setEnviando(true);
     setErro(null);
     try {
-      aoEntrar((await api.entrar(email, senha)).usuario);
+      if (desafio) {
+        const r = await api.entrarComCodigo(desafio, codigo.trim());
+        return aoEntrar(r.usuario, r.precisaMfa);
+      }
+      const r = await api.entrar(email, senha);
+      if (r.mfa) {
+        setDesafio(r.desafio);
+        setSenha("");
+        return;
+      }
+      aoEntrar(r.usuario, r.precisaMfa);
     } catch (err) {
+      if (err instanceof ErroApi && err.erro.codigo === "desafio_expirado") {
+        setDesafio(null);
+        setCodigo("");
+      }
       setErro(err instanceof ErroApi ? err.message : "Não foi possível entrar. Tente de novo.");
     } finally {
       setEnviando(false);
     }
+  }
+
+  if (desafio) {
+    return (
+      <form className="cartao login" onSubmit={enviar} noValidate>
+        <h2>Verificação em duas etapas</h2>
+        <label>
+          Código do aplicativo autenticador
+          <input
+            {...v.campo("codigo")}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            autoCapitalize="none"
+            spellCheck={false}
+            value={codigo}
+            onChange={(e) => setCodigo(e.target.value)}
+            required
+            autoFocus
+          />
+          {v.erro("codigo")}
+        </label>
+        <p className="legenda">Sem o celular? Digite um dos códigos de recuperação.</p>
+        {erro && (
+          <p className="erro" role="alert">
+            {erro}
+          </p>
+        )}
+        <button type="submit" disabled={enviando}>
+          {enviando ? "Conferindo…" : "Entrar"}
+        </button>
+        <button
+          type="button"
+          className="botao-texto"
+          onClick={() => {
+            setDesafio(null);
+            setCodigo("");
+            setErro(null);
+          }}
+        >
+          Voltar
+        </button>
+      </form>
+    );
   }
 
   return (

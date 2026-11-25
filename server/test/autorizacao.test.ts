@@ -110,7 +110,7 @@ describe("autorização pela rota registrada", () => {
 
   it("a lista de rotas públicas é exatamente esta (rota pública nova exige mudar o teste)", () => {
     const publicas = [...new Set(rotas.filter((r) => ehApi(r.url) && publica(r.url)).map((r) => r.url))].sort();
-    expect(publicas).toEqual(["/api/configurar", "/api/login", "/api/publico/:token", "/api/sair", "/api/saude", "/api/sessao", "/api/sso/iniciar", "/api/sso/retorno"]);
+    expect(publicas).toEqual(["/api/configurar", "/api/login", "/api/login/mfa", "/api/publico/:token", "/api/sair", "/api/saude", "/api/sessao", "/api/sso/iniciar", "/api/sso/retorno"]);
     // Nenhuma entrada sobrando na lista de públicas.
     for (const url of ROTAS_PUBLICAS) expect(rotas.some((r) => r.url === url), url).toBe(true);
   });

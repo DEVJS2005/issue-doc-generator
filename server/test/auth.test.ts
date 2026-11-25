@@ -48,7 +48,7 @@ describe("login", () => {
     const a = await app();
     const r = await a.inject({ method: "POST", url: "/api/login", payload: { email: "QA@Exemplo.dev", senha: SENHA_TESTE } });
     expect(r.statusCode).toBe(200);
-    expect(r.json()).toEqual({ usuario: { email: EMAIL_TESTE, nome: "qa", admin: true } });
+    expect(r.json()).toEqual({ usuario: { email: EMAIL_TESTE, nome: "qa", admin: true }, precisaMfa: false });
     const cookie = String(r.headers["set-cookie"]);
     expect(cookie).toContain("HttpOnly");
     expect(cookie).toContain("SameSite=Strict");
@@ -79,7 +79,7 @@ describe("login", () => {
   it("informa a sessão e sai", async () => {
     const a = await app();
     const cookie = await entrar(a);
-    expect((await a.inject({ method: "GET", url: "/api/sessao", headers: { cookie } })).json()).toEqual({ usuario: { email: EMAIL_TESTE, nome: "qa", admin: true } });
+    expect((await a.inject({ method: "GET", url: "/api/sessao", headers: { cookie } })).json()).toEqual({ usuario: { email: EMAIL_TESTE, nome: "qa", admin: true }, precisaMfa: false });
     const saida = await a.inject({ method: "POST", url: "/api/sair", headers: { cookie } });
     expect(String(saida.headers["set-cookie"])).toContain("Max-Age=0");
     expect((await a.inject({ method: "GET", url: "/api/sessao" })).statusCode).toBe(401);

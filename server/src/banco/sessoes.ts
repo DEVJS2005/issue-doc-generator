@@ -10,9 +10,25 @@ export type SessaoAberta = {
   navegador: string | null;
 };
 
-export type SessaoValida = SessaoAberta & { usuario: string };
+export type SessaoValida = SessaoAberta & {
+  usuario: string;
+  /** Passou pelo segundo fator (TOTP, chave de acesso ou SSO) nesta sessão. */
+  mfa: boolean;
+  /** Última vez que a senha (ou o código) foi confirmada de novo, para ações sensíveis. */
+  reautenticadaEm: number;
+};
 
-type Linha = { id: number; usuario: string; criada_em: number; ultimo_uso: number; expira_em: number; ip: string | null; navegador: string | null };
+type Linha = {
+  id: number;
+  usuario: string;
+  criada_em: number;
+  ultimo_uso: number;
+  expira_em: number;
+  ip: string | null;
+  navegador: string | null;
+  mfa: number;
+  reautenticada_em: number;
+};
 
 /** O "último uso" é gravado no máximo uma vez por minuto, para não escrever no banco a cada pedido. */
 const TOCAR_A_CADA_MS = 60_000;
@@ -25,6 +41,8 @@ const paraSessao = (l: Linha): SessaoValida => ({
   ultimoUso: l.ultimo_uso,
   ip: l.ip,
   navegador: l.navegador,
+  mfa: l.mfa === 1,
+  reautenticadaEm: l.reautenticada_em,
 });
 
 /**
@@ -39,12 +57,33 @@ export class RepositorioSessoes {
   ) {}
 
   /** Abre uma sessão e devolve o token que vai no cookie (só aparece aqui). */
-  criar(usuario: string, origem: { ip?: string | null; navegador?: string | null }, agora = Date.now()): string {
+  criar(usuario: string, origem: { ip?: string | null; navegador?: string | null; mfa?: boolean }, agora = Date.now()): string {
     const token = randomBytes(32).toString("base64url");
     this.db
-      .prepare("INSERT INTO sessoes (hash, usuario, criada_em, ultimo_uso, expira_em, ip, navegador) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .run(hashDe(token), usuario, agora, agora, agora + this.validadeMs, origem.ip?.slice(0, 64) ?? null, origem.navegador?.slice(0, 200) ?? null);
+      .prepare("INSERT INTO sessoes (hash, usuario, criada_em, ultimo_uso, expira_em, ip, navegador, mfa, reautenticada_em) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(
+        hashDe(token),
+        usuario,
+        agora,
+        agora,
+        agora + this.validadeMs,
+        origem.ip?.slice(0, 64) ?? null,
+        origem.navegador?.slice(0, 200) ?? null,
+        origem.mfa ? 1 : 0,
+        // Quem acabou de digitar a senha conta como confirmado agora.
+        agora,
+      );
     return token;
+  }
+
+  /** A sessão passou pelo segundo fator (ex.: ligou o MFA nela). */
+  marcarMfa(id: number) {
+    this.db.prepare("UPDATE sessoes SET mfa = 1 WHERE id = ?").run(id);
+  }
+
+  /** A pessoa confirmou a senha (ou o código) de novo nesta sessão. */
+  reautenticar(id: number, agora = Date.now()) {
+    this.db.prepare("UPDATE sessoes SET reautenticada_em = ? WHERE id = ?").run(agora, id);
   }
 
   /** Sessão do token, se existir e não tiver vencido. Atualiza o último uso. */
@@ -69,7 +108,7 @@ export class RepositorioSessoes {
         .prepare("SELECT * FROM sessoes WHERE usuario = ? AND expira_em > ? AND criada_em >= ? ORDER BY ultimo_uso DESC, id DESC")
         .all(usuario, agora, desde) as Linha[]
     ).map((l) => {
-      const { usuario: _u, ...s } = paraSessao(l);
+      const { usuario: _u, mfa: _m, reautenticadaEm: _r, ...s } = paraSessao(l);
       return s;
     });
   }
