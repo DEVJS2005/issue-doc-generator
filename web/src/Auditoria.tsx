@@ -18,6 +18,9 @@ export const ROTULO_ACAO: Record<AcaoAuditoria, string> = {
   backup: "Fez backup",
   baixar_backup: "Baixou backup",
   criar_jira: "Criou no Jira",
+  sair: "Saiu",
+  encerrar_sessao: "Encerrou uma sessão",
+  encerrar_todas: "Saiu de todos os dispositivos",
 };
 
 /** Detalhe em uma linha legível. Os campos vêm do servidor, já sem senhas nem tokens. */
