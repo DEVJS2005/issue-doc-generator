@@ -83,7 +83,7 @@ export function registrarSso(
     if (!usuario.ativo) return voltarComErro(reply, "desativado", https);
 
     request.log.info({ evento: "login", via: "sso", usuario: usuario.email }, "login: ok (sso)");
-    reply.header("set-cookie", [cookieEstado("", 0, https), ...abrirSessao(request, { sessoes: o.sessoesBanco, maxAgeSegundos: o.maxAgeSegundos }, usuario.email)]);
+    reply.header("set-cookie", [cookieEstado("", 0, https), ...abrirSessao(request, { sessoes: o.sessoesBanco, maxAgeSegundos: o.maxAgeSegundos }, usuario.email, true)]);
     return reply.redirect("/");
   });
 }

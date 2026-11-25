@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { api, ErroApi, type SessaoAberta } from "./api";
 import { useDialogo } from "./Dialogo";
 import { dataHora } from "./Historico";
+import { SecaoMfa } from "./Mfa";
 
 /** "Chrome no Windows", a partir do user-agent. Sem biblioteca: só os casos comuns. */
 export function descreverNavegador(ua: string | null): string {
@@ -33,10 +34,10 @@ export function descreverNavegador(ua: string | null): string {
 }
 
 /**
- * Sessões abertas de quem está logado, num diálogo: encerrar uma e "Sair de todos os
- * dispositivos". Encerrar a sessão deste dispositivo leva de volta ao login (`aoSair`).
+ * Diálogo "Segurança": verificação em duas etapas e sessões abertas (encerrar uma e "Sair de todos
+ * os dispositivos"). Encerrar a sessão deste dispositivo leva de volta ao login (`aoSair`).
  */
-export function Sessoes({ aoFechar, aoSair }: { aoFechar: () => void; aoSair: () => void }) {
+export function Sessoes({ conta, aoFechar, aoSair }: { conta: string; aoFechar: () => void; aoSair: () => void }) {
   const id = useId();
   const ref = useRef<HTMLDialogElement>(null);
   const dialogo = useDialogo();
@@ -104,8 +105,13 @@ export function Sessoes({ aoFechar, aoSair }: { aoFechar: () => void; aoSair: ()
         if (e.target === e.currentTarget) aoFechar();
       }}
     >
-      <form method="dialog" onSubmit={(e) => e.preventDefault()}>
-        <h2 id={`${id}-titulo`}>Sessões abertas</h2>
+      <div className="dialogo-corpo">
+        <h2 id={`${id}-titulo`}>Segurança</h2>
+        <section aria-labelledby={`${id}-mfa`} className="secao-seguranca">
+          <h3 id={`${id}-mfa`}>Verificação em duas etapas</h3>
+          <SecaoMfa conta={conta} aoSair={aoSair} />
+        </section>
+        <h3 id={`${id}-sessoes`}>Sessões abertas</h3>
         <p className="dialogo-mensagem">Onde a sua conta está conectada. Encerre o que você não reconhece.</p>
         {erro && (
           <p className="erro-campo" role="alert">
@@ -114,7 +120,7 @@ export function Sessoes({ aoFechar, aoSair }: { aoFechar: () => void; aoSair: ()
         )}
         {sessoes === null && !erro && <p aria-live="polite">Carregando…</p>}
         {sessoes && (
-          <ul className="lista-sessoes">
+          <ul className="lista-sessoes" aria-labelledby={`${id}-sessoes`}>
             {sessoes.map((s) => (
               <li key={s.id}>
                 <div>
@@ -139,7 +145,7 @@ export function Sessoes({ aoFechar, aoSair }: { aoFechar: () => void; aoSair: ()
             Sair de todos os dispositivos
           </button>
         </div>
-      </form>
+      </div>
     </dialog>
   );
 }

@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
+import { codigoDoPasso, deBase32, passoEm } from "../server/src/auth/totp";
 
 type Esperado = { gerado: string; refinado: string; chave: string };
 
@@ -466,11 +467,12 @@ test("sessões: a lista mostra este dispositivo, encerra a outra sessão e sai d
   await entrar(outraPagina);
   await entrar(page);
 
-  await page.getByRole("button", { name: "Sessões" }).click();
-  const dialogo = page.getByRole("dialog", { name: "Sessões abertas" });
+  await page.getByRole("button", { name: "Segurança" }).click();
+  const dialogo = page.getByRole("dialog", { name: "Segurança" });
   await expect(dialogo).toBeVisible();
-  await expect(dialogo.getByRole("listitem").filter({ hasText: "este dispositivo" })).toHaveCount(1);
-  const doOutro = dialogo.getByRole("listitem").filter({ hasText: "Navegador do outro teste" });
+  const lista = dialogo.getByRole("list", { name: "Sessões abertas" });
+  await expect(lista.getByRole("listitem").filter({ hasText: "este dispositivo" })).toHaveCount(1);
+  const doOutro = lista.getByRole("listitem").filter({ hasText: "Navegador do outro teste" });
   await expect(doOutro).toHaveCount(1);
 
   // Encerra a sessão do outro navegador: lá, a próxima carga volta para o login.
@@ -486,4 +488,39 @@ test("sessões: a lista mostra este dispositivo, encerra a outra sessão e sai d
   await page.reload();
   await expect(page.getByRole("heading", { name: "Entrar" })).toBeVisible();
   await outro.close();
+});
+
+test("verificação em duas etapas: liga com o código do aplicativo, entra com um código de recuperação e desliga", async ({ page }) => {
+  await entrar(page);
+  await page.getByRole("button", { name: "Segurança" }).click();
+  const dialogo = page.getByRole("dialog", { name: "Segurança" });
+  await dialogo.getByRole("button", { name: "Ligar a verificação em duas etapas" }).click();
+  await expect(dialogo.getByRole("img", { name: "QR code para o aplicativo autenticador" })).toBeVisible();
+
+  // O "aplicativo": calcula o código a partir da chave mostrada na tela.
+  const segredo = (await dialogo.locator(".mfa-segredo").textContent())!.trim();
+  await dialogo.getByLabel("Digite o código de 6 dígitos").fill(codigoDoPasso(deBase32(segredo), passoEm(Date.now())));
+  await dialogo.getByRole("button", { name: "Ligar", exact: true }).click();
+  const codigos = dialogo.getByRole("list", { name: "Códigos de recuperação" }).getByRole("listitem");
+  await expect(codigos).toHaveCount(10);
+  const recuperacao = (await codigos.first().textContent())!.trim();
+  await dialogo.getByRole("button", { name: "Já guardei" }).click();
+  await expect(dialogo.getByText("ligada")).toBeVisible();
+  await dialogo.getByRole("button", { name: "Fechar" }).click();
+
+  // Sai e entra de novo: depois da senha, pede o código.
+  await page.getByRole("button", { name: "Sair" }).click();
+  await page.getByLabel("Usuário ou e-mail").fill("qa@exemplo.dev");
+  await page.getByLabel("Senha").fill("senha-de-teste");
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page.getByRole("heading", { name: "Verificação em duas etapas" })).toBeVisible();
+  await page.getByLabel("Código do aplicativo autenticador").fill(recuperacao);
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page.getByRole("heading", { name: "O que está errado ou o que queremos" })).toBeVisible();
+
+  // Desliga, para não afetar os outros testes (o login recente dispensa confirmar a senha).
+  await page.getByRole("button", { name: "Segurança" }).click();
+  await page.getByRole("dialog", { name: "Segurança" }).getByRole("button", { name: "Desligar" }).click();
+  await page.getByRole("dialog", { name: "Desligar a verificação em duas etapas?" }).getByRole("button", { name: "Desligar" }).click();
+  await expect(page.getByRole("dialog", { name: "Segurança" }).getByRole("button", { name: "Ligar a verificação em duas etapas" })).toBeVisible();
 });

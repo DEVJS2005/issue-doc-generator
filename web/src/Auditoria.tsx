@@ -22,6 +22,9 @@ export const ROTULO_ACAO: Record<AcaoAuditoria, string> = {
   encerrar_sessao: "Encerrou uma sessão",
   encerrar_todas: "Saiu de todos os dispositivos",
   login_travado: "Conta travada (muitas tentativas)",
+  mfa_ativado: "Ligou a verificação em duas etapas",
+  mfa_desativado: "Desligou a verificação em duas etapas",
+  mfa_codigos: "Gerou novos códigos de recuperação",
 };
 
 /** Detalhe em uma linha legível. Os campos vêm do servidor, já sem senhas nem tokens. */

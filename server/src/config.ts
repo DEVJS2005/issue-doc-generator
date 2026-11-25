@@ -89,6 +89,8 @@ const esquema = z.object({
       return chave;
     }),
   SESSAO_HORAS: z.coerce.number().positive().default(12),
+  // Admin precisa de verificação em duas etapas (aplicativo autenticador ou chave de acesso).
+  ADMIN_EXIGE_MFA: booleano("false"),
   CONFIAR_PROXY: z
     .string()
     .default("false")
@@ -147,6 +149,8 @@ export type Config = {
   /** Chave AES-256 dos backups; null = backup sem criptografia. */
   backupChave: Buffer | null;
   sessaoHoras: number;
+  /** Admin só usa o sistema depois de ligar o MFA. */
+  adminExigeMfa: boolean;
   confiarProxy: ConfiancaProxy;
   precoPorMtok: Preco | null;
 };
@@ -189,6 +193,7 @@ export function carregarConfig(env: NodeJS.ProcessEnv = process.env): Config {
     segredoSessao: e.SEGREDO_SESSAO,
     backupChave: e.BACKUP_CHAVE,
     sessaoHoras: e.SESSAO_HORAS,
+    adminExigeMfa: e.ADMIN_EXIGE_MFA,
     confiarProxy: e.CONFIAR_PROXY,
     precoPorMtok: lerPreco(e.PRECO_POR_MTOK),
   };
