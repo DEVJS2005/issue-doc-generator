@@ -155,7 +155,7 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 
 | Comando | O que roda |
 |---|---|
-| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões, acesso de cada rota da API, IP atrás de proxy, limite de login por IP e por conta, 1º admin, administração, usuários, modelo reserva, histórico, refinar a partir da versão guardada, status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
+| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões, acesso de cada rota da API, IP atrás de proxy, limite de login por IP e por conta, 1º admin, administração, usuários, modelo reserva, histórico, refinar a partir da versão guardada, entrada maliciosa para a IA (tags e resposta fora do schema), status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
 | `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, status, CSV, link de leitura, idioma, administração, backup, auditoria, nota de qualidade, prints, Jira (falso), CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos |
 | `npm run typecheck` | TypeScript do servidor e da tela |
 | `npm run lint` | ESLint (TypeScript e regras dos hooks do React), sem tolerar avisos |
@@ -428,6 +428,9 @@ Resumo das proteções. Para relatar uma vulnerabilidade, veja o [SECURITY.md](S
   só no servidor.
 - **Cabeçalhos** em todas as respostas: CSP só com a própria origem (sem script ou estilo embutido),
   `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy` e HSTS em HTTPS.
+- **Entrada para a IA:** descrição, contexto e texto das imagens vão entre tags e são tratados
+  como dados, não como instruções (`server/prompts/sistema.md`); as nossas tags são removidas do
+  texto da pessoa antes do envio, e a resposta só vira issue se passar pelo schema.
 - **Conteúdo:** o Markdown da IA passa por `rehype-sanitize` antes de virar HTML; o CSV protege
   contra fórmulas; as imagens anexadas têm o formato conferido pelo conteúdo, não pela extensão.
   A API aceita só JSON.
