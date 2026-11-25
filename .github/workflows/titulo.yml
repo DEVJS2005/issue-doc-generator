@@ -6,8 +6,8 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
 
-permissions:
-  contents: read
+# Nada por padrão; cada job pede só o que usa.
+permissions: {}
 
 concurrency:
   group: titulo-${{ github.event.pull_request.number }}
@@ -17,6 +17,8 @@ jobs:
   titulo:
     name: Título do PR no padrão Conventional Commits
     runs-on: ubuntu-latest
+    # Só lê o título do evento: nenhuma permissão do token.
+    permissions: {}
     timeout-minutes: 2
     steps:
       - name: Confere o título (vira a mensagem do squash na main)

@@ -17,6 +17,9 @@ export const ACOES_AUDITORIA = [
   "backup",
   "baixar_backup",
   "criar_jira",
+  "sair",
+  "encerrar_sessao",
+  "encerrar_todas",
 ] as const;
 export type AcaoAuditoria = (typeof ACOES_AUDITORIA)[number];
 

@@ -1,8 +1,10 @@
 import { randomBytes } from "node:crypto";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ProvedorSso, EstadoSso } from "../auth/oidc.js";
-import { cookieSessao, lerCookie, type Sessoes } from "../auth/sessao.js";
+import { lerCookie, type Sessoes } from "../auth/sessao.js";
+import type { RepositorioSessoes } from "../banco/sessoes.js";
 import type { RepositorioUsuarios } from "../banco/usuarios.js";
+import { abrirSessao } from "./auth.js";
 
 const COOKIE_ESTADO = "idg_sso";
 const VALIDADE_ESTADO_MS = 10 * 60_000;
@@ -27,7 +29,16 @@ function voltarComErro(reply: FastifyReply, codigo: string, https: boolean) {
 
 export function registrarSso(
   app: FastifyInstance,
-  o: { sso: ProvedorSso | null; sessoes: Sessoes; usuarios: RepositorioUsuarios; urlRetorno: string },
+  o: {
+    sso: ProvedorSso | null;
+    /** Selo do estado do SSO (cookie curto e assinado). */
+    sessoes: Sessoes;
+    /** Sessão de login, aberta no banco ao voltar do provedor. */
+    sessoesBanco: RepositorioSessoes;
+    maxAgeSegundos: number;
+    usuarios: RepositorioUsuarios;
+    urlRetorno: string;
+  },
 ) {
   app.get("/api/sso/iniciar", async (request, reply) => {
     if (!o.sso) return reply.code(404).send({ erro: { codigo: "sso_desligado", mensagem: "Login único não configurado.", podeTentarDeNovo: false } });
@@ -72,7 +83,7 @@ export function registrarSso(
     if (!usuario.ativo) return voltarComErro(reply, "desativado", https);
 
     request.log.info({ evento: "login", via: "sso", usuario: usuario.email }, "login: ok (sso)");
-    reply.header("set-cookie", [cookieEstado("", 0, https), cookieSessao(o.sessoes.criar({ email: usuario.email }), o.sessoes.maxAgeSegundos, https)]);
+    reply.header("set-cookie", [cookieEstado("", 0, https), ...abrirSessao(request, { sessoes: o.sessoesBanco, maxAgeSegundos: o.maxAgeSegundos }, usuario.email)]);
     return reply.redirect("/");
   });
 }

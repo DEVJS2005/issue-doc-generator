@@ -4,13 +4,16 @@ import { z } from "zod";
 import { ERRO_NAO_AUTENTICADO, ERRO_SEM_PERMISSAO, rotaExigeAdmin, rotaExigeLogin } from "../auth/acesso.js";
 import type { Autenticador, Usuario } from "../auth/autenticador.js";
 import { Limitador } from "../auth/limite.js";
-import { COOKIE_SESSAO, cookieSaida, cookieSessao, lerCookie, type Sessoes } from "../auth/sessao.js";
+import { cookieSaida, cookieSessao, tokenDaSessao } from "../auth/sessao.js";
 import { ErroValidacao } from "../banco/banco.js";
+import type { RepositorioSessoes } from "../banco/sessoes.js";
 import type { RepositorioUsuarios } from "../banco/usuarios.js";
 
 declare module "fastify" {
   interface FastifyRequest {
     usuario?: Usuario;
+    /** Id da sessão deste pedido (para marcar "este dispositivo" e encerrar a própria). */
+    sessaoId?: number;
   }
 }
 
@@ -31,7 +34,7 @@ const CorpoConfigurar = z.object({
   senha: z.string().max(200),
 });
 
-function seguro(request: FastifyRequest) {
+export function seguro(request: FastifyRequest) {
   return request.protocol === "https";
 }
 
@@ -41,7 +44,9 @@ function erro(codigo: string, mensagem: string, podeTentarDeNovo = false) {
 
 export type OpcoesAuth = {
   autenticador: Autenticador;
-  sessoes: Sessoes;
+  sessoes: RepositorioSessoes;
+  /** Validade do cookie da sessão, em segundos. */
+  maxAgeSegundos: number;
   usuarios: RepositorioUsuarios;
   /** Código de uso único para criar o 1º admin; null quando já existe usuário. */
   codigoConfiguracao: { atual: string | null };
@@ -50,17 +55,25 @@ export type OpcoesAuth = {
 };
 
 /**
- * A sessão leva só o e-mail. A cada pedido o usuário é relido do banco: desativar alguém ou
- * tirar o perfil de admin vale na hora, sem esperar a sessão vencer.
+ * Usuário da sessão do pedido. A sessão fica no banco; o usuário é relido a cada pedido: desativar
+ * alguém ou tirar o perfil de admin vale na hora, sem esperar a sessão vencer.
  */
-export function usuarioDaRequisicao(request: FastifyRequest, o: OpcoesAuth): Usuario | null {
-  const sessao = o.sessoes.ler(lerCookie(request.headers.cookie, COOKIE_SESSAO));
+export function sessaoDaRequisicao(request: FastifyRequest, o: Pick<OpcoesAuth, "sessoes" | "usuarios">): { usuario: Usuario; sessaoId: number } | null {
+  const sessao = o.sessoes.buscar(tokenDaSessao(request.headers.cookie, seguro(request)));
   if (!sessao) return null;
-  const u = o.usuarios.buscar(sessao.email);
+  const u = o.usuarios.buscar(sessao.usuario);
   if (!u || !u.ativo) return null;
-  // Senha trocada (ou conta desativada) depois que esta sessão foi emitida: não vale mais.
-  if (sessao.emitidaEm < o.usuarios.sessoesValidasDesde(u.email)) return null;
-  return { email: u.email, nome: u.nome, admin: u.admin };
+  // Senha trocada (ou conta desativada) depois que esta sessão foi aberta: não vale mais.
+  if (sessao.criadaEm < o.usuarios.sessoesValidasDesde(u.email)) return null;
+  return { usuario: { email: u.email, nome: u.nome, admin: u.admin }, sessaoId: sessao.id };
+}
+
+/** Abre uma sessão para quem acabou de entrar e devolve os cabeçalhos Set-Cookie. */
+export function abrirSessao(request: FastifyRequest, o: Pick<OpcoesAuth, "sessoes" | "maxAgeSegundos">, email: string): string[] {
+  const token = o.sessoes.criar(email, { ip: request.ip, navegador: request.headers["user-agent"] ?? null });
+  const https = seguro(request);
+  // Em HTTPS, apaga o cookie de nome antigo (sem o prefixo __Host-), se houver.
+  return [cookieSessao(token, o.maxAgeSegundos, https), ...(https ? cookieSaida(true).slice(1) : [])];
 }
 
 export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
@@ -76,16 +89,16 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
   app.addHook("onRequest", async (request, reply) => {
     const rota = request.routeOptions.url;
     if (!rota || !rotaExigeLogin(rota)) return;
-    const usuario = usuarioDaRequisicao(request, o);
-    if (!usuario) return reply.code(401).send({ erro: ERRO_NAO_AUTENTICADO });
-    if (rotaExigeAdmin(rota) && !usuario.admin) return reply.code(403).send({ erro: ERRO_SEM_PERMISSAO });
-    request.usuario = usuario;
+    const sessao = sessaoDaRequisicao(request, o);
+    if (!sessao) return reply.code(401).send({ erro: ERRO_NAO_AUTENTICADO });
+    if (rotaExigeAdmin(rota) && !sessao.usuario.admin) return reply.code(403).send({ erro: ERRO_SEM_PERMISSAO });
+    request.usuario = sessao.usuario;
+    request.sessaoId = sessao.sessaoId;
   });
 
   function entrar(request: FastifyRequest, reply: FastifyReply, usuario: Usuario) {
     request.usuario = usuario; // para a auditoria saber quem entrou
-
-    reply.header("set-cookie", cookieSessao(o.sessoes.criar(usuario), o.sessoes.maxAgeSegundos, seguro(request)));
+    reply.header("set-cookie", abrirSessao(request, o, usuario.email));
     return { usuario };
   }
 
@@ -111,13 +124,17 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
     return entrar(request, reply, usuario);
   });
 
+  // "Sair" encerra a sessão no servidor: o cookie copiado antes disso não vale mais.
   app.post("/api/sair", async (request, reply) => {
+    const sessao = sessaoDaRequisicao(request, o);
+    if (sessao) request.usuario = sessao.usuario; // para a auditoria
+    o.sessoes.encerrarPorToken(tokenDaSessao(request.headers.cookie, seguro(request)));
     reply.header("set-cookie", cookieSaida(seguro(request)));
     return { ok: true };
   });
 
   app.get("/api/sessao", async (request, reply) => {
-    const usuario = usuarioDaRequisicao(request, o);
+    const usuario = sessaoDaRequisicao(request, o)?.usuario;
     if (!usuario) {
       return reply.code(401).send({
         ...erro("nao_autenticado", "Sem sessão."),
