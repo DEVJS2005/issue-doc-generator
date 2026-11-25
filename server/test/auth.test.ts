@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { montarApp } from "../src/app.js";
 import { lerUsuariosDoEnv } from "../src/auth/autenticador.js";
 import { Limitador } from "../src/auth/limite.js";
+import { criarChaves } from "../src/auth/chaves.js";
 import { criarSessoes, lerCookie } from "../src/auth/sessao.js";
 import { carregarConfig } from "../src/config.js";
 import { custoEstimado, lerPreco } from "../src/custo.js";
@@ -92,7 +93,7 @@ describe("login", () => {
 });
 
 describe("selo assinado (estado do login único)", () => {
-  const s = criarSessoes("segredo-de-teste", 12);
+  const s = criarSessoes(criarChaves("segredo-de-teste").chave("sso-estado"), 12);
 
   it("abre o que selou, dentro da validade", () => {
     expect(s.abrir(s.selar({ nonce: "n1" }, 60_000, 1_000), 2_000)).toEqual({ nonce: "n1" });
@@ -103,7 +104,7 @@ describe("selo assinado (estado do login único)", () => {
     const [, assinatura] = selo.split(".");
     const outro = Buffer.from(JSON.stringify({ d: { nonce: "n2" }, e: 9_999_999_999_999 })).toString("base64url");
     expect(s.abrir(`${outro}.${assinatura}`, 2_000)).toBeNull();
-    expect(criarSessoes("outro-segredo", 12).abrir(selo, 2_000)).toBeNull();
+    expect(criarSessoes(criarChaves("outro-segredo").chave("sso-estado"), 12).abrir(selo, 2_000)).toBeNull();
     expect(s.abrir(selo, 62_000)).toBeNull();
     expect(s.abrir("lixo")).toBeNull();
     expect(s.abrir(undefined)).toBeNull();

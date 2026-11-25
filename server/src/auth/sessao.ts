@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 /** Nome do cookie em HTTP (desenvolvimento) e em HTTPS, com o prefixo que o navegador protege. */
 export const COOKIE_SESSAO = "idg_sessao";
@@ -6,14 +6,13 @@ export const COOKIE_SESSAO_HTTPS = "__Host-idg_sessao";
 
 /**
  * Selo assinado com HMAC-SHA256 para dados curtos e com validade, como o estado do login único
- * (SSO). A sessão de login não usa mais isto: fica no banco (banco/sessoes.ts).
+ * (SSO). A sessão de login não usa mais isto: fica no banco (banco/sessoes.ts). A chave é a
+ * subchave "sso-estado", derivada do SEGREDO_SESSAO (auth/chaves.ts).
  */
-export function criarSessoes(segredo: string, horas: number) {
-  const chave = segredo || randomBytes(32).toString("hex");
+export function criarSessoes(chave: Buffer, horas: number) {
   const assinar = (dados: string) => createHmac("sha256", chave).update(dados).digest("base64url");
 
   return {
-    segredoTemporario: !segredo,
     maxAgeSegundos: Math.round(horas * 3600),
 
     /** Sela dados curtos (ex.: estado do SSO) num token assinado e com validade. */
