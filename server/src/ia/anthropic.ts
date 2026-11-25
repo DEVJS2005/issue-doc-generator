@@ -19,19 +19,23 @@ const BETA_FALLBACK = "server-side-fallback-2026-07-01";
 
 export function criarProvedorAnthropic(o: OpcoesAnthropic): Provedor {
   const cliente = new Anthropic({ apiKey: o.apiKey, maxRetries: 2 });
-  const formato = zodOutputFormat(IssueSchema);
+  const formatoIssue = zodOutputFormat(IssueSchema);
 
   return {
     nome: "anthropic",
     modelo: o.modelo,
-    async gerar({ sistema, usuario, imagens = [] }, { signal, aoProgresso }) {
+    async gerar({ sistema, usuario, imagens = [], contextoSistema, formato = "issue" }, { signal, aoProgresso }) {
       try {
         const stream = cliente.beta.messages.stream(
           {
             model: o.modelo,
             max_tokens: o.maxTokens,
             // Bloco de sistema fixo e com cache: a partir da 2ª chamada vem de cache_read_input_tokens.
-            system: [{ type: "text", text: sistema, cache_control: { type: "ephemeral" } }],
+            // O "Meu contexto" vem num 2º bloco com cache: o 1º serve a todos, o 2º às gerações da pessoa.
+            system: [
+              { type: "text", text: sistema, cache_control: { type: "ephemeral" } },
+              ...(contextoSistema ? [{ type: "text" as const, text: contextoSistema, cache_control: { type: "ephemeral" as const } }] : []),
+            ],
             messages: [
               {
                 role: "user",
@@ -43,7 +47,7 @@ export function criarProvedorAnthropic(o: OpcoesAnthropic): Provedor {
                   : usuario,
               },
             ],
-            output_config: { effort: o.esforco, format: formato },
+            output_config: formato === "issue" ? { effort: o.esforco, format: formatoIssue } : { effort: o.esforco },
             ...(o.fallbackRecusa ? { betas: [BETA_FALLBACK], fallbacks: "default" as const } : {}),
           },
           { signal },

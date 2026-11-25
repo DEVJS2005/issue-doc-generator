@@ -152,6 +152,17 @@ export const MIGRACAO_CHAVES_ACESSO = `
 // Um arquivo SQLite (node:sqlite, sem dependência nativa) guarda a configuração da IA, os usuários
 // e o histórico de issues. Cada item da lista é uma migração; a versão aplicada fica em
 // PRAGMA user_version. Nunca edite uma migração já publicada: acrescente outra no fim.
+// "Meu contexto": o texto da pessoa e a versão compacta, a única que vai para a IA.
+export const MIGRACAO_CONTEXTO_USUARIO = `
+  CREATE TABLE contexto_usuario (
+    usuario TEXT PRIMARY KEY,
+    original TEXT NOT NULL DEFAULT '',
+    compacto TEXT NOT NULL DEFAULT '',
+    atualizado_em INTEGER,
+    aviso_dispensado INTEGER NOT NULL DEFAULT 0
+  );
+`;
+
 const MIGRACOES: string[] = [
   `
   CREATE TABLE configuracao (
@@ -213,6 +224,7 @@ const MIGRACOES: string[] = [
   MIGRACAO_TRAVAS_LOGIN,
   MIGRACAO_MFA,
   MIGRACAO_CHAVES_ACESSO,
+  MIGRACAO_CONTEXTO_USUARIO,
 ];
 
 export type Banco = DatabaseSync;

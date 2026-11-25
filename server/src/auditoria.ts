@@ -68,6 +68,8 @@ const ROTAS: Record<string, Registro> = {
   },
   "POST /api/chaves-acesso/registro/concluir": { acao: "chave_acesso_criada" },
   "DELETE /api/chaves-acesso/:id": { acao: "chave_acesso_removida" },
+  "PUT /api/contexto": { acao: "contexto_salvo" },
+  "DELETE /api/contexto": { acao: "contexto_apagado" },
   "POST /api/sair": { acao: "sair" },
   "DELETE /api/sessoes/:id": { acao: "encerrar_sessao", alvo: param("id") },
   "POST /api/sessoes/encerrar-todas": { acao: "encerrar_todas" },

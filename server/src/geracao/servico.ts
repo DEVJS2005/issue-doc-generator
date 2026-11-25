@@ -39,7 +39,7 @@ const INTERVALO_PROGRESSO_MS = 250;
 export async function gerarIssue(
   provedor: Provedor,
   usuario: string,
-  opcoes: { signal: AbortSignal; aoProgresso: (e: EventoProgresso) => void; sistema?: string; idioma?: Idioma; imagens?: ImagemAnexa[] },
+  opcoes: { signal: AbortSignal; aoProgresso: (e: EventoProgresso) => void; sistema?: string; idioma?: Idioma; imagens?: ImagemAnexa[]; contextoSistema?: string },
 ): Promise<ResultadoGeracao> {
   const inicio = Date.now();
   let parcial = "";
@@ -50,7 +50,7 @@ export async function gerarIssue(
   opcoes.aoProgresso({ fase: "analisando", caracteres: 0, secao: null });
 
   const resposta = await provedor.gerar(
-    { sistema: opcoes.sistema ?? promptSistema(), usuario, imagens: opcoes.imagens },
+    { sistema: opcoes.sistema ?? promptSistema(), usuario, imagens: opcoes.imagens, ...(opcoes.contextoSistema ? { contextoSistema: opcoes.contextoSistema } : {}) },
     {
       signal: opcoes.signal,
       aoProgresso: (p) => {

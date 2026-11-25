@@ -22,7 +22,7 @@ export type Exemplo = {
 
 // Nossas tags, também escritas com "<", ">" e "/" de largura total ou pequenos (que a IA pode ler
 // como os comuns) e com espaços no meio.
-const TAGS = /[<＜﹤]\s*[/／]?\s*(tipo|produto|descricao|contexto|idioma|imagens|issue_atual|ajuste)\s*[>＞﹥]/gi;
+const TAGS = /[<＜﹤]\s*[/／]?\s*(tipo|produto|descricao|contexto_do_sistema|contexto|idioma|imagens|issue_atual|ajuste)\s*[>＞﹥]/gi;
 
 /**
  * Remove tags nossas de dentro do texto do usuário, para ele não fechar a tag antes da hora nem
@@ -36,6 +36,15 @@ export function limpar(texto: string): string {
     atual = atual.replace(TAGS, "");
   }
   return atual.trim();
+}
+
+/**
+ * "Meu contexto" da pessoa, já compacto, como bloco próprio antes da mensagem. Fica igual entre os
+ * pedidos dela, para o cache de prompt reaproveitar. Vazio = sem bloco.
+ */
+export function formatarContextoSistema(compacto: string): string {
+  const texto = limpar(compacto);
+  return texto ? `<contexto_do_sistema>\n${texto}\n</contexto_do_sistema>` : "";
 }
 
 /**

@@ -51,3 +51,11 @@ export function promptSistema(): string {
   emCache ??= montarPromptSistema();
   return emCache;
 }
+
+let compactarEmCache: string | undefined;
+
+/** Prompt de sistema do resumo do "Meu contexto" (uma chamada, ao salvar). */
+export function promptCompactarContexto(pasta = PASTA_PROMPTS): string {
+  compactarEmCache ??= ler(path.join(pasta, "compactar-contexto.md")) + "\n";
+  return compactarEmCache;
+}

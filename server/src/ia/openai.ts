@@ -26,7 +26,7 @@ export function criarProvedorOpenAI(o: OpcoesOpenAI): Provedor {
   return {
     nome: compativel ? "openai_compativel" : "openai",
     modelo: o.modelo,
-    async gerar({ sistema, usuario, imagens = [] }, { signal, aoProgresso }) {
+    async gerar({ sistema, usuario, imagens = [], contextoSistema, formato = "issue" }, { signal, aoProgresso }) {
       try {
         const stream = await cliente.chat.completions.create(
           {
@@ -35,6 +35,8 @@ export function criarProvedorOpenAI(o: OpcoesOpenAI): Provedor {
             ...(compativel ? { max_tokens: o.maxTokens } : { max_completion_tokens: o.maxTokens }),
             messages: [
               { role: "system", content: sistema },
+              // Depois do sistema fixo, para o prefixo comum seguir no cache automático.
+              ...(contextoSistema ? [{ role: "system" as const, content: contextoSistema }] : []),
               {
                 role: "user",
                 content: imagens.length
@@ -45,7 +47,7 @@ export function criarProvedorOpenAI(o: OpcoesOpenAI): Provedor {
                   : usuario,
               },
             ],
-            response_format: { type: "json_schema", json_schema: { name: "issue", schema, strict: true } },
+            ...(formato === "issue" ? { response_format: { type: "json_schema" as const, json_schema: { name: "issue", schema, strict: true } } } : {}),
             stream: true,
             stream_options: { include_usage: true },
           },
