@@ -158,12 +158,41 @@ O Node imprime `ExperimentalWarning: SQLite is an experimental feature` ao subir
 
 ## Testes
 
-| Comando | O que roda |
-|---|---|
-| `npm test` | Vitest do servidor (schema, Markdown, prompt, exemplos, rotas, login, sessões revogáveis (lista, encerrar, sair de todos, cookie `__Host-`), verificação em duas etapas (TOTP da RFC 6238, códigos de recuperação, admin obrigado, senha de novo nas ações sensíveis), chave de acesso (cadastro, login sem senha, site falso e desafio repetido recusados), acesso de cada rota da API, IP atrás de proxy, limite de login por IP e trava por conta com espera progressiva (no banco, também depois de reiniciar), 1º admin, administração, usuários, modelo reserva, backup criptografado e restauração, histórico, refinar a partir da versão guardada, saúde mínima sem login, entrada maliciosa para a IA (tags e resposta fora do schema), status, links, backup, auditoria, nota de qualidade, imagens, Jira (projetos liberados), cabeçalhos de segurança, erros, retenção, limite, custo) e da tela (validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria) |
-| `npm run test:e2e` | Build + Playwright: login, gerar, destaques, copiar e baixar, refinar, erro, cancelar, chave fora do navegador, histórico, status, CSV, link de leitura, idioma, administração, backup, auditoria, nota de qualidade, prints, Jira (falso), sessões, verificação em duas etapas, chave de acesso (aparelho virtual do Chromium), CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos |
-| `npm run typecheck` | TypeScript do servidor e da tela |
-| `npm run lint` | ESLint (TypeScript e regras dos hooks do React), sem tolerar avisos |
+Cada comando e o que ele cobre. Para incluir um teste novo, acrescente um item na lista, sem
+mexer nas outras linhas (assim dois PRs não brigam pela mesma linha).
+
+**`npm run typecheck`**: TypeScript do servidor e da tela.
+
+**`npm run lint`**: ESLint (TypeScript e regras dos hooks do React), sem tolerar avisos.
+
+**`npm test`**: Vitest do servidor e da tela.
+
+- Servidor: schema, Markdown, prompt e exemplos
+- Servidor: rotas e acesso de cada rota da API
+- Servidor: login, 1º admin, usuários e administração
+- Servidor: sessões revogáveis (lista, encerrar, sair de todos, cookie `__Host-`)
+- Servidor: verificação em duas etapas (TOTP da RFC 6238, códigos de recuperação, admin obrigado,
+  senha de novo nas ações sensíveis)
+- Servidor: chave de acesso (cadastro, login sem senha, site falso e desafio repetido recusados)
+- Servidor: IP atrás de proxy, limite de login por IP e trava por conta com espera progressiva (no
+  banco, também depois de reiniciar)
+- Servidor: modelo reserva, histórico, refinar a partir da versão guardada, status e links
+- Servidor: backup, backup criptografado e restauração
+- Servidor: saúde mínima sem login
+- Servidor: entrada maliciosa para a IA (tags e resposta fora do schema)
+- Servidor: auditoria, nota de qualidade, imagens e Jira (projetos liberados)
+- Servidor: cabeçalhos de segurança, erros, retenção, limite e custo
+- Tela: validação dos campos, diálogo do sistema, tema, rodapé, anexos, nota e auditoria
+
+**`npm run test:e2e`**: build e Playwright.
+
+- Login, gerar, destaques, copiar e baixar, refinar, erro e cancelar
+- Chave da IA fora do navegador
+- Histórico, status, CSV, link de leitura e idioma
+- Administração, backup e auditoria
+- Nota de qualidade, prints e Jira (falso)
+- Sessões, verificação em duas etapas e chave de acesso (aparelho virtual do Chromium)
+- CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos
 
 ### Proteções no GitHub
 
