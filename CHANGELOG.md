@@ -46,6 +46,8 @@ Todas as mudanças relevantes deste projeto ficam aqui. O formato segue o
 
 - Banco: três migrações novas (4: auditoria; 5: envios ao Jira; 6: sessões encerradas na troca de
   senha). Rodam sozinhas ao subir; nada a fazer na atualização.
+- CI: o título do PR é conferido também quando é editado (workflow `titulo.yml`), sem precisar
+  de um commit novo.
 
 ### Corrigido
 

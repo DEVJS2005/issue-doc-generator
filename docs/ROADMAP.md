@@ -203,4 +203,5 @@ Passo a passo completo em [INSTALACAO-DOCKER.md](INSTALACAO-DOCKER.md). Em resum
 - **23/11:**
   - changelog e roadmap por fragmento em `changelog.d/`, juntados no release; os PRs deixam de editar o `CHANGELOG.md`, a tabela de itens e o histórico de decisões;
   - workflow `atualizar-prs.yml` atualiza as branches dos PRs com a `main`, com um token próprio (o do Actions não dispara o CI);
+  - o check do título do PR sai do `ci.yml` para o `titulo.yml`, que roda também quando o título é editado (PR #41);
   - release v1.3.0 com os itens 31 a 36 e o que estava em "Não lançado".
