@@ -1,0 +1,45 @@
+# OpenSSF Scorecard: nota de boas práticas de segurança do repositório (Actions fixadas, permissões,
+# proteção da main, revisão de código, dependências atualizadas...). Roda uma vez por semana e
+# quando a regra de proteção da main muda. O resultado aparece em Security → Code scanning e na
+# página pública do Scorecard.
+name: Scorecard
+
+on:
+  schedule:
+    - cron: "41 7 * * 3"
+  branch_protection_rule:
+  workflow_dispatch:
+
+# Nada por padrão; o job pede só o que usa.
+permissions: {}
+
+jobs:
+  analise:
+    name: OpenSSF Scorecard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      security-events: write # envia o resultado para o Code scanning
+      id-token: write # publica o resultado assinado na página pública do Scorecard
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ossf/scorecard-action@23f22cd43608bae7a1f1fa2603d7314dee9538a5 # v2.6.0
+        with:
+          results_file: resultado.sarif
+          results_format: sarif
+          publish_results: true
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: scorecard
+          path: resultado.sarif
+          retention-days: 7
+
+      - uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
+        with:
+          sarif_file: resultado.sarif

@@ -207,6 +207,21 @@ Com `VERSAO_IMAGEM` fixa, troque o número pela versão nova antes do `pull`.
 
 As migrações do banco rodam sozinhas ao subir, e o volume `dados` é mantido.
 
+### Conferir a assinatura da imagem (opcional)
+
+As imagens publicadas depois da 1.3.0 são assinadas pelo próprio workflow de publicação (cosign,
+sem chave guardada) e trazem a lista de pacotes (SBOM) e a proveniência do build. Para conferir
+antes de subir, com o [cosign](https://docs.sigstore.dev/cosign/system_config/installation/)
+instalado (troque `X.Y.Z` pela versão):
+
+```bash
+cosign verify ghcr.io/devjs2005/issue-doc-generator:X.Y.Z \
+  --certificate-identity-regexp '^https://github.com/DEVJS2005/issue-doc-generator/\.github/workflows/publicar\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+Se a assinatura não bater, não suba a imagem e avise pelo relato privado do `SECURITY.md`.
+
 ## Backup e restauração
 
 O servidor faz sozinho um backup por dia, na pasta `backups` dentro do volume, e guarda as cópias
