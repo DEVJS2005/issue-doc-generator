@@ -33,15 +33,17 @@ export function registrarMfa(
   o: { mfa: RepositorioMfa; sessoes: RepositorioSessoes; usuarios: RepositorioUsuarios; travas: RepositorioTravasLogin; adminExigeMfa: boolean },
 ) {
   const exigido = (admin: boolean) => o.adminExigeMfa && admin;
+  // Limite por minuto: gerar o QR code e conferir senha ou código custam processamento.
+  const limite = { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } };
 
-  app.get("/api/mfa", async (request) => {
+  app.get("/api/mfa", limite, async (request) => {
     const u = usuarioObrigatorio(request);
     return { ativo: o.mfa.ativo(u.email), codigosRestantes: o.mfa.codigosRestantes(u.email), exigido: exigido(u.admin) };
   });
 
   // Começa a configuração: segredo novo, QR code (SVG gerado aqui, sem serviço externo) e o
   // segredo em texto para digitar no aplicativo. Só vale depois de confirmado com um código.
-  app.post("/api/mfa/iniciar", async (request, reply) => {
+  app.post("/api/mfa/iniciar", limite, async (request, reply) => {
     const u = usuarioObrigatorio(request);
     const segredo = o.mfa.iniciar(u.email);
     if (!segredo) return reply.code(409).send(erro("mfa_ja_ativo", "A verificação em duas etapas já está ligada."));
@@ -51,7 +53,7 @@ export function registrarMfa(
     return { segredo, uri, qr: `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}` };
   });
 
-  app.post("/api/mfa/ativar", async (request, reply) => {
+  app.post("/api/mfa/ativar", limite, async (request, reply) => {
     const u = usuarioObrigatorio(request);
     const corpo = CorpoCodigo.safeParse(request.body);
     if (!corpo.success) return reply.code(400).send(erro("entrada_invalida", corpo.error.issues[0]?.message ?? "Entrada inválida."));
@@ -64,7 +66,7 @@ export function registrarMfa(
     return { codigos };
   });
 
-  app.post("/api/mfa/codigos", async (request, reply) => {
+  app.post("/api/mfa/codigos", limite, async (request, reply) => {
     const u = usuarioObrigatorio(request);
     if (!o.mfa.ativo(u.email)) return reply.code(409).send(erro("mfa_desligado", "A verificação em duas etapas está desligada."));
     if (!exigirReautenticacao(request, reply)) return;
@@ -73,7 +75,7 @@ export function registrarMfa(
     return { codigos: o.mfa.novosCodigos(u.email) };
   });
 
-  app.post("/api/mfa/desativar", async (request, reply) => {
+  app.post("/api/mfa/desativar", limite, async (request, reply) => {
     const u = usuarioObrigatorio(request);
     if (exigido(u.admin)) return reply.code(403).send(erro("mfa_obrigatorio", "Para administradores, a verificação em duas etapas é obrigatória."));
     if (!exigirReautenticacao(request, reply)) return;
@@ -84,7 +86,7 @@ export function registrarMfa(
 
   // Confirma a senha (ou um código do MFA) de novo, para liberar as ações sensíveis por 5 minutos.
   // Erros contam na trava da conta, como no login.
-  app.post("/api/reautenticar", async (request, reply) => {
+  app.post("/api/reautenticar", limite, async (request, reply) => {
     const u = usuarioObrigatorio(request);
     const corpo = CorpoReautenticar.safeParse(request.body);
     if (!corpo.success) return reply.code(400).send(erro("entrada_invalida", corpo.error.issues[0]?.message ?? "Entrada inválida."));

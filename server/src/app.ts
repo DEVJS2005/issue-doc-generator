@@ -189,7 +189,6 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   registrarRotaRefinar(app, opcoesGeracao);
   registrarHistorico(app, { historico, usuarios });
   registrarSessoes(app, { sessoes: sessoesBanco, usuarios });
-  registrarMfa(app, { mfa, sessoes: sessoesBanco, usuarios, travas, adminExigeMfa: config.adminExigeMfa });
   // Limite de pedidos só nas rotas que pedem (config.rateLimit), com o erro no formato da API.
   await app.register(rateLimit, {
     global: false,
@@ -200,6 +199,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   });
   // Depois do rate-limit: o plugin só vale para rotas registradas depois dele.
   registrarLinks(app, { historico, links: new RepositorioLinks(banco), usuarios });
+  registrarMfa(app, { mfa, sessoes: sessoesBanco, usuarios, travas, adminExigeMfa: config.adminExigeMfa });
   const clienteJira = opcoes.jira !== undefined ? opcoes.jira : config.jira ? criarClienteJira(config.jira) : null;
   if (clienteJira) {
     app.log.info(`Jira ligado: ${clienteJira.url}`);

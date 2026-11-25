@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, randomBytes, randomInt } from "node:crypto";
 import { conferirSenha, gerarHash } from "../auth/senha.js";
 import { conferirCodigo, gerarSegredo } from "../auth/totp.js";
 import type { Banco } from "./banco.js";
@@ -11,8 +11,8 @@ type LinhaTotp = { usuario: string; segredo: string; ativo: number; ultimo_passo
 /** "xxxxx-xxxxx": 10 caracteres de um alfabeto sem letras parecidas (0/O, 1/l). ~50 bits. */
 function codigoRecuperacao(): string {
   const alfabeto = "abcdefghjkmnpqrstuvwxyz23456789";
-  const bytes = randomBytes(10);
-  const c = [...bytes].map((b) => alfabeto[b % alfabeto.length]).join("");
+  // randomInt sorteia sem viés (o "byte % 31" favoreceria algumas letras).
+  const c = Array.from({ length: 10 }, () => alfabeto[randomInt(alfabeto.length)]).join("");
   return `${c.slice(0, 5)}-${c.slice(5)}`;
 }
 

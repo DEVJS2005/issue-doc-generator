@@ -218,5 +218,15 @@ describe("verificação em duas etapas (TOTP)", () => {
     expect((await a.inject({ method: "POST", url, headers: { cookie: cookieDe(r) }, payload: {} })).statusCode).toBe(403);
     await a.close();
   });
+
+  it("as rotas de MFA têm limite de pedidos por minuto", async () => {
+    const a = await app();
+    const cookie = await entrar(a);
+    const status: number[] = [];
+    for (let i = 0; i < 21; i++) status.push((await a.inject({ method: "GET", url: "/api/mfa", headers: { cookie } })).statusCode);
+    expect(status.slice(0, 20).every((s) => s === 200)).toBe(true);
+    expect(status[20]).toBe(429);
+    await a.close();
+  });
 });
 
