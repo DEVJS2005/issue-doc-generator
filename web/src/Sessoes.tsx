@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { api, ErroApi, type SessaoAberta } from "./api";
 import { useDialogo } from "./Dialogo";
 import { dataHora } from "./Historico";
+import { SecaoChavesAcesso } from "./ChavesAcesso";
 import { SecaoMfa } from "./Mfa";
 
 /** "Chrome no Windows", a partir do user-agent. Sem biblioteca: só os casos comuns. */
@@ -34,7 +35,7 @@ export function descreverNavegador(ua: string | null): string {
 }
 
 /**
- * Diálogo "Segurança": verificação em duas etapas e sessões abertas (encerrar uma e "Sair de todos
+ * Diálogo "Segurança": verificação em duas etapas, chaves de acesso e sessões abertas (encerrar uma e "Sair de todos
  * os dispositivos"). Encerrar a sessão deste dispositivo leva de volta ao login (`aoSair`).
  */
 export function Sessoes({ conta, aoFechar, aoSair }: { conta: string; aoFechar: () => void; aoSair: () => void }) {
@@ -110,6 +111,10 @@ export function Sessoes({ conta, aoFechar, aoSair }: { conta: string; aoFechar: 
         <section aria-labelledby={`${id}-mfa`} className="secao-seguranca">
           <h3 id={`${id}-mfa`}>Verificação em duas etapas</h3>
           <SecaoMfa conta={conta} aoSair={aoSair} />
+        </section>
+        <section aria-labelledby={`${id}-chaves`} className="secao-seguranca">
+          <h3 id={`${id}-chaves`}>Chaves de acesso</h3>
+          <SecaoChavesAcesso aoSair={aoSair} />
         </section>
         <h3 id={`${id}-sessoes`}>Sessões abertas</h3>
         <p className="dialogo-mensagem">Onde a sua conta está conectada. Encerre o que você não reconhece.</p>

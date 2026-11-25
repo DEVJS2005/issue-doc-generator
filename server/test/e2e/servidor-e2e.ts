@@ -48,6 +48,8 @@ const config = carregarConfig({
   LIMITE_POR_HORA: "100",
   PORTA: String(PORTA_E2E),
   JIRA_PROJETOS: "LOJ",
+  // Chave de acesso só funciona em domínio (não em IP): o teste dela abre a tela em localhost.
+  URL_PUBLICA: `http://localhost:${PORTA_E2E}`,
 });
 
 // Jira falso: um projeto, dois tipos; a criação numera LOJ-1, LOJ-2...

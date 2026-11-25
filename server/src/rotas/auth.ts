@@ -25,7 +25,15 @@ declare module "fastify" {
 }
 
 /** Rotas que um admin sem MFA ainda pode usar quando ADMIN_EXIGE_MFA=true: só as de ligar o MFA. */
-const ROTAS_SEM_MFA = new Set(["/api/mfa", "/api/mfa/iniciar", "/api/mfa/ativar"]);
+const ROTAS_SEM_MFA = new Set([
+  "/api/mfa",
+  "/api/mfa/iniciar",
+  "/api/mfa/ativar",
+  // Cadastrar uma chave de acesso também vale como segundo fator.
+  "/api/chaves-acesso",
+  "/api/chaves-acesso/registro/iniciar",
+  "/api/chaves-acesso/registro/concluir",
+]);
 /** Validade do desafio entre a senha certa e o código do segundo fator. */
 const VALIDADE_DESAFIO_MS = 5 * 60_000;
 
@@ -73,6 +81,8 @@ export type OpcoesAuth = {
   /** Selo do desafio do segundo fator (subchave "mfa-desafio"). */
   seloDesafio: Sessoes;
   adminExigeMfa: boolean;
+  /** Endereço onde a chave de acesso funciona (URL_PUBLICA), ou null se desligada. */
+  origemChaveAcesso: string | null;
   /** Código de uso único para criar o 1º admin; null quando já existe usuário. */
   codigoConfiguracao: { atual: string | null };
   /** Texto do botão de login único; null quando o SSO está desligado. */
@@ -230,6 +240,7 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth) {
         ...erro("nao_autenticado", "Sem sessão."),
         precisaConfigurar: o.codigoConfiguracao.atual !== null,
         sso: o.rotuloSso,
+        chaveAcesso: o.origemChaveAcesso,
       });
     }
     return { usuario, precisaMfa: precisaMfa(sessao) };

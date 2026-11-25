@@ -134,6 +134,21 @@ export const MIGRACAO_MFA = `
   ALTER TABLE sessoes ADD COLUMN reautenticada_em INTEGER NOT NULL DEFAULT 0;
 `;
 
+/** Chaves de acesso (passkeys): a chave pública de cada uma e o contador de usos. */
+export const MIGRACAO_CHAVES_ACESSO = `
+  CREATE TABLE chaves_acesso (
+    id TEXT PRIMARY KEY,
+    usuario TEXT NOT NULL,
+    chave_publica BLOB NOT NULL,
+    contador INTEGER NOT NULL,
+    transportes TEXT,
+    nome TEXT NOT NULL,
+    criada_em INTEGER NOT NULL,
+    ultimo_uso INTEGER
+  );
+  CREATE INDEX chaves_acesso_por_usuario ON chaves_acesso (usuario);
+`;
+
 // Um arquivo SQLite (node:sqlite, sem dependência nativa) guarda a configuração da IA, os usuários
 // e o histórico de issues. Cada item da lista é uma migração; a versão aplicada fica em
 // PRAGMA user_version. Nunca edite uma migração já publicada: acrescente outra no fim.
@@ -197,6 +212,7 @@ const MIGRACOES: string[] = [
   MIGRACAO_SESSOES_REVOGAVEIS,
   MIGRACAO_TRAVAS_LOGIN,
   MIGRACAO_MFA,
+  MIGRACAO_CHAVES_ACESSO,
 ];
 
 export type Banco = DatabaseSync;

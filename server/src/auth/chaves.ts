@@ -4,7 +4,7 @@ import { hkdfSync, randomBytes } from "node:crypto";
  * Para que cada subchave serve. O nome entra no "info" do HKDF: chaves de usos diferentes saem
  * independentes, e vazar uma não revela as outras nem o SEGREDO_SESSAO.
  */
-export type UsoChave = "sso-estado" | "mfa" | "mfa-desafio";
+export type UsoChave = "sso-estado" | "mfa" | "mfa-desafio" | "chave-acesso-desafio";
 
 const SAL = Buffer.from("issue-doc-generator/v1", "utf8");
 

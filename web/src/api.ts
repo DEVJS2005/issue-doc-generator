@@ -74,7 +74,9 @@ export type AcaoAuditoria =
   | "login_travado"
   | "mfa_ativado"
   | "mfa_desativado"
-  | "mfa_codigos";
+  | "mfa_codigos"
+  | "chave_acesso_criada"
+  | "chave_acesso_removida";
 export type EventoAuditoria = {
   id: number;
   quando: number;
@@ -196,12 +198,43 @@ function chamar<T>(metodo: "GET" | "PUT" | "PATCH" | "DELETE", url: string, corp
  * Sessão: o 401 diz se o banco ainda não tem usuário (`precisaConfigurar`) e qual é o botão de
  * login único, se houver (`sso`).
  */
-export async function lerSessao(): Promise<{ usuario: Usuario | null; precisaMfa: boolean; precisaConfigurar: boolean; sso: string | null }> {
+export async function lerSessao(): Promise<{ usuario: Usuario | null; precisaMfa: boolean; precisaConfigurar: boolean; sso: string | null; chaveAcesso: boolean }> {
   const r = await fetch("/api/sessao");
   const corpo = await r.json().catch(() => ({}));
   return r.ok
-    ? { usuario: corpo.usuario, precisaMfa: Boolean(corpo.precisaMfa), precisaConfigurar: false, sso: null }
-    : { usuario: null, precisaMfa: false, precisaConfigurar: Boolean(corpo.precisaConfigurar), sso: corpo.sso ?? null };
+    ? { usuario: corpo.usuario, precisaMfa: Boolean(corpo.precisaMfa), precisaConfigurar: false, sso: null, chaveAcesso: false }
+    : {
+        usuario: null,
+        precisaMfa: false,
+        precisaConfigurar: Boolean(corpo.precisaConfigurar),
+        sso: corpo.sso ?? null,
+        // A chave de acesso só funciona no endereço configurado (URL_PUBLICA).
+        chaveAcesso: typeof corpo.chaveAcesso === "string" && corpo.chaveAcesso === window.location.origin,
+      };
+}
+
+export type ChaveAcesso = { id: string; nome: string; criadaEm: number; ultimoUso: number | null };
+
+/** A pessoa fechou a janela do aparelho ou o tempo acabou: não é erro para mostrar. */
+export const cancelouChave = (e: unknown) => e instanceof Error && (e.name === "NotAllowedError" || e.name === "AbortError");
+
+/** O navegador sabe usar chave de acesso (WebAuthn)? A biblioteca só carrega quando precisa. */
+export const navegadorTemChaveAcesso = () => typeof window !== "undefined" && typeof window.PublicKeyCredential === "function";
+
+/** Login sem senha: o aparelho (celular, Windows Hello, chave de segurança) assina o desafio. */
+async function entrarComChave() {
+  const { startAuthentication } = await import("@simplewebauthn/browser");
+  const { opcoes, token } = await postar("/api/login/chave/iniciar", {}).then((r) => lerJson<{ opcoes: never; token: string }>(r));
+  const resposta = await startAuthentication({ optionsJSON: opcoes });
+  return postar("/api/login/chave/concluir", { token, resposta }).then((r) => lerJson<{ usuario: Usuario; precisaMfa: boolean }>(r));
+}
+
+/** Cadastra uma chave de acesso neste aparelho (pede a senha confirmada há pouco). */
+async function cadastrarChave(nome?: string) {
+  const { startRegistration } = await import("@simplewebauthn/browser");
+  const { opcoes, token } = await postar("/api/chaves-acesso/registro/iniciar", {}).then((r) => lerJson<{ opcoes: never; token: string }>(r));
+  const resposta = await startRegistration({ optionsJSON: opcoes });
+  return postar("/api/chaves-acesso/registro/concluir", { token, resposta, nome }).then((r) => lerJson<{ chave: { id: string; nome: string } }>(r));
 }
 
 export const api = {
@@ -217,6 +250,10 @@ export const api = {
   desativarMfa: () => postar("/api/mfa/desativar", {}).then((r) => lerJson<{ ok: true }>(r)),
   /** Admin desliga o MFA de alguém que perdeu o celular e os códigos de recuperação. */
   desligarMfaDe: (id: number) => postar(`/api/admin/usuarios/${id}/mfa/desligar`, {}).then((r) => lerJson<{ ok: true }>(r)),
+  entrarComChave,
+  cadastrarChave,
+  chavesAcesso: () => chamar<{ disponivel: boolean; chaves: ChaveAcesso[] }>("GET", "/api/chaves-acesso"),
+  removerChave: (id: string) => chamar<{ ok: true }>("DELETE", `/api/chaves-acesso/${encodeURIComponent(id)}`),
   /** Confirma a senha de novo para as ações sensíveis (vale 5 minutos). */
   reautenticar: (senha: string) => postar("/api/reautenticar", { senha }).then((r) => lerJson<{ ok: true }>(r)),
   configurar: (codigo: string, nome: string, email: string, senha: string) =>

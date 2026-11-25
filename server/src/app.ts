@@ -39,6 +39,8 @@ import { registrarLinks } from "./rotas/links.js";
 import { LIMITE_AJUSTE, registrarRotaRefinar } from "./rotas/refinar.js";
 import { registrarSessoes } from "./rotas/sessoes.js";
 import { registrarMfa } from "./rotas/mfa.js";
+import { registrarChavesAcesso } from "./rotas/chavesAcesso.js";
+import { RepositorioChavesAcesso } from "./banco/chavesAcesso.js";
 
 const pastaWebPadrao = fileURLToPath(new URL("../../web/dist", import.meta.url));
 const EXPURGO_A_CADA_MS = 6 * 3_600_000;
@@ -167,6 +169,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     mfa,
     seloDesafio,
     adminExigeMfa: config.adminExigeMfa,
+    origemChaveAcesso: config.urlPublica?.origem ?? null,
     codigoConfiguracao,
     rotuloSso: sso?.rotulo ?? null,
   });
@@ -200,6 +203,15 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
   // Depois do rate-limit: o plugin só vale para rotas registradas depois dele.
   registrarLinks(app, { historico, links: new RepositorioLinks(banco), usuarios });
   registrarMfa(app, { mfa, sessoes: sessoesBanco, usuarios, travas, adminExigeMfa: config.adminExigeMfa });
+  registrarChavesAcesso(app, {
+    urlPublica: config.urlPublica,
+    chaves: new RepositorioChavesAcesso(banco),
+    sessoes: sessoesBanco,
+    maxAgeSegundos: sessoes.maxAgeSegundos,
+    usuarios,
+    selo: criarSessoes(chaves.chave("chave-acesso-desafio"), config.sessaoHoras),
+  });
+  if (config.urlPublica) app.log.info(`Chave de acesso ligada para ${config.urlPublica.dominio}`);
   const clienteJira = opcoes.jira !== undefined ? opcoes.jira : config.jira ? criarClienteJira(config.jira) : null;
   if (clienteJira) {
     app.log.info(`Jira ligado: ${clienteJira.url}`);

@@ -189,6 +189,18 @@ autenticador (Google Authenticator, Microsoft Authenticator, 1Password…). Com
   recuperação continuam funcionando, e cada pessoa liga o MFA de novo (ou um admin desliga para ela).
 - Baixar backup e criar ou promover admin pedem a senha de novo (vale por 5 minutos).
 
+### Chave de acesso (entrar sem senha)
+
+Com `URL_PUBLICA` no `.env` (o endereço que as pessoas abrem, ex.: `https://issues.empresa.com`),
+cada pessoa cadastra, em **Segurança**, uma **chave de acesso**: depois entra com a digital, o
+rosto ou o PIN do aparelho, sem senha. Ela vale também como segunda etapa, inclusive para o admin
+com `ADMIN_EXIGE_MFA=true`.
+
+- Precisa de **https com nome de domínio**. Por IP não funciona (regra dos navegadores); `http` só
+  em `localhost`.
+- A chave fica presa ao domínio. Trocou o endereço, cada pessoa cadastra a chave de novo.
+- O botão "Entrar com chave de acesso" só aparece quando a tela é aberta nesse endereço.
+
 ## 9. Login único (opcional)
 
 Para o time entrar com a conta da empresa (Microsoft Entra ID, Google Workspace, Keycloak, Okta…),
