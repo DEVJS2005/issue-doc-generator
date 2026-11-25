@@ -5,9 +5,9 @@ revisão.
 
 ## Onde estamos
 
-Último release: **v1.1.0** (MIT), publicado em 17/11 a partir do merge do PR #8. Depois dele, a
-`main` recebeu, ainda sem release: as correções do Gemini (#17), a licença AGPL (#19), o lote 1
-(#20) e uma correção de tabelas no Markdown (#21). O lote 2 está no PR #22, em revisão.
+Último release: **v1.3.0**, de 23/11: Jira, prints, nota de qualidade, auditoria e o reforço de
+segurança dos itens 31 a 35. Antes dele, a v1.2.0 (17/11) trouxe o lote 2 e foi o primeiro release
+em AGPL.
 
 - Geração e Refinar com streaming, cache de prompt, erros amigáveis e 4 provedores
   (Claude, OpenAI, compatível com OpenAI, Gemini).
@@ -115,7 +115,7 @@ Encontrado na revisão de 17/11. Vem antes do lote 3.
 | 32 | **IP do cliente atrás de proxy:** `CONFIAR_PROXY` com número de saltos ou lista de IP/CIDR (`true` = 1 proxy), limite de login também por conta, porta publicada só em `127.0.0.1` e guia do nginx/Caddy/Traefik. | ✅ PR #35 |
 | 33 | **Jira: projetos liberados.** `JIRA_PROJETOS` filtra a lista e é conferido no servidor nos tipos e na criação (403 fora da lista); a URL do Jira só para o admin. | ✅ PR #36 |
 | 34 | **Refinar a partir do histórico:** com `historicoId`, a base é a versão atual e a entrada guardadas; versão antiga na tela dá 409. | ✅ PR #37 |
-| 35 | **Texto do Jira:** escapar `!`, `_`, `+` e `??`, e neutralizar `{noformat}`/`{code}` dentro do bloco de código. | Em revisão no PR #38 |
+| 35 | **Texto do Jira:** escapar `!`, `_`, `+` e `??`, e neutralizar `{noformat}`/`{code}` dentro do bloco de código. | ✅ PR #38 |
 
 Ficaram de fora nesta rodada:
 - cenários em Gherkin;
@@ -126,7 +126,7 @@ Ficaram de fora nesta rodada:
 
 | # | Item | Estado / estimativa |
 |---|---|---|
-| 36 | **Fila de PRs sem conflito:** changelog e roadmap por fragmento (`changelog.d/`, juntados no release) e workflow que atualiza as branches dos PRs com a `main`. | Em revisão |
+| 36 | **Fila de PRs sem conflito:** changelog e roadmap por fragmento (`changelog.d/`, juntados no release) e workflow que atualiza as branches dos PRs com a `main`. | ✅ PR #39 |
 
 ## Para o DevOps
 
@@ -200,3 +200,8 @@ Passo a passo completo em [INSTALACAO-DOCKER.md](INSTALACAO-DOCKER.md). Em resum
   - o itálico que o próprio Markdown da issue gera continua itálico; o resto do texto é escapado;
   - dentro do bloco de código, `{noformat}` e `{code}` ganham um espaço de largura zero depois da
     chave (o Jira não lê escape ali).
+- **23/11:**
+  - changelog e roadmap por fragmento em `changelog.d/`, juntados no release; os PRs deixam de editar o `CHANGELOG.md`, a tabela de itens e o histórico de decisões;
+  - workflow `atualizar-prs.yml` atualiza as branches dos PRs com a `main`, com um token próprio (o do Actions não dispara o CI);
+  - o check do título do PR sai do `ci.yml` para o `titulo.yml`, que roda também quando o título é editado (PR #41);
+  - release v1.3.0 com os itens 31 a 36 e o que estava em "Não lançado".
