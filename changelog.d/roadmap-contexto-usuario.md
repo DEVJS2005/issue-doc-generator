@@ -1,4 +1,5 @@
 categoria: Documentação
+pr: 56
 decisao: entra o item 47, "Meu contexto" por usuário, depois da Fase 1 e antes da Fase 2; sem contexto próprio, segue sem contexto padrão do servidor
 decisao: o contexto é compactado pela IA uma vez, ao salvar (a pessoa revisa a versão compacta), e vai nas gerações num bloco que o cache de prompt reaproveita
 ---
