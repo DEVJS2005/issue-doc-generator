@@ -9,8 +9,9 @@ import { gerarIssue, type ResultadoGeracao } from "../geracao/servico.js";
 import { ErroGeracao, normalizarErro } from "../ia/erros.js";
 import { partesAlteradas } from "../issue/alteracoes.js";
 import { TIPOS_ISSUE, type Issue } from "../issue/schema.js";
-import { formatarEntrada, IDIOMAS, type Entrada } from "../prompt/entrada.js";
+import { formatarContextoSistema, formatarEntrada, IDIOMAS, type Entrada } from "../prompt/entrada.js";
 import { usuarioObrigatorio } from "../auth/acesso.js";
+import type { RepositorioContextoUsuario } from "../banco/contextoUsuario.js";
 
 export const LIMITE_DESCRICAO = 4000;
 export const LIMITE_CONTEXTO = 8000;
@@ -61,6 +62,8 @@ export type OpcoesRotaGerar = {
   config: Config;
   ajustes: Ajustes;
   historico: RepositorioHistorico;
+  /** "Meu contexto" de cada pessoa: a versão compacta vai junto de cada geração e refinamento. */
+  contextos: RepositorioContextoUsuario;
 };
 
 function horaLocal(ms: number) {
@@ -122,6 +125,7 @@ export async function responderComGeracao(
     const r: ResultadoGeracao = await gerarIssue(provedor, o.usuario, {
       idioma: o.entrada.idioma,
       imagens: o.imagens,
+      contextoSistema: formatarContextoSistema(o.contextos.compacto(quem)),
       signal: controle.signal,
       aoProgresso: (p) => sse.enviar("progresso", p),
     });
@@ -137,6 +141,7 @@ export async function responderComGeracao(
         tokens: r.uso,
         duracaoMs: r.duracaoMs,
         avisos: r.avisos.length,
+        comContexto: Boolean(o.contextos.compacto(quem)),
         ...o.logExtra,
       },
       `${o.tipoPedido}: ok (cache lido: ${r.uso.cacheLeitura} tokens${custo === null ? "" : `, ~US$ ${custo}`})`,

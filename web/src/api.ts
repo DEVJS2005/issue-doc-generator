@@ -76,7 +76,9 @@ export type AcaoAuditoria =
   | "mfa_desativado"
   | "mfa_codigos"
   | "chave_acesso_criada"
-  | "chave_acesso_removida";
+  | "chave_acesso_removida"
+  | "contexto_salvo"
+  | "contexto_apagado";
 export type EventoAuditoria = {
   id: number;
   quando: number;
@@ -213,6 +215,9 @@ export async function lerSessao(): Promise<{ usuario: Usuario | null; precisaMfa
       };
 }
 
+/** "Meu contexto": o texto da pessoa e a versão compacta, a única que vai nas gerações. */
+export type MeuContexto = { original: string; compacto: string; atualizadoEm: number | null; avisoDispensado: boolean };
+
 export type ChaveAcesso = { id: string; nome: string; criadaEm: number; ultimoUso: number | null };
 
 /** A pessoa fechou a janela do aparelho ou o tempo acabou: não é erro para mostrar. */
@@ -250,6 +255,13 @@ export const api = {
   desativarMfa: () => postar("/api/mfa/desativar", {}).then((r) => lerJson<{ ok: true }>(r)),
   /** Admin desliga o MFA de alguém que perdeu o celular e os códigos de recuperação. */
   desligarMfaDe: (id: number) => postar(`/api/admin/usuarios/${id}/mfa/desligar`, {}).then((r) => lerJson<{ ok: true }>(r)),
+  contexto: () => chamar<MeuContexto & { limites: { original: number; compacto: number } }>("GET", "/api/contexto"),
+  /** Uma chamada à IA: devolve a versão compacta para a pessoa revisar (ainda não salva). */
+  compactarContexto: (texto: string) => postar("/api/contexto/compactar", { texto }).then((r) => lerJson<{ compacto: string }>(r)),
+  salvarContexto: (original: string, compacto: string) => chamar<MeuContexto>("PUT", "/api/contexto", { original, compacto }),
+  apagarContexto: () => chamar<{ ok: true }>("DELETE", "/api/contexto"),
+  /** "Agora não" no aviso do primeiro acesso. */
+  dispensarAvisoContexto: () => postar("/api/contexto/aviso", {}).then((r) => lerJson<{ ok: true }>(r)),
   entrarComChave,
   cadastrarChave,
   chavesAcesso: () => chamar<{ disponivel: boolean; chaves: ChaveAcesso[] }>("GET", "/api/chaves-acesso"),

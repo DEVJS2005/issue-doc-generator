@@ -1590,3 +1590,31 @@ button.perigo:hover:not(:disabled) {
 .jira-form label {
   margin: 0;
 }
+
+/* Abas do diálogo "Minha conta". */
+.abas-dialogo {
+  margin-bottom: 16px;
+}
+
+.abas button[aria-selected="true"] {
+  color: var(--texto);
+  border-bottom-color: var(--acento);
+}
+
+/* Convite do primeiro acesso para preencher o "Meu contexto". */
+.aviso-contexto {
+  border: 1px solid var(--borda);
+  border-left: 3px solid var(--acento);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.aviso-contexto h2 {
+  font-size: 1rem;
+  margin: 0 0 4px;
+}
+
+.aviso-contexto p {
+  margin: 0 0 8px;
+}

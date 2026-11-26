@@ -51,7 +51,7 @@ export function criarProvedorGemini(o: OpcoesGemini): Provedor {
   return {
     nome: "gemini",
     modelo: o.modelo,
-    async gerar({ sistema, usuario, imagens = [] }, { signal, aoProgresso }) {
+    async gerar({ sistema, usuario, imagens = [], contextoSistema, formato = "issue" }, { signal, aoProgresso }) {
       try {
         const stream = await ai.models.generateContentStream({
           model: o.modelo,
@@ -59,9 +59,9 @@ export function criarProvedorGemini(o: OpcoesGemini): Provedor {
             ? [{ role: "user", parts: [...imagens.map((i) => ({ inlineData: { mimeType: i.tipo, data: i.dados } })), { text: usuario }] }]
             : usuario,
           config: {
-            systemInstruction: sistema,
-            responseMimeType: "application/json",
-            responseJsonSchema: schema,
+            // O "Meu contexto" vai no fim da instrução, depois do prefixo fixo (cache implícito).
+            systemInstruction: contextoSistema ? `${sistema}\n${contextoSistema}` : sistema,
+            ...(formato === "issue" ? { responseMimeType: "application/json", responseJsonSchema: schema } : {}),
             maxOutputTokens: o.maxTokens,
             thinkingConfig: configRaciocinio(o.modelo, o.esforco),
             abortSignal: signal,

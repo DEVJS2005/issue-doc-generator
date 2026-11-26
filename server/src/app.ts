@@ -41,6 +41,8 @@ import { registrarSessoes } from "./rotas/sessoes.js";
 import { registrarMfa } from "./rotas/mfa.js";
 import { registrarChavesAcesso } from "./rotas/chavesAcesso.js";
 import { RepositorioChavesAcesso } from "./banco/chavesAcesso.js";
+import { RepositorioContextoUsuario } from "./banco/contextoUsuario.js";
+import { registrarContexto } from "./rotas/contexto.js";
 
 const pastaWebPadrao = fileURLToPath(new URL("../../web/dist", import.meta.url));
 const EXPURGO_A_CADA_MS = 6 * 3_600_000;
@@ -187,7 +189,8 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     limites: { descricao: LIMITE_DESCRICAO, contexto: LIMITE_CONTEXTO, ajuste: LIMITE_AJUSTE },
   }));
 
-  const opcoesGeracao = { config, ajustes, historico };
+  const contextos = new RepositorioContextoUsuario(banco);
+  const opcoesGeracao = { config, ajustes, historico, contextos };
   registrarRotaGerar(app, opcoesGeracao);
   registrarRotaRefinar(app, opcoesGeracao);
   registrarHistorico(app, { historico, usuarios });
@@ -212,6 +215,7 @@ export async function montarApp(config: Config, opcoes: OpcoesApp = {}) {
     selo: criarSessoes(chaves.chave("chave-acesso-desafio"), config.sessaoHoras),
   });
   if (config.urlPublica) app.log.info(`Chave de acesso ligada para ${config.urlPublica.dominio}`);
+  registrarContexto(app, { config, ajustes, contextos });
   const clienteJira = opcoes.jira !== undefined ? opcoes.jira : config.jira ? criarClienteJira(config.jira) : null;
   if (clienteJira) {
     app.log.info(`Jira ligado: ${clienteJira.url}`);

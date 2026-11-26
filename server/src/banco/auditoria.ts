@@ -26,6 +26,8 @@ export const ACOES_AUDITORIA = [
   "mfa_codigos",
   "chave_acesso_criada",
   "chave_acesso_removida",
+  "contexto_salvo",
+  "contexto_apagado",
 ] as const;
 export type AcaoAuditoria = (typeof ACOES_AUDITORIA)[number];
 

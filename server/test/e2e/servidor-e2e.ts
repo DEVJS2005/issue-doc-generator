@@ -22,7 +22,9 @@ const espera = (ms: number) => new Promise((ok) => setTimeout(ok, ms));
 const provedor: Provedor = {
   nome: "anthropic",
   modelo: "modelo-e2e",
-  async gerar({ usuario }, { signal, aoProgresso }) {
+  async gerar({ usuario, formato }, { signal, aoProgresso }) {
+    // Resumo do "Meu contexto": texto livre, sem a issue.
+    if (formato === "texto") return { texto: "- Painel Loja Exemplo: Pedidos e Cupons\n- Máximo de 3 cupons por pedido", modelo: "modelo-e2e", usouFallback: false, uso: { entrada: 10, saida: 10, cacheLeitura: 0, cacheEscrita: 0 } };
     if (usuario.includes("FALHAR")) throw new ErroGeracao("limite_taxa");
     if (usuario.includes("DEMORAR")) {
       await new Promise((_, rejeitar) => signal.addEventListener("abort", () => rejeitar(new Error("abortado"))));

@@ -24,6 +24,13 @@ export type PedidoIA = {
   usuario: string;
   /** Prints anexados à descrição (só na geração; não vão para o histórico). */
   imagens?: ImagemAnexa[];
+  /**
+   * "Meu contexto" da pessoa (compacto, entre tags), num bloco depois do sistema: igual entre os
+   * pedidos dela, para o cache reaproveitar. Ausente = sem bloco.
+   */
+  contextoSistema?: string;
+  /** "issue" (padrão): JSON pelo schema da issue. "texto": texto livre (resumo do contexto). */
+  formato?: "issue" | "texto";
 };
 
 export type RespostaIA = {

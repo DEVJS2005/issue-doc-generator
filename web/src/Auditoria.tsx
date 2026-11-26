@@ -27,6 +27,8 @@ export const ROTULO_ACAO: Record<AcaoAuditoria, string> = {
   mfa_codigos: "Gerou novos códigos de recuperação",
   chave_acesso_criada: "Cadastrou uma chave de acesso",
   chave_acesso_removida: "Removeu uma chave de acesso",
+  contexto_salvo: "Salvou o Meu contexto",
+  contexto_apagado: "Apagou o Meu contexto",
 };
 
 /** Detalhe em uma linha legível. Os campos vêm do servidor, já sem senhas nem tokens. */
