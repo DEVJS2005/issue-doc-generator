@@ -1,5 +1,5 @@
 categoria: Adicionado
-pr: 0
+pr: 60
 roadmap: 47
 decisao: o diálogo do topo passa a se chamar "Minha conta", com as abas Meu contexto, Segurança e Sessões
 decisao: o contexto é resumido pela IA numa chamada só (conta no limite por hora), a pessoa revisa a versão compacta, e só ela vai nas gerações, num bloco depois do prompt fixo (com cache próprio na Anthropic); sem contexto, nada muda e não há contexto padrão
