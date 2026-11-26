@@ -34,7 +34,19 @@ com crédito a quem relatou, se quiser.
 
 O resumo das proteções está na seção [Segurança do README](README.md#segurança).
 
-Para quem instala: use HTTPS com `CONFIAR_PROXY=true`, um `SEGREDO_SESSAO` longo e aleatório,
-contas de serviço com o mínimo de permissão (Jira, provedores de IA) e copie a pasta `backups` do
-volume para fora do servidor. O backup traz os usuários (senhas só como hash) e o histórico: guarde
-com o mesmo cuidado do banco.
+Para quem instala (detalhes no [guia do Docker](docs/INSTALACAO-DOCKER.md)):
+
+- Use HTTPS atrás de um proxy e diga ao servidor quem é o proxy: `CONFIAR_PROXY` com o IP ou a
+  faixa dele (ex.: `127.0.0.1`). Sem proxy, deixe `false` e não exponha a porta 3000 para fora.
+- Gere um `SEGREDO_SESSAO` longo e aleatório e não troque sem avisar: os segredos do MFA dependem
+  dele.
+- Ligue `ADMIN_EXIGE_MFA=true`, para todo admin ter uma segunda etapa (código do aplicativo ou
+  chave de acesso).
+- Defina `BACKUP_CHAVE` e guarde uma cópia dela fora do servidor. Copie a pasta `backups` do
+  volume para fora também. Sem a chave, o backup sai aberto e traz os usuários (senhas só como
+  hash) e o histórico: guarde com o mesmo cuidado do banco.
+- Com `URL_PUBLICA`, as pessoas podem entrar com chave de acesso, sem senha.
+- Use contas de serviço com o mínimo de permissão (Jira, provedores de IA) e limite o Jira aos
+  projetos necessários (`JIRA_PROJETOS`).
+- Antes de subir uma versão nova, confira a assinatura da imagem com `cosign verify` (comando no
+  guia do Docker).

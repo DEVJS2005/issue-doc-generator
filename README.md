@@ -480,11 +480,14 @@ Resumo das proteções. Para relatar uma vulnerabilidade, veja o [SECURITY.md](S
 - **Verificação em duas etapas:** TOTP (RFC 6238) opcional, obrigatório para admin com
   `ADMIN_EXIGE_MFA=true`. O segredo fica cifrado no banco (AES-256-GCM, com uma subchave do
   `SEGREDO_SESSAO`), os códigos de recuperação só como hash, e o mesmo código não vale duas vezes.
-  Erros de código contam na trava da conta. Baixar backup, criar ou promover admin e mexer no MFA
-  pedem a senha de novo.
+  Erros de código contam na trava da conta.
+- **Senha de novo** nas ações sensíveis: baixar backup, criar ou promover admin, mexer no MFA e
+  cadastrar ou remover chave de acesso pedem a senha confirmada nos últimos 5 minutos.
 - **Chave de acesso:** WebAuthn com biometria ou PIN obrigatórios, presa ao domínio de
   `URL_PUBLICA` (um site falso não consegue usar). O banco guarda só a chave pública; o desafio
   vale 5 minutos e uma vez.
+- **Segredo do servidor:** o `SEGREDO_SESSAO` não é usado direto. Cada uso (estado do SSO, MFA,
+  desafios de login) tem a própria subchave, derivada por HKDF-SHA256.
 - **Jira:** só os projetos de `JIRA_PROJETOS`, conferidos no servidor; a URL do Jira só aparece
   para o admin.
 - **Acesso:** toda rota da API exige login, menos uma lista curta de rotas públicas (saúde, login,
@@ -509,9 +512,12 @@ Resumo das proteções. Para relatar uma vulnerabilidade, veja o [SECURITY.md](S
 - **Links de leitura:** token aleatório de 192 bits, guardado só como hash, com validade, revogação
   e limite de pedidos por IP.
 - **Container:** roda como usuário sem privilégio, sem capacidades do kernel e sem escalada de
-  privilégio.
+  privilégio. A imagem final não traz o `npm` (só o Node e o app).
 - **GitHub:** CodeQL a cada PR, `npm audit` das dependências de produção no CI, Dependabot e
   `main` protegida.
+- **Cadeia de suprimentos:** Actions fixadas por SHA e imagem base com digest; gitleaks (segredos)
+  em todo PR; Trivy na imagem; a imagem publicada sai com SBOM, proveniência e assinatura cosign
+  (veja como conferir no guia do Docker); OpenSSF Scorecard semanal.
 
 ## Variáveis de ambiente
 
