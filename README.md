@@ -38,8 +38,11 @@ Mudanças por versão: [CHANGELOG.md](CHANGELOG.md).
 - **Histórico** por usuário, com busca, status (Rascunho, Revisada, Aprovada) e versões;
   **administração** sem reiniciar o servidor, modelo reserva automático, **auditoria** e backup
   diário do banco.
+- **Meu contexto:** em **Minha conta**, cada pessoa descreve o sistema em que trabalha (produto,
+  termos, regras). A IA resume uma vez, a pessoa revisa, e só a versão compacta vai em cada geração,
+  num bloco que o cache de prompt reaproveita. Sem contexto, a geração segue como antes.
 - **Login** por nome de usuário (ou e-mail) e senha, ou **SSO** (OpenID Connect: Entra ID, Google Workspace, Keycloak, Okta).
-  Em **Segurança**, no topo, cada pessoa liga a **verificação em duas etapas** (aplicativo
+  Em **Minha conta → Segurança**, no topo, cada pessoa liga a **verificação em duas etapas** (aplicativo
   autenticador, com códigos de recuperação) ou cadastra uma **chave de acesso** para entrar sem
   senha (digital, rosto ou PIN), vê onde a conta está conectada, encerra o que não
   reconhece ou sai de todos os dispositivos.
@@ -251,19 +254,19 @@ fica no banco).
   ativo: o servidor recusa tirar o último.
 - **Login** por nome de usuário (ou e-mail) e senha (`server/src/auth/autenticador.ts`) e, opcionalmente, por **SSO**
   (veja abaixo). O perfil de admin vem sempre do banco.
-- **Verificação em duas etapas (MFA):** em **Segurança**, cada pessoa liga com um aplicativo
+- **Verificação em duas etapas (MFA):** em **Minha conta → Segurança**, cada pessoa liga com um aplicativo
   autenticador (QR code gerado no próprio servidor) e recebe 10 códigos de recuperação. Com MFA
   ligado, depois da senha o login pede o código. Com `ADMIN_EXIGE_MFA=true`, todo admin liga antes
   de usar o sistema. Um admin desliga o MFA de quem perdeu o celular e os códigos. No login único
   (SSO), o segundo fator fica com o provedor de identidade.
-- **Chave de acesso (passkey):** com `URL_PUBLICA`, cada pessoa cadastra em **Segurança** uma
+- **Chave de acesso (passkey):** com `URL_PUBLICA`, cada pessoa cadastra em **Minha conta → Segurança** uma
   chave e entra sem senha, com a digital, o rosto ou o PIN do aparelho. Ela vale como segunda
   etapa, também para o admin com `ADMIN_EXIGE_MFA=true`. Cadastrar e remover pedem a senha de novo.
 - **Senha de novo:** baixar backup, criar ou promover admin, gerar códigos novos e desligar o MFA
   pedem a senha confirmada nos últimos 5 minutos.
 - **Sessão:** guardada no servidor, válida por `SESSAO_HORAS`. O cookie (`HttpOnly`,
   `SameSite=Strict`) leva um id aleatório; o banco guarda só o hash dele, com data, último uso, IP e
-  navegador. "Sair" encerra a sessão no servidor, e o link **Segurança** lista as sessões abertas, com
+  navegador. "Sair" encerra a sessão no servidor, e **Minha conta → Sessões** lista as sessões abertas, com
   "Encerrar" em cada uma e "Sair de todos os dispositivos". O usuário é relido do banco a cada
   pedido: desativar alguém ou tirar o admin vale na hora.
 - **Acesso:**

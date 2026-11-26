@@ -178,7 +178,7 @@ Rode **uma instância só**. O banco é um arquivo SQLite, e o limite por hora f
 
 ## 8. Verificação em duas etapas (MFA)
 
-Cada pessoa pode ligar, em **Segurança** (no topo), a verificação em duas etapas com um aplicativo
+Cada pessoa pode ligar, em **Minha conta → Segurança** (no topo), a verificação em duas etapas com um aplicativo
 autenticador (Google Authenticator, Microsoft Authenticator, 1Password…). Com
 `ADMIN_EXIGE_MFA=true` no `.env`, todo administrador precisa ligar antes de usar o sistema.
 
@@ -192,7 +192,7 @@ autenticador (Google Authenticator, Microsoft Authenticator, 1Password…). Com
 ### Chave de acesso (entrar sem senha)
 
 Com `URL_PUBLICA` no `.env` (o endereço que as pessoas abrem, ex.: `https://issues.empresa.com`),
-cada pessoa cadastra, em **Segurança**, uma **chave de acesso**: depois entra com a digital, o
+cada pessoa cadastra, em **Minha conta → Segurança**, uma **chave de acesso**: depois entra com a digital, o
 rosto ou o PIN do aparelho, sem senha. Ela vale também como segunda etapa, inclusive para o admin
 com `ADMIN_EXIGE_MFA=true`.
 

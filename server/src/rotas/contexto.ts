@@ -13,8 +13,6 @@ import { promptCompactarContexto } from "../prompt/montar.js";
 export const LIMITE_CONTEXTO_ORIGINAL = 8000;
 /** Versão compacta, a que vai em toda geração: curta para gastar poucos tokens. */
 export const LIMITE_CONTEXTO_COMPACTO = 2000;
-/** Saída do resumo: sobra para os 1.500 caracteres pedidos no prompt. */
-const MAX_TOKENS_RESUMO = 1200;
 
 const erro = (codigo: string, mensagem: string, podeTentarDeNovo = false) => ({ erro: { codigo, mensagem, podeTentarDeNovo } });
 
@@ -32,7 +30,8 @@ const CorpoSalvar = z.object({
 export function registrarContexto(app: FastifyInstance, o: { config: Config; ajustes: Ajustes; contextos: RepositorioContextoUsuario }) {
   const limite = { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } };
 
-  app.get("/api/contexto", limite, async (request) => {
+  // A tela lê ao abrir (aviso do primeiro acesso): limite mais folgado que o das escritas.
+  app.get("/api/contexto", { config: { rateLimit: { max: 120, timeWindow: "1 minute" } } }, async (request) => {
     const u = usuarioObrigatorio(request);
     return { ...o.contextos.ler(u.email), limites: { original: LIMITE_CONTEXTO_ORIGINAL, compacto: LIMITE_CONTEXTO_COMPACTO } };
   });

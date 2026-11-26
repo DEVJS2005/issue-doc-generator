@@ -34,6 +34,7 @@ const Historico = lazy(() => import("./Historico").then((m) => ({ default: m.His
 const Admin = lazy(() => import("./Admin").then((m) => ({ default: m.Admin })));
 const Versoes = lazy(() => import("./Versoes").then((m) => ({ default: m.Versoes })));
 const Sessoes = lazy(() => import("./Sessoes").then((m) => ({ default: m.Sessoes })));
+type AbaConta = "contexto" | "seguranca" | "sessoes";
 const SecaoMfa = lazy(() => import("./Mfa").then((m) => ({ default: m.SecaoMfa })));
 const SecaoChavesAcesso = lazy(() => import("./ChavesAcesso").then((m) => ({ default: m.SecaoChavesAcesso })));
 const Compartilhado = lazy(() => import("./Compartilhado").then((m) => ({ default: m.Compartilhado })));
@@ -90,7 +91,10 @@ function Principal() {
   const [rotuloSso, setRotuloSso] = useState<string | null>(null);
   const [chaveAcesso, setChaveAcesso] = useState(false);
   const [pagina, setPagina] = useState<Pagina>("gerar");
-  const [verSessoes, setVerSessoes] = useState(false);
+  // Aba aberta no diálogo "Minha conta" (null = fechado).
+  const [verConta, setVerConta] = useState<AbaConta | null>(null);
+  // Aviso do primeiro acesso para preencher o "Meu contexto".
+  const [avisoContexto, setAvisoContexto] = useState(false);
   // ADMIN_EXIGE_MFA: admin que ainda não ligou o MFA só vê a tela de ligar.
   const [precisaMfa, setPrecisaMfa] = useState(false);
   // Issue aberta do histórico (ou usada como base de uma nova); a chave remonta o Gerador com ela.
@@ -109,6 +113,21 @@ function Principal() {
 
   const expirou = useCallback(() => setUsuario(null), []);
 
+  // Sem contexto salvo e sem "Agora não", convida a preencher.
+  const logado = Boolean(usuario) && !precisaMfa;
+  useEffect(() => {
+    if (!logado) return setAvisoContexto(false);
+    api
+      .contexto()
+      .then((c) => setAvisoContexto(!c.compacto && !c.avisoDispensado))
+      .catch(() => setAvisoContexto(false));
+  }, [logado]);
+
+  function agoraNao() {
+    setAvisoContexto(false);
+    api.dispensarAvisoContexto().catch(() => undefined);
+  }
+
   function entrou(u: Usuario, exigeMfa = false) {
     setPrecisaMfa(exigeMfa);
     if (window.location.search) window.history.replaceState(null, "", window.location.pathname);
@@ -119,13 +138,13 @@ function Principal() {
 
   async function sair() {
     await api.sair().catch(() => undefined);
-    setVerSessoes(false);
+    setVerConta(null);
     setUsuario(null);
   }
 
   /** A sessão deste dispositivo foi encerrada pela lista de sessões: volta ao login. */
   const saiuPelaLista = useCallback(() => {
-    setVerSessoes(false);
+    setVerConta(null);
     setUsuario(null);
   }, []);
 
@@ -162,8 +181,8 @@ function Principal() {
               <strong title={usuario.email}>{usuario.nome}</strong>
               {usuario.admin && <span className="selo">admin</span>}
               {!precisaMfa && (
-                <button type="button" className="botao-texto" onClick={() => setVerSessoes(true)}>
-                  Segurança
+                <button type="button" className="botao-texto" onClick={() => setVerConta("contexto")}>
+                  Minha conta
                 </button>
               )}
               <button type="button" className="botao-texto" onClick={sair}>
@@ -174,9 +193,9 @@ function Principal() {
           <SeletorTema />
         </div>
       </header>
-      {usuario && verSessoes && (
+      {usuario && verConta && (
         <Suspense fallback={null}>
-          <Sessoes conta={usuario.email} aoFechar={() => setVerSessoes(false)} aoSair={saiuPelaLista} />
+          <Sessoes conta={usuario.email} abaInicial={verConta} aoFechar={() => setVerConta(null)} aoSair={saiuPelaLista} aoSalvarContexto={() => setAvisoContexto(false)} />
         </Suspense>
       )}
       {usuario && !precisaMfa && (
@@ -232,6 +251,20 @@ function Principal() {
         {usuario && !precisaMfa && (
           // O Gerador fica montado ao trocar de aba, para não perder uma geração em andamento.
           <div hidden={pagina !== "gerar"}>
+            {avisoContexto && (
+              <section className="aviso-contexto" aria-labelledby="aviso-contexto-titulo">
+                <h2 id="aviso-contexto-titulo">Conte sobre o seu sistema</h2>
+                <p>Com o produto, os termos e as regras que você usa, as issues saem mais certeiras. Fica em Minha conta e vale para todas as suas issues.</p>
+                <div className="acoes">
+                  <button type="button" onClick={() => setVerConta("contexto")}>
+                    Preencher agora
+                  </button>
+                  <button type="button" className="secundario" onClick={agoraNao}>
+                    Agora não
+                  </button>
+                </div>
+              </section>
+            )}
             <Gerador key={aberta.chave} pessoa={usuario.nome} aberta={aberta.item} base={aberta.base} aoNova={novaIssue} aoSessaoExpirar={expirou} />
           </div>
         )}

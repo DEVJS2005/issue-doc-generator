@@ -16,6 +16,12 @@ async function entrar(page: Page, email = "qa@exemplo.dev", senha = "senha-de-te
   await expect(page.getByRole("heading", { name: "O que está errado ou o que queremos" })).toBeVisible();
 }
 
+/** Abre "Minha conta" no topo e vai para a aba pedida. */
+async function abrirConta(page: Page, aba: "Meu contexto" | "Segurança" | "Sessões") {
+  await page.getByRole("button", { name: "Minha conta" }).click();
+  await page.getByRole("dialog", { name: "Minha conta" }).getByRole("tab", { name: aba }).click();
+}
+
 async function gerar(page: Page, descricao: string) {
   await page.getByLabel(/^Descrição/).fill(descricao);
   await page.getByLabel("Nome do produto").fill("Loja Exemplo");
@@ -467,8 +473,8 @@ test("sessões: a lista mostra este dispositivo, encerra a outra sessão e sai d
   await entrar(outraPagina);
   await entrar(page);
 
-  await page.getByRole("button", { name: "Segurança" }).click();
-  const dialogo = page.getByRole("dialog", { name: "Segurança" });
+  await abrirConta(page, "Sessões");
+  const dialogo = page.getByRole("dialog", { name: "Minha conta" });
   await expect(dialogo).toBeVisible();
   const lista = dialogo.getByRole("list", { name: "Sessões abertas" });
   await expect(lista.getByRole("listitem").filter({ hasText: "este dispositivo" })).toHaveCount(1);
@@ -492,8 +498,8 @@ test("sessões: a lista mostra este dispositivo, encerra a outra sessão e sai d
 
 test("verificação em duas etapas: liga com o código do aplicativo, entra com um código de recuperação e desliga", async ({ page }) => {
   await entrar(page);
-  await page.getByRole("button", { name: "Segurança" }).click();
-  const dialogo = page.getByRole("dialog", { name: "Segurança" });
+  await abrirConta(page, "Segurança");
+  const dialogo = page.getByRole("dialog", { name: "Minha conta" });
   await dialogo.getByRole("button", { name: "Ligar a verificação em duas etapas" }).click();
   await expect(dialogo.getByRole("img", { name: "QR code para o aplicativo autenticador" })).toBeVisible();
 
@@ -519,10 +525,10 @@ test("verificação em duas etapas: liga com o código do aplicativo, entra com 
   await expect(page.getByRole("heading", { name: "O que está errado ou o que queremos" })).toBeVisible();
 
   // Desliga, para não afetar os outros testes (o login recente dispensa confirmar a senha).
-  await page.getByRole("button", { name: "Segurança" }).click();
-  await page.getByRole("dialog", { name: "Segurança" }).getByRole("button", { name: "Desligar" }).click();
+  await abrirConta(page, "Segurança");
+  await page.getByRole("dialog", { name: "Minha conta" }).getByRole("button", { name: "Desligar" }).click();
   await page.getByRole("dialog", { name: "Desligar a verificação em duas etapas?" }).getByRole("button", { name: "Desligar" }).click();
-  await expect(page.getByRole("dialog", { name: "Segurança" }).getByRole("button", { name: "Ligar a verificação em duas etapas" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Minha conta" }).getByRole("button", { name: "Ligar a verificação em duas etapas" })).toBeVisible();
 });
 
 test("chave de acesso: cadastra no aparelho, sai e entra sem senha", async ({ page }) => {
@@ -542,8 +548,8 @@ test("chave de acesso: cadastra no aparelho, sai e entra sem senha", async ({ pa
   await page.getByRole("button", { name: "Entrar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "O que está errado ou o que queremos" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Segurança" }).click();
-  const dialogo = page.getByRole("dialog", { name: "Segurança" });
+  await abrirConta(page, "Segurança");
+  const dialogo = page.getByRole("dialog", { name: "Minha conta" });
   await dialogo.getByRole("button", { name: "Adicionar chave de acesso" }).click();
   await expect(dialogo.getByRole("list", { name: "Chaves de acesso" }).getByText("ainda não usada")).toBeVisible();
   await dialogo.getByRole("button", { name: "Fechar" }).click();
@@ -553,8 +559,49 @@ test("chave de acesso: cadastra no aparelho, sai e entra sem senha", async ({ pa
   await expect(page.getByRole("heading", { name: "O que está errado ou o que queremos" })).toBeVisible();
 
   // Remove, para não afetar os outros testes.
-  await page.getByRole("button", { name: "Segurança" }).click();
+  await abrirConta(page, "Segurança");
   await dialogo.getByRole("list", { name: "Chaves de acesso" }).getByRole("button", { name: "Remover" }).click();
   await page.getByRole("dialog", { name: "Remover a chave de acesso?" }).getByRole("button", { name: "Remover" }).click();
   await expect(dialogo.getByRole("list", { name: "Chaves de acesso" })).toHaveCount(0);
+});
+
+test("Meu contexto: o aviso do primeiro acesso leva à aba, a IA resume e, salvo, o aviso some", async ({ page }) => {
+  await entrar(page, "comum@exemplo.dev", "senha-comum");
+  const aviso = page.getByRole("region", { name: "Conte sobre o seu sistema" });
+  await expect(aviso).toBeVisible();
+  await aviso.getByRole("button", { name: "Preencher agora" }).click();
+
+  const dialogo = page.getByRole("dialog", { name: "Minha conta" });
+  await expect(dialogo.getByRole("tab", { name: "Meu contexto" })).toHaveAttribute("aria-selected", "true");
+  await dialogo.getByLabel("Sobre o seu sistema").fill("Trabalho no Painel Loja Exemplo, com Pedidos e Cupons. Cupom: no máximo 3 por pedido.");
+  await dialogo.getByRole("button", { name: "Gerar versão compacta" }).click();
+  const compacta = dialogo.getByLabel(/^Versão compacta/);
+  await expect(compacta).toHaveValue(/Máximo de 3 cupons por pedido/);
+  await compacta.fill("- Painel Loja Exemplo: Pedidos e Cupons\n- Até 3 cupons por pedido");
+  await dialogo.getByRole("button", { name: "Salvar" }).click();
+  await expect(dialogo.getByText("Contexto salvo.")).toBeVisible();
+  await dialogo.getByRole("button", { name: "Fechar" }).click();
+  await expect(aviso).toHaveCount(0);
+
+  // Volta ao abrir de novo e não pede mais o aviso.
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "O que está errado ou o que queremos" })).toBeVisible();
+  await expect(aviso).toHaveCount(0);
+  await abrirConta(page, "Meu contexto");
+  await expect(dialogo.getByLabel(/^Versão compacta/)).toHaveValue("- Painel Loja Exemplo: Pedidos e Cupons\n- Até 3 cupons por pedido");
+
+  // Apaga, para não afetar os outros testes.
+  await dialogo.getByRole("button", { name: "Apagar" }).click();
+  await page.getByRole("dialog", { name: "Apagar o seu contexto?" }).getByRole("button", { name: "Apagar" }).click();
+  await expect(dialogo.getByText("Contexto apagado.")).toBeVisible();
+});
+
+test("Meu contexto: 'Agora não' fecha o aviso de vez", async ({ page }) => {
+  await entrar(page);
+  const aviso = page.getByRole("region", { name: "Conte sobre o seu sistema" });
+  await aviso.getByRole("button", { name: "Agora não" }).click();
+  await expect(aviso).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "O que está errado ou o que queremos" })).toBeVisible();
+  await expect(aviso).toHaveCount(0);
 });
