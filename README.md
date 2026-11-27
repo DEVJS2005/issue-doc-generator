@@ -177,6 +177,8 @@ mexer nas outras linhas (assim dois PRs não brigam pela mesma linha).
 - Servidor: verificação em duas etapas (TOTP da RFC 6238, códigos de recuperação, admin obrigado,
   senha de novo nas ações sensíveis)
 - Servidor: chave de acesso (cadastro, login sem senha, site falso e desafio repetido recusados)
+- Servidor: Meu contexto (resumo em texto livre, só a versão compacta nas gerações, sem contexto
+  nada muda, limites, aviso do primeiro acesso) e o bloco do contexto em cada provedor
 - Servidor: IP atrás de proxy, limite de login por IP e trava por conta com espera progressiva (no
   banco, também depois de reiniciar)
 - Servidor: modelo reserva, histórico, refinar a partir da versão guardada, status e links
@@ -195,6 +197,7 @@ mexer nas outras linhas (assim dois PRs não brigam pela mesma linha).
 - Administração, backup e auditoria
 - Nota de qualidade, prints e Jira (falso)
 - Sessões, verificação em duas etapas e chave de acesso (aparelho virtual do Chromium)
+- Meu contexto: aviso do primeiro acesso, resumo, salvar e "Agora não"
 - CSP sem bloqueios, celular sem rolagem horizontal, diálogos e validação dos campos
 
 ### Proteções no GitHub
